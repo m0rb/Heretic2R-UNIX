@@ -13,8 +13,10 @@
 // Define GAME_INCLUDE so that game.h does not define the short, server-visible 'gclient_t' and 'edict_t' structures
 // because we define the game versions in this file.
 #define GAME_INCLUDE
-// morb was here. GAME_DLL was never defined; game-internal functions in g_Items.h etc. were silently invisible.
+// morb was here. was: #define GAME_DLL — Makefile already passes -DGAME_DLL on the command line; redefining it here triggers a -Wmacro-redefined warning.
+#ifndef GAME_DLL
 #define GAME_DLL // Expose game-internal function declarations (e.g. in g_Items.h).
+#endif
 
 #include "Game.h"
 #include "g_HitLocation.h" //mxd
