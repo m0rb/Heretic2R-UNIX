@@ -1,0 +1,159 @@
+name: Release
+
+on:
+  push:
+    branches: [ main, unix ]
+
+jobs:
+  build-linux-x86_64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential git make pkg-config cmake ninja-build \
+            libasound2-dev libpulse-dev libaudio-dev libfribidi-dev \
+            libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev \
+            libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
+            libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev \
+            libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev \
+            libibus-1.0-dev libudev-dev libthai-dev
+
+      - name: Build SDL3 from source
+        run: |
+          git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
+          cmake -S SDL3-src -B SDL3-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST=OFF
+          cmake --build SDL3-build --parallel
+          sudo cmake --install SDL3-build
+
+      - name: Build
+        run: make -j$(nproc)
+
+      - name: Create archive
+        run: |
+          mkdir -p dist
+          cp build/release/heretic2r dist/
+          cp -r build/release/base dist/
+          tar czf heretic2r-linux-x86_64.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-linux-x86_64
+          path: heretic2r-linux-x86_64.tar.gz
+
+  build-linux-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential git make pkg-config cmake ninja-build \
+            libasound2-dev libpulse-dev libaudio-dev libfribidi-dev \
+            libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev \
+            libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
+            libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev \
+            libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev \
+            libibus-1.0-dev libudev-dev libthai-dev
+
+      - name: Build SDL3 from source
+        run: |
+          git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
+          cmake -S SDL3-src -B SDL3-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST=OFF
+          cmake --build SDL3-build --parallel
+          sudo cmake --install SDL3-build
+
+      - name: Build
+        run: make -j$(nproc)
+
+      - name: Create archive
+        run: |
+          mkdir -p dist
+          cp build/release/heretic2r dist/
+          cp -r build/release/base dist/
+          tar czf heretic2r-linux-arm64.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-linux-arm64
+          path: heretic2r-linux-arm64.tar.gz
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install make gcc sdl3 pkg-config
+
+      - name: Build
+        run: make -j$(sysctl -n hw.logicalcpu)
+
+      - name: Create archive
+        run: |
+          mkdir -p dist
+          cp build/release/heretic2r dist/
+          cp -r build/release/base dist/
+          tar czf heretic2r-macos.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-macos
+          path: heretic2r-macos.tar.gz
+
+  build-freebsd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build on FreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y gmake gcc sdl3 pkgconf mesa-libs
+          run: |
+            gmake -j$(sysctl -n hw.ncpu)
+            mkdir -p dist
+            cp build/release/heretic2r dist/
+            cp -r build/release/base dist/
+            tar czf heretic2r-freebsd.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-freebsd
+          path: heretic2r-freebsd.tar.gz
+
+  release:
+    needs: [ build-linux-x86_64, build-linux-arm64, build-macos, build-freebsd ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Create or update rolling release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Latest build"
+          prerelease: true
+          make_latest: true
+          body: |
+            Automated rolling release — built from `${{ github.ref_name }}` @ `${{ github.sha }}`.
+          files: |
+            heretic2r-linux-x86_64.tar.gz
+            heretic2r-linux-arm64.tar.gz
+            heretic2r-macos.tar.gz
+            heretic2r-freebsd.tar.gz
