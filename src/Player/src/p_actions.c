@@ -20,7 +20,7 @@
 #include "p_anim_branch.h" //mxd
 #include "p_anim_data.h"
 #include "p_utility.h" //mxd
-#include "q_shared.h"
+#include "q_Shared.h"
 #include "compat.h"
 
 typedef enum //mxd

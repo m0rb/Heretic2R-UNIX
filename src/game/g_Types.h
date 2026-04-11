@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "q_shared.h" // For byte, vec3_t, qboolean, uint, trace_t
+#include "q_Shared.h" // For byte, vec3_t, qboolean, uint, trace_t
 #include "p_types.h"  // For physicsType_t, deadState_t
 #include "g_items.h"  // For gitem_t
 

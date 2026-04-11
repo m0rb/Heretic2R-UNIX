@@ -7,7 +7,7 @@
 #pragma once
 
 #ifdef _WIN32
-#include "q_shared.h"
+#include "q_Shared.h"
 
 #define MAX_REFLIBS	16 //mxd
 

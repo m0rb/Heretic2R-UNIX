@@ -11,7 +11,7 @@
 #endif
 
 #include "ResourceManager.h"
-#include "q_shared.h"
+#include "q_Shared.h"
 
 typedef struct ResMngr_Block_s
 {

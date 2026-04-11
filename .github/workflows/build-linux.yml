@@ -29,9 +29,21 @@ jobs:
             make \
             gcc \
             g++ \
-            libsdl3-dev \
+            cmake \
+            ninja-build \
             libgl1-mesa-dev \
             pkg-config
+
+      - name: Build SDL3 from source
+        run: |
+          git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
+          cmake -S SDL3-src -B SDL3-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSDL_SHARED=ON \
+            -DSDL_STATIC=OFF \
+            -DSDL_TEST=OFF
+          cmake --build SDL3-build --parallel
+          sudo cmake --install SDL3-build
 
       - name: Build
         run: make -j$(nproc)

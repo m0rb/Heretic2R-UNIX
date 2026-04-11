@@ -5,7 +5,7 @@
 // Copyright 1998 Raven Software
 //
 
-#include "q_shared.h"
+#include "q_Shared.h"
 #include "Vector.h"
 
 // Q2 counterpart. Expects a positive value.
