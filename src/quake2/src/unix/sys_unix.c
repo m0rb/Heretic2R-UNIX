@@ -289,6 +289,51 @@ static DIR* finddir = NULL;
 static char findpath[MAX_OSPATH];
 static char findpattern[MAX_OSPATH];
 static int finddir_len; // Length of the directory-only portion of findpath.
+static unsigned findmusthave;
+static unsigned findcanthave;
+
+// Check SFF_* attribute flags against a dirent.
+// On Windows, "*.""  is the glob for "no extension" and matches bare directory names.
+// On Unix we honor it by checking d_type/stat directly.
+static qboolean FindMatchAttributes(const struct dirent* d)
+{
+	// Skip . and .. always.
+	if (d->d_name[0] == '.' && (d->d_name[1] == '\0' || (d->d_name[1] == '.' && d->d_name[2] == '\0')))
+		return false;
+
+	// Determine if entry is a directory via stat (portable; d_type is not reliable on all FS).
+	qboolean is_dir = false;
+	{
+		char full[MAX_OSPATH];
+		struct stat st;
+		snprintf(full, sizeof(full), "%.*s/%s", finddir_len, findpath, d->d_name);
+		if (stat(full, &st) == 0 && S_ISDIR(st.st_mode))
+			is_dir = true;
+	}
+
+	// Hidden on Unix: name starts with '.'.
+	const qboolean is_hidden = (d->d_name[0] == '.');
+
+	if ((findcanthave & SFF_HIDDEN) && is_hidden)
+		return false;
+	if ((findmusthave & SFF_SUBDIR) && !is_dir)
+		return false;
+	if ((findcanthave & SFF_SUBDIR) && is_dir)
+		return false;
+
+	return true;
+}
+
+// On Windows "*.""  matches files/dirs with no extension, which includes bare
+// directory names like "male" or "female". Map that to a plain "*" on Unix.
+static void NormalizePattern(const char* raw, char* out, size_t outsz)
+{
+	strncpy(out, raw, outsz - 1);
+	out[outsz - 1] = '\0';
+	const size_t len = strlen(out);
+	if (len >= 2 && out[len - 1] == '.' && out[len - 2] == '*')
+		out[len - 1] = '\0'; // Strip trailing dot: "*." -> "*"
+}
 
 char* Sys_FindFirst(const char* path, unsigned musthave, unsigned canthave)
 {
@@ -298,20 +343,25 @@ char* Sys_FindFirst(const char* path, unsigned musthave, unsigned canthave)
 	if (finddir)
 		Sys_Error("Sys_FindFirst without close");
 
-	// Extract directory and pattern
+	findmusthave = musthave;
+	findcanthave = canthave;
+
+	// Extract directory and pattern.
 	strcpy(findpath, path);
 	p = strrchr(findpath, '/');
 	if (p)
 	{
 		*p = 0;
-		strcpy(findpattern, p + 1);
+		char raw[MAX_OSPATH];
+		strcpy(raw, p + 1);
+		NormalizePattern(raw, findpattern, sizeof(findpattern));
 	}
 	else
 	{
 		strcpy(findpattern, "*");
 	}
 
-	finddir_len = (int)strlen(findpath); // Save directory length before any filename is appended.
+	finddir_len = (int)strlen(findpath);
 
 	finddir = opendir(findpath);
 	if (!finddir)
@@ -319,6 +369,9 @@ char* Sys_FindFirst(const char* path, unsigned musthave, unsigned canthave)
 
 	while ((d = readdir(finddir)) != NULL)
 	{
+		if (!FindMatchAttributes(d))
+			continue;
+
 		// Use strcasecmp for a plain filename (no wildcards), fnmatch for glob patterns.
 		// This makes lookups like "bumper.smk" match "Bumper.smk" on case-sensitive Linux FS.
 		const qboolean is_plain = (*findpattern && !strpbrk(findpattern, "*?["));
@@ -344,6 +397,9 @@ char* Sys_FindNext(unsigned musthave, unsigned canthave)
 
 	while ((d = readdir(finddir)) != NULL)
 	{
+		if (!FindMatchAttributes(d))
+			continue;
+
 		const qboolean is_plain = (*findpattern && !strpbrk(findpattern, "*?["));
 		const qboolean match = !*findpattern
 			|| !strcmp(findpattern, "*")

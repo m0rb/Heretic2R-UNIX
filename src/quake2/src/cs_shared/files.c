@@ -279,34 +279,52 @@ int FS_FOpenFile(const char* filename, FILE** file)
 				continue;
 
 			// H2: do binary search instead of iteration, because pak filenames are sorted alphabetically.
-			int start = 0;
-			int end = pak->numfiles;
-
-			do
+			// morb was here. The binary search assumes Q_stricmp ordering (case-insensitive).
+			// Some third-party pak files use raw ASCII ordering instead. If the binary search
+			// misses, fall back to a linear case-insensitive scan before giving up.
+			int found_index = -1;
 			{
-				const int index = (start + end) / 2;
-				const int cmp = Q_stricmp(filepath, pak->files[index].name);
+				int start = 0;
+				int end = pak->numfiles;
 
-				if (cmp == 0)
+				do
 				{
-					// Found it!
-					file_from_pak = true;
-					Com_DDPrintf(2, "PackFile: %s : %s\n", pak->filename, filename); //mxd. Com_DPrintf() -> Com_DDPrintf(), to reduce console spam when developer 1.
+					const int index = (start + end) / 2;
+					const int cmp = Q_stricmp(filepath, pak->files[index].name);
 
-					// Open a new file on the pakfile
-					if (fopen_s(file, pak->filename, "rb") != 0) //mxd. fopen -> fopen_s
-						Com_Error(ERR_FATAL, "Couldn't reopen %s", pak->filename);
+					if (cmp == 0) { found_index = index; break; }
+					if (cmp > 0)  start = index + 1;
+					else          end   = index;
+				} while (start < end);
+			}
 
-					fseek(*file, pak->files[index].filepos, SEEK_SET);
-
-					return pak->files[index].filelen;
+			// Binary search missed — linear fallback for non-standard sort orders.
+			if (found_index < 0)
+			{
+				for (int i = 0; i < pak->numfiles; i++)
+				{
+					if (Q_stricmp(filepath, pak->files[i].name) == 0)
+					{
+						found_index = i;
+						break;
+					}
 				}
+			}
 
-				if (cmp > 0)
-					start = index + 1;
-				else // cmp < 0
-					end = index;
-			} while (start < end);
+			if (found_index >= 0)
+			{
+				// Found it!
+				file_from_pak = true;
+				Com_DDPrintf(2, "PackFile: %s : %s\n", pak->filename, filename); //mxd. Com_DPrintf() -> Com_DDPrintf(), to reduce console spam when developer 1.
+
+				// Open a new file on the pakfile
+				if (fopen_s(file, pak->filename, "rb") != 0) //mxd. fopen -> fopen_s
+					Com_Error(ERR_FATAL, "Couldn't reopen %s", pak->filename);
+
+				fseek(*file, pak->files[found_index].filepos, SEEK_SET);
+
+				return pak->files[found_index].filelen;
+			}
 		}
 		else
 		{

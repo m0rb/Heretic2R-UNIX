@@ -34,17 +34,25 @@ jobs:
       - name: Build
         run: make -j$(nproc)
 
-      - name: Create archive
+      - name: Create archives
         run: |
-          mkdir -p dist
+          mkdir -p dist dist-ded
           cp build/release/heretic2r dist/
           cp -r build/release/base dist/
+          cp build/release/heretic2r-server dist-ded/
+          cp -r build/release/base dist-ded/
           tar czf heretic2r-linux-x86_64.tar.gz -C dist .
+          tar czf heretic2r-server-linux-x86_64.tar.gz -C dist-ded .
 
       - uses: actions/upload-artifact@v4
         with:
           name: heretic2r-linux-x86_64
           path: heretic2r-linux-x86_64.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-server-linux-x86_64
+          path: heretic2r-server-linux-x86_64.tar.gz
 
   build-linux-arm64:
     runs-on: ubuntu-24.04-arm
@@ -75,17 +83,25 @@ jobs:
       - name: Build
         run: make -j$(nproc)
 
-      - name: Create archive
+      - name: Create archives
         run: |
-          mkdir -p dist
+          mkdir -p dist dist-ded
           cp build/release/heretic2r dist/
           cp -r build/release/base dist/
+          cp build/release/heretic2r-server dist-ded/
+          cp -r build/release/base dist-ded/
           tar czf heretic2r-linux-arm64.tar.gz -C dist .
+          tar czf heretic2r-server-linux-arm64.tar.gz -C dist-ded .
 
       - uses: actions/upload-artifact@v4
         with:
           name: heretic2r-linux-arm64
           path: heretic2r-linux-arm64.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-server-linux-arm64
+          path: heretic2r-server-linux-arm64.tar.gz
 
   build-macos:
     runs-on: macos-latest
@@ -98,17 +114,25 @@ jobs:
       - name: Build
         run: make -j$(sysctl -n hw.logicalcpu)
 
-      - name: Create archive
+      - name: Create archives
         run: |
-          mkdir -p dist
+          mkdir -p dist dist-ded
           cp build/release/heretic2r dist/
           cp -r build/release/base dist/
+          cp build/release/heretic2r-server dist-ded/
+          cp -r build/release/base dist-ded/
           tar czf heretic2r-macos.tar.gz -C dist .
+          tar czf heretic2r-server-macos.tar.gz -C dist-ded .
 
       - uses: actions/upload-artifact@v4
         with:
           name: heretic2r-macos
           path: heretic2r-macos.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-server-macos
+          path: heretic2r-server-macos.tar.gz
 
   build-freebsd:
     runs-on: ubuntu-latest
@@ -123,15 +147,23 @@ jobs:
             pkg install -y gmake gcc sdl3 pkgconf mesa-libs
           run: |
             gmake -j$(sysctl -n hw.ncpu)
-            mkdir -p dist
+            mkdir -p dist dist-ded
             cp build/release/heretic2r dist/
             cp -r build/release/base dist/
+            cp build/release/heretic2r-server dist-ded/
+            cp -r build/release/base dist-ded/
             tar czf heretic2r-freebsd.tar.gz -C dist .
+            tar czf heretic2r-server-freebsd.tar.gz -C dist-ded .
 
       - uses: actions/upload-artifact@v4
         with:
           name: heretic2r-freebsd
           path: heretic2r-freebsd.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-server-freebsd
+          path: heretic2r-server-freebsd.tar.gz
 
   release:
     needs: [ build-linux-x86_64, build-linux-arm64, build-macos, build-freebsd ]
@@ -143,7 +175,7 @@ jobs:
         with:
           merge-multiple: true
 
-      - name: Create or update rolling release
+      - name: Create or update client rolling release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
@@ -152,8 +184,27 @@ jobs:
           make_latest: true
           body: |
             Automated rolling release — built from `${{ github.ref_name }}` @ `${{ github.sha }}`.
+
+            Requires Heretic II game data (base/) to run.
           files: |
             heretic2r-linux-x86_64.tar.gz
             heretic2r-linux-arm64.tar.gz
             heretic2r-macos.tar.gz
             heretic2r-freebsd.tar.gz
+
+      - name: Create or update dedicated server rolling release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-ded
+          name: "Latest dedicated server build"
+          prerelease: true
+          body: |
+            Automated rolling release — built from `${{ github.ref_name }}` @ `${{ github.sha }}`.
+
+            Standalone dedicated server binaries. No SDL3 or OpenGL required.
+            Include game data (base/) from a Heretic II installation to run.
+          files: |
+            heretic2r-server-linux-x86_64.tar.gz
+            heretic2r-server-linux-arm64.tar.gz
+            heretic2r-server-macos.tar.gz
+            heretic2r-server-freebsd.tar.gz

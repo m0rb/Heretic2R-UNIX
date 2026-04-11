@@ -110,7 +110,13 @@ static int LoadTextFile(char* name, char** addr)
 	const int length = gi.FS_LoadFile(name, (void**)&buffer);
 
 	if (length <= 0)
-		Sys_Error("LoadTextFile: unable to load '%s'", name);
+	{
+		// morb was here. Non-fatal on dedicated servers / stripped installs.
+		// was: Sys_Error("LoadTextFile: unable to load '%s'", name);
+		Com_Printf("WARNING: LoadTextFile: unable to load '%s' -- level messages disabled\n", name);
+		*addr = NULL;
+		return 0;
+	}
 
 	*addr = (char*)gi.TagMalloc(length + 1, 0);
 	memcpy(*addr, buffer, length);
@@ -123,6 +129,8 @@ static int LoadTextFile(char* name, char** addr)
 static void LoadStrings(void)
 {
 	const int length = LoadTextFile("levelmsg.txt", &message_buf);
+	if (length == 0)
+		return;
 
 	char* start_ptr = &message_buf[0];
 	char* p = NULL;
@@ -284,7 +292,8 @@ static void ShutdownGame(void)
 		game.entitiesSpawned = false;
 	}
 
-	gi.FS_FreeFile(message_buf); //mxd
+	if (message_buf != NULL)
+		gi.FS_FreeFile(message_buf); //mxd
 
 	gi.FreeTags(TAG_LEVEL);
 	gi.FreeTags(TAG_GAME);

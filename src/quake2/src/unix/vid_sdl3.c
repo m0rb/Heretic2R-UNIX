@@ -10,6 +10,7 @@
 #include "../client/cl_skeletons.h"
 #include "vid_dll.h"
 #include "../../../ref_gl1/src/gl1_Local.h"
+#include "../win32/vid_Screenshot.h"
 
 static SDL_Window *window = NULL;
 static SDL_GLContext gl_context = NULL;
@@ -64,7 +65,7 @@ static qboolean VID_LoadRefresh(void)
     ri.jointNodes = joint_nodes;
     ri.Is_Screen_Flashing = Is_Screen_Flashing;
     ri.Deactivate_Screen_Flash = Deactivate_Screen_Flash;
-    ri.Vid_WriteScreenshot = NULL; // TODO: implement Unix screenshot
+    ri.Vid_WriteScreenshot = VID_WriteScreenshot;
 #ifdef _DEBUG
     ri.DBG_IDEPrint = DBG_IDEPrint;
     ri.DBG_HudPrint = DBG_HudPrint;

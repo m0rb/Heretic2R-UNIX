@@ -429,12 +429,15 @@ void SV_InitGame(void)
 	// Init game
 	SV_InitGameProgs();
 
-	for (int i = 0; i < (int)maxclients->value; i++)
+	if (ge != NULL) // morb was here. ge may be NULL if game DLL failed to load.
 	{
-		edict_t* ent = EDICT_NUM(i + 1);
-		ent->s.number = (short)(i + 1);
-		svs.clients[i].edict = ent;
-		memset(&svs.clients[i].lastcmd, 0, sizeof(svs.clients[i].lastcmd));
+		for (int i = 0; i < (int)maxclients->value; i++)
+		{
+			edict_t* ent = EDICT_NUM(i + 1);
+			ent->s.number = (short)(i + 1);
+			svs.clients[i].edict = ent;
+			memset(&svs.clients[i].lastcmd, 0, sizeof(svs.clients[i].lastcmd));
+		}
 	}
 }
 

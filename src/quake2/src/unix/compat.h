@@ -140,6 +140,19 @@ static inline int sscanf_s(const char *buffer, const char *format, ...)
     return result;
 }
 
+/* memcpy_s */
+static inline int memcpy_s(void *dest, size_t destsz, const void *src, size_t count)
+{
+    if (!dest || !src || destsz == 0)
+        return 22; /* EINVAL */
+
+    if (count > destsz)
+        return 34; /* ERANGE */
+
+    memcpy(dest, src, count);
+    return 0;
+}
+
 /* memmove_s */
 static inline int memmove_s(void *dest, size_t destsz, const void *src, size_t count)
 {

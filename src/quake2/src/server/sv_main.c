@@ -857,6 +857,12 @@ void SV_Init(void)
 	public_server = Cvar_Get("public", "0", 0);
 	sv_reconnect_limit = Cvar_Get("sv_reconnect_limit", "3", CVAR_ARCHIVE);
 
+	// morb was here. r_farclipdist is initialized by the renderer/CLFX DLL on the client,
+	// but on a dedicated server neither runs. Register it here so sv_effects.c doesn't
+	// crash dereferencing a NULL cvar pointer when sending effects to clients.
+	if (r_farclipdist == NULL)
+		r_farclipdist = Cvar_Get("r_farclipdist", "4096.0", 0);
+
 	SZ_Init(&net_message, net_message_buffer, sizeof(net_message_buffer));
 	CLFX_LoadDll(); // H2
 }

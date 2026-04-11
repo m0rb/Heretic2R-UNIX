@@ -219,6 +219,7 @@ UNIX_SRCS := \
 	$(UNIX_DIR)/q_shunix.c \
 	$(UNIX_DIR)/main.c \
 	$(UNIX_DIR)/vid_sdl3.c \
+	$(UNIX_DIR)/vid_screenshot.c \
 	$(UNIX_DIR)/snd_dll.c \
 	$(UNIX_DIR)/clfx_dll.c
 
@@ -277,12 +278,23 @@ CLFX_OBJS     := $(patsubst %.c,$(BUILD_DIR)/%.o,$(CLFX_SRCS)) \
 # All object files for the main executable
 ALL_EXE_OBJS := $(COMMON_OBJS) $(CLIENT_OBJS) $(SERVER_OBJS) $(UNIX_OBJS) $(RENDERER_OBJS)
 
+# Dedicated server source files (no client, renderer, or SDL/GL)
+DED_UNIX_SRCS := \
+	$(UNIX_DIR)/sys_unix.c \
+	$(UNIX_DIR)/net_udp.c \
+	$(UNIX_DIR)/q_shunix.c \
+	$(UNIX_DIR)/main.c \
+	$(UNIX_DIR)/ded_stubs.c
+
+DED_SRCS := $(COMMON_SRCS) $(SERVER_SRCS) $(DED_UNIX_SRCS)
+DED_OBJS := $(patsubst %.c,$(BUILD_DIR)/ded/%.o,$(DED_SRCS))
+
 # Targets
-.PHONY: all clean game player client server clfx
+.PHONY: all clean game player client clfx ded server dedicated
 # Note: "Client Effects.so" has a space in its name, so it cannot be a Make file target.
 # The clfx rule is phony and links directly to the correctly-named output.
 
-all: client game player clfx
+all: client game player clfx ded
 
 # Main client executable (replaces Heretic2R.exe)
 client: $(BUILD_DIR)/heretic2r$(EXE_EXT)
@@ -294,6 +306,28 @@ endif
 $(BUILD_DIR)/heretic2r$(EXE_EXT): $(ALL_EXE_OBJS)
 	@echo "  LINK    $@"
 	@$(CC) $(CFLAGS) $(EXPORT_DYNAMIC) -o $@ $^ $(LIBS)
+
+# Dedicated server executable
+ded server dedicated: $(BUILD_DIR)/heretic2r-server$(EXE_EXT)
+
+DED_CFLAGS := $(filter-out $(SDL3_CFLAGS),$(CFLAGS)) -DDEDICATED_ONLY
+DED_LIBS   := $(MATH_LIBS) $(PTHREAD_LIBS)
+ifeq ($(UNAME),Linux)
+  DED_LIBS += -ldl -lm
+endif
+ifeq ($(UNAME),FreeBSD)
+  DED_LIBS += -lexecinfo
+endif
+
+$(BUILD_DIR)/heretic2r-server$(EXE_EXT): $(DED_OBJS)
+	@echo "  LINK    $@"
+	@mkdir -p $(BUILD_DIR)
+	@$(CC) $(DED_CFLAGS) $(EXPORT_DYNAMIC) -o $@ $^ $(DED_LIBS)
+
+$(BUILD_DIR)/ded/%.o: %.c
+	@echo "  CC (ded) $<"
+	@mkdir -p $(dir $@)
+	@$(CC) $(DED_CFLAGS) -fPIC -MMD -MP -c -o $@ $<
 
 # Game DLL
 game: $(BUILD_DIR)/base/gamex86$(SHARED_EXT)
