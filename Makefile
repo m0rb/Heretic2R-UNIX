@@ -100,10 +100,18 @@ SDL3_LIBS := $(shell pkg-config --libs sdl3 2>/dev/null || echo "-lSDL3")
 
 # OpenGL configuration
 GL_CFLAGS :=
-GL_LIBS := -lGL
+ifeq ($(UNAME),Darwin)
+  GL_LIBS := -framework OpenGL
+else
+  GL_LIBS := -lGL
+endif
 
 # Additional libraries
-DL_LIBS := -ldl
+ifeq ($(UNAME),Darwin)
+  DL_LIBS :=
+else
+  DL_LIBS := -ldl
+endif
 MATH_LIBS := -lm
 PTHREAD_LIBS := -lpthread
 
@@ -277,9 +285,13 @@ all: client game player clfx
 # Main client executable (replaces Heretic2R.exe)
 client: $(BUILD_DIR)/heretic2r$(EXE_EXT)
 
+ifneq ($(UNAME),Darwin)
+  EXPORT_DYNAMIC := -Wl,--export-dynamic
+endif
+
 $(BUILD_DIR)/heretic2r$(EXE_EXT): $(ALL_EXE_OBJS)
 	@echo "  LINK    $@"
-	@$(CC) $(CFLAGS) -Wl,--export-dynamic -o $@ $^ $(LIBS)
+	@$(CC) $(CFLAGS) $(EXPORT_DYNAMIC) -o $@ $^ $(LIBS)
 
 # Game DLL
 game: $(BUILD_DIR)/base/gamex86$(SHARED_EXT)
