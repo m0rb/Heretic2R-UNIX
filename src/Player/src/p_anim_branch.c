@@ -13,6 +13,7 @@
 #include "Vector.h"
 #include "Player/m_Player.h" // In game/src! --mxd.
 #include "p_utility.h" //mxd
+#include "p_types.h" //mxd
 
 qboolean CheckFall(const playerinfo_t* info)
 {
@@ -228,13 +229,13 @@ int ChickenBranchLwrStanding(playerinfo_t* info)
 }
 
 // This allows the chicken to interrupt itself - if its idling.
-void ChickenBranchIdle(playerinfo_t* info)
+int ChickenBranchIdle(playerinfo_t* info)
 {
 	// Do we need to attack?
 	if (info->seqcmd[ACMDU_ATTACK])
 	{
 		PlayerAnimSetLowerSeq(info, ASEQ_WSWORD_SPIN);
-		return;
+		return ASEQ_WSWORD_SPIN;
 	}
 
 	const qboolean do_jump = info->seqcmd[ACMDL_JUMP]; //mxd
@@ -245,7 +246,7 @@ void ChickenBranchIdle(playerinfo_t* info)
 		const int seq = (do_jump ? ASEQ_JUMPFWD_WGO : ASEQ_WALKF_GO);
 		PlayerAnimSetLowerSeq(info, seq);
 
-		return;
+		return seq;
 	}
 
 	if (info->seqcmd[ACMDL_RUN_F])
@@ -254,7 +255,7 @@ void ChickenBranchIdle(playerinfo_t* info)
 		const int seq = (do_jump ? ASEQ_JUMPFWD_RGO : ASEQ_RUNF_GO);
 		PlayerAnimSetLowerSeq(info, seq);
 
-		return;
+		return seq;
 	}
 
 	if (info->seqcmd[ACMDL_RUN_B])
@@ -263,7 +264,7 @@ void ChickenBranchIdle(playerinfo_t* info)
 		const int seq = (do_jump ? ASEQ_JUMPFLIPL : ASEQ_WSTRAFE_LEFT); //TODO: these sequence names don't seem right!
 		PlayerAnimSetLowerSeq(info, seq);
 
-		return;
+		return seq;
 	}
 
 	if (info->seqcmd[ACMDL_BACK])
@@ -272,28 +273,31 @@ void ChickenBranchIdle(playerinfo_t* info)
 		const int seq = (do_jump ? ASEQ_JUMPBACK : ASEQ_WALKB);
 		PlayerAnimSetLowerSeq(info, seq);
 
-		return;
+		return seq;
 	}
 
 	if (info->seqcmd[ACMDL_STRAFE_L])
 	{
 		// Strafing left.
 		PlayerAnimSetLowerSeq(info, ASEQ_STRAFEL);
-		return;
+		return ASEQ_STRAFEL;
 	}
 
 	if (info->seqcmd[ACMDL_STRAFE_R])
 	{
 		// Strafing right.
 		PlayerAnimSetLowerSeq(info, ASEQ_STRAFER);
-		return;
+		return ASEQ_STRAFER;
 	}
 
 	if (info->seqcmd[ACMDL_JUMP])
 	{
 		// Jumping in place.
 		PlayerAnimSetLowerSeq(info, ASEQ_JUMPUP);
+		return ASEQ_JUMPUP;
 	}
+
+	return ASEQ_NONE;
 }
 
 #pragma endregion
@@ -1052,12 +1056,12 @@ int BranchLwrSurfaceSwim(playerinfo_t* info)
 {
 	assert(info);
 
-	if (info->pers.weaponready != WEAPON_READY_HANDS)
-	{
-		gitem_t* weapon = FindItem("fball");
-		if (weapon != NULL)
-			Weapon_EquipSpell(info, weapon);
-	}
+		if (info->pers.weaponready != WEAPON_READY_HANDS)
+		{
+			gitem_t* weapon = FindItem("fball");
+			if (weapon != NULL)
+				Weapon_EquipSpell(info, weapon);
+		}
 
 	if (info->seqcmd[ACMDL_ACTION])
 	{
@@ -1108,9 +1112,9 @@ int BranchLwrUnderwaterSwim(playerinfo_t* info)
 {
 	assert(info);
 
-	if (info->pers.weaponready != WEAPON_READY_HANDS)
-	{
-		gitem_t* weapon = FindItem("fball");
+		if (info->pers.weaponready != WEAPON_READY_HANDS)
+		{
+			gitem_t* weapon = FindItem("fball");
 		if (weapon != NULL)
 			Weapon_EquipSpell(info, weapon);
 	}

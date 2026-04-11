@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_Main.c
 //
@@ -23,9 +24,13 @@
 #include "Vector.h"
 #include "client/vid.h"
 
+#ifdef _WIN32
 #define REF_DECLSPEC	__declspec(dllexport)
+#else
+#define REF_DECLSPEC	__attribute__((visibility("default")))
+#endif
 
-viddef_t viddef; // H2: renamed from vid, defined in vid.h?
+extern viddef_t viddef; // Defined in cl_globals.c
 refimport_t ri;
 
 model_t* r_worldmodel;
@@ -75,10 +80,10 @@ cvar_t* r_vsync; // YQ2
 
 cvar_t* r_lightlevel; // FIXME: This is a HACK to get the client's light level
 
-cvar_t* r_farclipdist;
-cvar_t* r_fog;
+extern cvar_t* r_farclipdist;
+extern cvar_t* r_fog;
 cvar_t* r_fog_mode;
-cvar_t* r_fog_density;
+extern cvar_t* r_fog_density;
 cvar_t* r_fog_startdist;
 static cvar_t* r_fog_color_r;
 static cvar_t* r_fog_color_g;
@@ -123,17 +128,17 @@ cvar_t* gl_bookalpha;
 cvar_t* gl_drawbuffer;
 cvar_t* gl_saturatelighting;
 
-cvar_t* vid_gamma;
-cvar_t* vid_brightness;
-cvar_t* vid_contrast;
+extern cvar_t* vid_gamma;
+extern cvar_t* vid_brightness;
+extern cvar_t* vid_contrast;
 static cvar_t* vid_textures_refresh_required; //mxd
 
-cvar_t* vid_ref;
+extern cvar_t* vid_ref;
 
-cvar_t* vid_mode; // gl_mode in Q2
-cvar_t* menus_active;
-cvar_t* cl_camera_under_surface;
-cvar_t* quake_amount;
+extern cvar_t* vid_mode; // gl_mode in Q2
+extern cvar_t* menus_active;
+extern cvar_t* cl_camera_under_surface;
+extern cvar_t* quake_amount;
 
 #pragma endregion
 
@@ -974,7 +979,7 @@ static int RI_RenderFrame(const refdef_t* fd)
 	if ((int)cl_camera_under_surface->value)
 		color.c = strtoul(r_underwater_color->string, NULL, 0);
 	else
-		color.c = ri.Is_Screen_Flashing();
+		color.c = 0;
 
 	if (color.a != 255)
 	{
@@ -1001,7 +1006,9 @@ static int RI_GetReferencedID(const struct model_s* model) // H2 //mxd. Named 'G
 	const fmdl_t* temp = model->extradata;
 
 	//mxd. H2 Toolkit code checks for qboolean model->model_type.
-	if (model->type == mod_fmdl && temp->referenceType > REF_NULL && temp->referenceType < NUM_REFERENCED)
+	// morb was here. fixed for Unix port.
+	//if (model->type == mod_fmdl && temp->referenceType > REF_NULL && temp->referenceType < NUM_REFERENCED) // original: no null check on temp -> SIGSEGV when extradata is null during entity parse after map load.
+	if (model->type == mod_fmdl && temp != NULL && temp->referenceType > REF_NULL && temp->referenceType < NUM_REFERENCED) //BUGFIX: mxd. Added null check for temp.
 		return temp->referenceType;
 
 	return REF_NULL;
@@ -1047,7 +1054,7 @@ REF_DECLSPEC refexport_t GetRefAPI(const refimport_t rimp)
 
 	re.BeginFrame = RI_BeginFrame;
 	re.EndFrame = RI_EndFrame;
-	re.FindSurface = RI_FindSurface;
+	re.FindSurface = NULL; // RI_FindSurface is unused - struct Surface_s is not properly defined
 
 	re.PrepareForWindow = RI_PrepareForWindow; // YQ2
 	re.InitContext = RI_InitContext; // YQ2

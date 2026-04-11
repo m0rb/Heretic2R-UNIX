@@ -1,5 +1,16 @@
+# Build outputs
 /build/**
 /release
+
+# Unix Makefile build outputs
+/build/release/
+/build/debug/
+
+# Game data — copyrighted Raven Software assets, not redistributable
+/base/
+
+# Local / tooling
+/build.log
 /lib/*.exp
 /lib/*.lib
 /src/.vs
@@ -25,3 +36,4 @@
 /src/WinSnd/debug
 /src/WinSnd/release
 *.user
+/stuff/unpack

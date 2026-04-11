@@ -23,6 +23,7 @@
 #include "p_main.h"
 #include "Random.h"
 #include "Vector.h"
+#include "compat.h" //morb was here.
 
 gitem_armor_t silver_armor_info	= { MAX_SILVER_ARMOR, SILVER_HIT_MULT, SILVER_SPELL_MULT };
 gitem_armor_t gold_armor_info	= { MAX_GOLD_ARMOR, GOLD_HIT_MULT, GOLD_SPELL_MULT };

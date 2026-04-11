@@ -4,6 +4,9 @@
 // Copyright 1998 Raven Software
 //
 
+// morb was here. g_Local.h must come first — it defines GAME_DLL, which gates game-internal
+// declarations in g_Items.h and others. Previously it was last; functions were silently hidden.
+#include "g_Local.h"
 #include "g_ClientCommands.h" //mxd
 #include "g_Combat.h" //mxd
 #include "g_Items.h"
@@ -15,12 +18,12 @@
 #include "Player/p_HUD.h" //mxd
 #include "Player/p_Morph.h" //mxd
 #include "Player/p_View.h" //mxd
+#include "compat.h" //morb was here.
 #include "cl_strings.h"
 #include "p_anims.h"
 #include "p_dll.h" //mxd
 #include "Random.h"
 #include "Vector.h"
-#include "g_Local.h"
 
 qboolean self_spawn; // True when spawned manually using 'spawn' ccmd.
 
@@ -564,7 +567,7 @@ void Cmd_Use_f(edict_t* ent, char* name)
 
 				info->defensive_debounce = info->leveltime + DEFENSE_DEBOUNCE;
 			}
-			else if (info->leveltime > info->pers.defensive_nomana_debounce) //mxd. Added defensive_nomana_debounce check.
+			else
 			{
 				// Play a sound to tell the player they're out of mana (also done in PlayerUpdate() --mxd).
 				char* snd_name; //mxd
@@ -577,9 +580,6 @@ void Cmd_Use_f(edict_t* ent, char* name)
 					snd_name = "*nomana.wav";
 
 				gi.sound(ent, CHAN_VOICE, gi.soundindex(snd_name), 0.75f, ATTN_NORM, 0.0f);
-
-				//mxd. Added to allow "nomana.wav" to finish playing before starting a new one when tapping item use button.
-				info->pers.defensive_nomana_debounce = info->leveltime + DEFENSE_DEBOUNCE_NOMANA;
 			}
 
 			// Put the ammo back.
@@ -1147,4 +1147,3 @@ void ClientCommand(edict_t* ent)
 
 	// Anything that doesn't match a command will be a chat.
 	Cmd_Say_f(ent, false, true);
-}

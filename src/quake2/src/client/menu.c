@@ -10,6 +10,10 @@
 #include "g_PlayStats.h" //mxd
 #include "Vector.h"
 
+#ifndef _WIN32
+#include "../unix/compat.h"
+#endif
+
 #include "menus/menu_addressbook.h"
 #include "menus/menu_cameracfg.h"
 #include "menus/menu_citymap.h"

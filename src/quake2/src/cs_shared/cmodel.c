@@ -1,5 +1,5 @@
 //
-// cmodel.c -- Collision model loading.
+// cmodel.c -- model loading
 //
 // Copyright 1998 Raven Software
 //
@@ -7,7 +7,7 @@
 #include <float.h>
 #include "cmodel.h"
 #include "cmodel_private.h"
-#include "server/server.h"
+#include "compat.h"
 #include "Vector.h"
 
 static int checkcount;
@@ -462,55 +462,14 @@ static void CMod_LoadVisibility(const lump_t* l)
 	memcpy(map_visibility, cmod_base + l->fileofs, l->filelen);
 }
 
-static qboolean CMod_LoadExternalEntityString(const char* name, const uint checksum) // YQ2
-{
-	if (strlen(name) >= MAX_QPATH || Q_stricmp(COM_FileExtension(name), "bsp") != 0)
-	{
-		Com_Printf("%s: unsupported map format '%s'.\n", __func__, name);
-		return false;
-	}
-
-	char name_noext[MAX_QPATH];
-	COM_StripExtension(name, name_noext);
-
-	char ent_name[MAX_OSPATH];
-	snprintf(ent_name, sizeof(ent_name) - 1, "%s@%08x.ent", name_noext, checksum);
-
-	char* buffer = NULL;
-	const int buf_len = FS_LoadFile(ent_name, (void**)&buffer); 
-
-	if (buffer == NULL)
-		return false; // FS_FOpenFile() already printed "file not found" message.
-
-	// If the .ent file is too small or large, don't load.
-	if (buf_len < 1 || buf_len >= (int)sizeof(map_entitystring) - 1)
-	{
-		Com_Printf("%s: invalid map fixes file size %i for '%s'!\n", __func__, buf_len, ent_name);
-		FS_FreeFile(buffer);
-
-		return false;
-	}
-
-	numentitychars = buf_len;
-
-	memcpy(map_entitystring, buffer, buf_len);
-	map_entitystring[numentitychars] = 0; // YQ2: jit entity bug - null-terminate the entity string!
-
-	FS_FreeFile(buffer);
-	Com_Printf(".ent file '%s' loaded.\n", ent_name);
-
-	return true;
-}
-
 static void CMod_LoadEntityString(const lump_t* l)
 {
 	numentitychars = l->filelen;
 
-	if (l->filelen < 1 || l->filelen >= (int)sizeof(map_entitystring)) //mxd. '>' in Q2 and original logic. // YQ2: lower-bound checks.
-		Com_Error(ERR_DROP, "Map with invalid entity lump size (%i)", l->filelen); //mxd. More detailed message.
+	if (l->filelen >= MAX_MAP_ENTSTRING) //mxd. '>' in Q2 and original logic.
+		Com_Error(ERR_DROP, "Map has too large entity lump");
 
 	memcpy(map_entitystring, cmod_base + l->fileofs, l->filelen);
-	map_entitystring[numentitychars] = 0; // YQ2: jit entity bug - null-terminate the entity string!
 }
 
 // Q2 counterpart
@@ -583,10 +542,7 @@ cmodel_t* CM_LoadMap(const char* name, const qboolean clientload, uint* checksum
 	CMod_LoadAreas(&header.lumps[LUMP_AREAS]);
 	CMod_LoadAreaPortals(&header.lumps[LUMP_AREAPORTALS]);
 	CMod_LoadVisibility(&header.lumps[LUMP_VISIBILITY]);
-
-	// YQ2: external .ent support.
-	if (!(int)sv_entfile->value || !CMod_LoadExternalEntityString(name, last_checksum))
-		CMod_LoadEntityString(&header.lumps[LUMP_ENTITIES]);
+	CMod_LoadEntityString(&header.lumps[LUMP_ENTITIES]);
 
 	FS_FreeFile(buf);
 	CM_InitBoxHull();

@@ -214,30 +214,30 @@ void ParseEffectToSizeBuf(sizebuf_t* sb, const char* format, va_list marker) // 
 	{
 		switch (*format)
 		{
-			case 'b':
-				MSG_WriteByte(sb, va_arg(marker, byte));
-				break;
+		case 'b':
+			MSG_WriteByte(sb, (byte)va_arg(marker, int)); // byte is promoted to int in variadic args
+			break;
 
-			case 'd':
-				MSG_WriteDir(sb, *va_arg(marker, vec3_t*));
-				break;
+		case 'd':
+			MSG_WriteDir(sb, *va_arg(marker, vec3_t*));
+			break;
 
-			case 'f':
-				MSG_WriteFloat(sb, (float)va_arg(marker, double)); // float variadic arg is promoted to double --mxd.
-				break;
+		case 'f':
+			MSG_WriteFloat(sb, (float)va_arg(marker, double)); // float variadic arg is promoted to double --mxd.
+			break;
 
-			case 'i':
-				MSG_WriteLong(sb, va_arg(marker, int));
-				break;
+		case 'i':
+			MSG_WriteLong(sb, va_arg(marker, int));
+			break;
 
-			case 'p':
-			case 'v':
-				MSG_WritePos(sb, *va_arg(marker, vec3_t*));
-				break;
+		case 'p':
+		case 'v':
+			MSG_WritePos(sb, *va_arg(marker, vec3_t*));
+			break;
 
-			case 's':
-				MSG_WriteShort(sb, va_arg(marker, short));
-				break;
+		case 's':
+			MSG_WriteShort(sb, (short)va_arg(marker, int)); // short is promoted to int in variadic args
+			break;
 
 			case 't':
 				MSG_WriteShortYawPitch(sb, *va_arg(marker, vec3_t*));

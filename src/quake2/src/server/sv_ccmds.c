@@ -5,10 +5,12 @@
 //
 
 #include "server.h"
+#include "g_local.h"
 #include "cl_strings.h"
 #include "cs_shared/cmodel.h"
 #include "client/screen.h"
 #include "sv_effects.h"
+#include "../unix/compat.h"
 
 #pragma region ========================== SAVEGAME FILES ==========================
 
@@ -162,13 +164,18 @@ void SV_ReadLevelFile(void)
 
 	if (fopen_s(&f, name, "rb") != 0) //mxd. fopen -> fopen_s
 	{
-		Com_Printf("Failed to open %s\n", name);
-		return;
+		// sv2 holds configstrings and portal state. If it's missing (e.g. save created with
+		// an older build), fall through and still load entity data from the .sav file.
+		// SpawnEntities has already populated sv.configstrings from the map, so skipping
+		// the overwrite is safe; area portal state defaults to open.
+		Com_DPrintf("SV_ReadLevelFile: %s not found, skipping configstrings/portals.\n", name);
 	}
-
-	FS_Read(sv.configstrings, sizeof(sv.configstrings), f);
-	CM_ReadPortalState(f);
-	fclose(f);
+	else
+	{
+		FS_Read(sv.configstrings, sizeof(sv.configstrings), f);
+		CM_ReadPortalState(f);
+		fclose(f);
+	}
 
 	Com_sprintf(name, sizeof(name), "%s/save/current/%s.sav", FS_Userdir(), temp); // H2: FS_Gamedir() -> FS_Userdir()
 	ge->ReadLevel(name);

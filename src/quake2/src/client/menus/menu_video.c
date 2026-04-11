@@ -7,6 +7,8 @@
 #include "menu_video.h"
 #include "client/client.h"
 #include "win32/dll_io/vid_dll.h"
+#include "../unix/vid_dll.h"
+#include "../unix/compat.h"
 
 cvar_t* m_banner_video;
 

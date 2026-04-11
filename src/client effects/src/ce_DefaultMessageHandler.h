@@ -8,4 +8,4 @@
 
 #include "ce_Message.h"
 
-extern void CE_DefaultMsgHandler(struct client_entity_s* self, CE_Message_t* msg);
+extern void CE_DefaultMsgHandler(client_entity_t* self, CE_Message_t* msg);

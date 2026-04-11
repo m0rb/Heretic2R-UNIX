@@ -6,6 +6,8 @@
 
 #include <setjmp.h>
 #include "client.h"
+#include "clfx_dll_unix.h"
+#include "../unix/compat.h"
 #include "cl_camera.h"
 #include "cl_effects.h"
 #include "cl_messages.h"

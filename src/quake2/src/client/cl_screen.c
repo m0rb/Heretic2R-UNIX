@@ -10,6 +10,11 @@
 #include "menus/menu_worldmap.h"
 #include "win32/dll_io/vid_dll.h"
 
+#ifndef _WIN32
+#include "../unix/compat.h"
+#include <limits.h>
+#endif
+
 float scr_con_current; // Approaches scr_conlines at scr_conspeed.
 
 static qboolean scr_initialized; // Ready to draw.
@@ -288,11 +293,14 @@ void SCR_BeginLoadingPlaque(void)
 
 	scr_draw_loading_plaque = true; // H2
 
+	// morb was here. scr_draw_loading was inside the screen guard, so if disable_screen
+	// was already true (level loads), the worldmap plaque never showed.
+	// Set it unconditionally before the guard so SCR_DrawLoading always runs next frame.
+	if (cl.cinematictime == 0)
+		scr_draw_loading = true;
+
 	if (!cls.disable_screen && !(int)developer->value && cls.key_dest != key_console)
 	{
-		if (cl.cinematictime == 0)
-			scr_draw_loading = true;
-
 		scr_progressbar_width = 0; // H2
 
 		SCR_UpdateScreen();

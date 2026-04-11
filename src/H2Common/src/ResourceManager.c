@@ -5,7 +5,9 @@
 //
 
 #ifdef _DEBUG
-	#include <windows.h>
+	#ifdef _WIN32
+		#include <windows.h>
+	#endif
 #endif
 
 #include "ResourceManager.h"
@@ -71,7 +73,11 @@ H2COMMON_API void ResMngr_Des(ResourceManager_t* resource)
 	{
 		char msg[100];
 		Com_sprintf(msg, sizeof(msg), "Potential memory leak: %d bytes unfreed\n", resource->resSize * resource->numResourcesAllocated); //mxd. sprintf -> Com_sprintf.
+	#ifdef _WIN32
 		OutputDebugString(msg);
+	#else
+		fputs(msg, stderr);
+	#endif
 	}
 #endif
 

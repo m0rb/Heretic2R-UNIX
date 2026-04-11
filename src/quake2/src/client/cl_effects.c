@@ -9,7 +9,10 @@
 #include "cs_shared/cmodel.h"
 #include "FX.h"
 #include "Game.h"
+#include "g_Edict.h" // For full struct edict_s definition (used in CL_RemoveEffects)
 #include "g_Items.h"
+#include "clfx_dll_unix.h"
+#include "../unix/dll_io_unix.h"
 #include "ResourceManager.h"
 #include "Vector.h"
 #include "win32/dll_io/clfx_dll.h"
@@ -382,7 +385,13 @@ void CL_InitClientEffects(const char* dll_name)
 		CL_UnloadClientEffects();
 
 	Com_ColourPrintf(P_HEADER, "------ Loading %s ------\n", dll_name);
-	Sys_LoadGameDll(dll_name, &clfx_library, &checksum);
+	
+	// Try to load the library - if it fails, just return without error
+	if (!Sys_LoadGameDll(dll_name, &clfx_library, &checksum))
+	{
+		Com_ColourPrintf(P_HEADER, "------------------------------------\n");
+		return; // Library not available, continue without client effects
+	}
 
 	// Init client_fx_import_t 
 	fxi.cl_predict = cl_predict;
@@ -421,9 +430,17 @@ void CL_InitClientEffects(const char* dll_name)
 	fxi.Trace = CL_Trace;
 	fxi.InCameraPVS = InCameraPVS;
 
-	GetfxAPI = (GetfxAPI_t)GetProcAddress(clfx_library, "GetfxAPI");
+	GetfxAPI = (GetfxAPI_t)Sys_GetProcAddress(clfx_library, "GetfxAPI");
 	if (GetfxAPI == NULL)
-		Com_Error(ERR_FATAL, "GetProcAddress failed on %s", dll_name);
+	{
+		Sys_UnloadGameDll(dll_name, &clfx_library);
+		Com_ColourPrintf(P_HEADER, "------------------------------------\n");
+		return; // GetfxAPI not found, continue without client effects
+	}
+
+	// Initialize the buffer manager BEFORE calling fxe.Init(), because Init() may
+	// allocate from it via fxi.FXBufMngr. Calling it after caused resSize=0 assertion failures.
+	ResMngr_Con(&fx_buffer_manager, ENTITY_FX_BUF_SIZE, ENTITY_FX_BUF_BLOCK_SIZE);
 
 	CLFX_Init();
 	fxe.Init();
@@ -431,10 +448,10 @@ void CL_InitClientEffects(const char* dll_name)
 	if (fxe.api_version != FX_API_VERSION)
 	{
 		CL_UnloadClientEffects();
-		Com_Error(ERR_FATAL, "%s has incompatible api_version", dll_name);
+		Com_ColourPrintf(P_HEADER, "------------------------------------\n");
+		return; // Incompatible API version, continue without client effects
 	}
 
-	ResMngr_Con(&fx_buffer_manager, ENTITY_FX_BUF_SIZE, ENTITY_FX_BUF_BLOCK_SIZE);
 	Com_ColourPrintf(P_HEADER, "------------------------------------\n");
 
 	fxapi_initialized = true;

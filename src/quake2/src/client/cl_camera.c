@@ -7,6 +7,7 @@
 #include "cl_camera.h"
 #include "cl_effects.h"
 #include "client.h"
+#include "compat.h"
 #include "EffectFlags.h"
 #include "menu.h"
 #include "Vector.h"
@@ -166,6 +167,9 @@ static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheigh
 {
 #define CAM_MODE_SWITCH_DURATION	500
 #define MASK_CAMERA					(CONTENTS_SOLID | CONTENTS_ILLUSIONARY | CONTENTS_CAMERABLOCK)
+
+	if (PlayerEntPtr == NULL)
+		return;
 
 	static const vec3_t mins = { -1.0f, -1.0f, -1.0f };
 	static const vec3_t maxs = {  1.0f,  1.0f,  1.0f };
@@ -446,7 +450,7 @@ void CL_CalcViewValues(void)
 	player_state_t* ops = &oldframe->playerstate;
 
 	// Calculate the origin.
-	if (ps->remote_id == REMOTE_ID_NONE && ps->pmove.pm_type != PM_INTERMISSION) //mxd. Use REMOTE_ID_NONE define.
+	if (ps->remote_id == REMOTE_ID_NONE && ps->pmove.pm_type != PM_INTERMISSION && PlayerEntPtr != NULL) //mxd. Use REMOTE_ID_NONE define.
 	{
 		if (CL_Predict())
 		{

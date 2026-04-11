@@ -18,7 +18,109 @@
 // This is a precaution against having a malicious server instruct clients to write files over areas they shouldn't.
 
 #include "qcommon.h"
+#include "compat.h"
 #include "qfiles.h"
+
+#ifndef _WIN32
+#include <dirent.h>
+#include <sys/stat.h>
+#include <string.h>
+
+// morb was here. fixed for Unix port.
+// FS_FixCasePath and its call-site in FS_FOpenFile are new — the Windows build uses case-insensitive
+// NTFS so no equivalent was needed in the original code. On Linux the filesystem is case-sensitive;
+// this function does a component-wise case-insensitive directory scan to resolve the correct path.
+
+// Walk each component of 'path' doing case-insensitive directory lookups.
+// Modifies 'path' in place. Returns true if the full path was resolved to an existing file/dir.
+// Only called after a direct fopen/stat already failed, so the overhead only hits missing files.
+static qboolean FS_FixCasePath(char* path, const size_t maxlen)
+{
+	char work[MAX_OSPATH];
+	char resolved[MAX_OSPATH];
+
+	strcpy_s(work, sizeof(work), path);
+
+	// Handle leading '/' (absolute path).
+	char* tok = work;
+	if (tok[0] == '/')
+	{
+		resolved[0] = '/';
+		resolved[1] = '\0';
+		tok++;
+	}
+	else
+	{
+		resolved[0] = '\0';
+	}
+
+	while (*tok)
+	{
+		char* slash = strchr(tok, '/');
+		if (slash)
+			*slash = '\0';
+
+		// Build candidate path for this component.
+		char candidate[MAX_OSPATH];
+		const size_t rlen = strlen(resolved);
+		if (rlen > 0 && resolved[rlen - 1] == '/')
+			Com_sprintf(candidate, sizeof(candidate), "%s%s", resolved, tok);
+		else if (rlen > 0)
+			Com_sprintf(candidate, sizeof(candidate), "%s/%s", resolved, tok);
+		else
+			Com_sprintf(candidate, sizeof(candidate), "%s", tok);
+
+		struct stat st;
+		if (stat(candidate, &st) == 0)
+		{
+			// Exact match — use it.
+			strcpy_s(resolved, sizeof(resolved), candidate);
+		}
+		else
+		{
+			// Case-insensitive scan of the parent directory.
+			const char* scandir = (rlen > 0) ? resolved : ".";
+			DIR* d = opendir(scandir);
+			if (!d)
+				return false;
+
+			qboolean found = false;
+			struct dirent* ent;
+			while ((ent = readdir(d)) != NULL)
+			{
+				if (strcasecmp(ent->d_name, tok) == 0)
+				{
+					// BUGFIX: mxd. Use a temporary buffer — passing 'resolved' as both the
+					// snprintf destination and a format argument is undefined behaviour and
+					// can corrupt the path under optimising compilers.
+					char tmp[MAX_OSPATH];
+					const size_t rlen2 = strlen(resolved);
+					if (rlen2 > 0 && resolved[rlen2 - 1] == '/')
+						Com_sprintf(tmp, sizeof(tmp), "%s%s", resolved, ent->d_name);
+					else if (rlen2 > 0)
+						Com_sprintf(tmp, sizeof(tmp), "%s/%s", resolved, ent->d_name);
+					else
+						Com_sprintf(tmp, sizeof(tmp), "%s", ent->d_name);
+					strcpy_s(resolved, sizeof(resolved), tmp);
+					found = true;
+					break;
+				}
+			}
+			closedir(d);
+
+			if (!found)
+				return false;
+		}
+
+		tok = slash ? (slash + 1) : (tok + strlen(tok));
+	}
+
+	if (resolved[0])
+		strcpy_s(path, maxlen, resolved);
+
+	return true;
+}
+#endif
 
 static char fs_gamedir[MAX_OSPATH];
 static cvar_t* fs_basedir;
@@ -139,9 +241,13 @@ int FS_FOpenFile(const char* filename, FILE** file)
 	// Check for links first
 	for (const filelink_t* link = fs_links; link != NULL; link = link->next)
 	{
-		if (!strncmp(filename, link->from, link->fromlength))
+		// morb was here. use filepath (backslashes already converted) for both the comparison
+		// and the tail so the netpath is clean on Linux.
+		// if (!strncmp(filename, link->from, link->fromlength))
+		if (!strncmp(filepath, link->from, link->fromlength))
 		{
-			Com_sprintf(netpath, sizeof(netpath), "%s%s", link->to, filename + link->fromlength);
+			// Com_sprintf(netpath, sizeof(netpath), "%s%s", link->to, filename + link->fromlength);
+			Com_sprintf(netpath, sizeof(netpath), "%s%s", link->to, filepath + link->fromlength);
 
 			if (fopen_s(file, netpath, "rb") == 0) //mxd. fopen -> fopen_s
 			{
@@ -205,10 +311,29 @@ int FS_FOpenFile(const char* filename, FILE** file)
 		else
 		{
 			// Check a file in the directory tree
-			Com_sprintf(netpath, sizeof(netpath), "%s/%s", search->filename, filename);
+			// morb was here. use filepath (backslashes already converted to '/') not filename.
+			// on Linux backslashes are literal characters, so e.g. 'models/items\defense' would never open.
+			// Com_sprintf(netpath, sizeof(netpath), "%s/%s", search->filename, filename);
+			Com_sprintf(netpath, sizeof(netpath), "%s/%s", search->filename, filepath);
 
+			// morb was here. fixed for Unix port.
+			//if (fopen_s(file, netpath, "rb") != 0) //mxd. fopen -> fopen_s
+			//	continue; // original: case mismatch silently fell through to pak file on Windows (case-insensitive FS); on Linux this caused the wrong (pak) version to be loaded.
 			if (fopen_s(file, netpath, "rb") != 0) //mxd. fopen -> fopen_s
+			{
+#ifndef _WIN32
+				// On Linux the filesystem is case-sensitive; try a component-wise
+				// case-insensitive scan before giving up (e.g. "Bumper.smk" vs "bumper.smk").
+				char fixedpath[MAX_OSPATH];
+				strcpy_s(fixedpath, sizeof(fixedpath), netpath);
+				if (FS_FixCasePath(fixedpath, sizeof(fixedpath)) && fopen_s(file, fixedpath, "rb") == 0)
+				{
+					Com_DDPrintf(2, "FindFile (case-fixed): %s\n", fixedpath);
+					return FS_FileLength(*file);
+				}
+#endif
 				continue;
+			}
 
 			Com_DDPrintf(2, "FindFile: %s\n", netpath); //mxd. Com_DPrintf() -> Com_DDPrintf(), to reduce console spam when developer 1.
 
@@ -665,9 +790,10 @@ void FS_InitFilesystem(void)
 		char userdir[MAX_OSPATH];
 
 		//mxd. Change userdir location from "c:/Games/Heretic2/user" to "c:\Users\[User]\Saved Games\Heretic2R/base".
+		// morb was here. Sys_GetOSUserDir already returns ~/.Heretic2R; don't append /Heretic2R again.
+		// was: strcat_s(buffer, sizeof(buffer), "/Heretic2R");
 		if (Sys_GetOSUserDir(buffer, sizeof(buffer)))
 		{
-			strcat_s(buffer, sizeof(buffer), "/Heretic2R");
 			use_modern_userdir = true;
 		}
 		else // Fall back to original logic...
@@ -682,20 +808,7 @@ void FS_InitFilesystem(void)
 		fs_userdir = Cvar_Get("userdir", userdir, 0); // "C:\Games\Heretic2/base"
 	}
 
-	//mxd. Copy configs from [gamedir]/config to Heretic2R\[user]\configs?
-	char vanilla_cfg_path[MAX_OSPATH];
-	sprintf_s(vanilla_cfg_path, sizeof(vanilla_cfg_path), "%s/config", FS_GetPath("config"));
-
-	if (use_modern_userdir)
-	{
-		char cfg_path[MAX_OSPATH];
-		sprintf_s(cfg_path, sizeof(cfg_path), "%s/configs", fs_userdir->string);
-
-		fs_configsdir = Cvar_Get("configsdir", cfg_path, CVAR_NOSET);
-		CopyConfigs(vanilla_cfg_path, cfg_path);
-	}
-	else
-	{
-		fs_configsdir = Cvar_Get("configsdir", vanilla_cfg_path, CVAR_NOSET);
-	}
+	// morb was here. simplified config dir — heretic2r.cfg lives directly in the userdir (base/).
+	// was: configs/ subdir under userdir, with skin-named files (e.g. configs/male/Corvus.cfg).
+	fs_configsdir = Cvar_Get("configsdir", fs_userdir->string, CVAR_NOSET);
 }

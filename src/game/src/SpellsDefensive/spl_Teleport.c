@@ -9,6 +9,8 @@
 #include "Player/p_Client.h" //mxd
 #include "Player/p_Teleport.h"
 #include "Vector.h"
+#include "g_local.h"
+#include "compat.h"
 
 // Spawn the Spell teleport effect - from the player.
 // We could send the teleport type over the flags instead of as a parameter byte.

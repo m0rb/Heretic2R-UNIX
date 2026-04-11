@@ -1,0 +1,52 @@
+name: Build (Linux)
+
+on:
+  push:
+    branches: [ main, unix ]
+  pull_request:
+    branches: [ main, unix ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            make \
+            gcc \
+            g++ \
+            libsdl3-dev \
+            libgl1-mesa-dev \
+            pkg-config
+
+      - name: Build
+        run: make -j$(nproc)
+
+      - name: Stage release artifacts
+        run: |
+          mkdir -p dist
+          cp build/release/heretic2r dist/
+          cp -r build/release/base dist/
+
+      - name: Create archive
+        run: tar czf heretic2r-linux-${{ matrix.arch }}.tar.gz -C dist .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-linux-${{ matrix.arch }}
+          path: heretic2r-linux-${{ matrix.arch }}.tar.gz

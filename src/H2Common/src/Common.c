@@ -6,6 +6,7 @@
 
 #include "q_shared.h"
 #include "Console.h"
+#include "compat.h"
 
 // Q2 counterpart
 H2COMMON_API char* COM_SkipPath(char* pathname)

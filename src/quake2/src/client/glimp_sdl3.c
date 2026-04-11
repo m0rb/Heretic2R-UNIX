@@ -9,6 +9,7 @@
 #include "glimp_sdl3.h"
 #include "client.h"
 #include <SDL3/SDL.h>
+#include "../unix/vid_dll.h"
 
 static int last_flags = 0;
 static SDL_Window* window = NULL;
@@ -251,12 +252,30 @@ void GLimp_ShutdownGraphics(void)
 // (Un)grab Input.
 void GLimp_GrabInput(const qboolean grab)
 {
-	if (window != NULL)
+	static qboolean current_grab = false;
+
+	// Only change state when it differs — calling SDL_SetWindowRelativeMouseMode
+	// every frame while a mouse button is held can drop the BUTTON_UP event on
+	// some SDL3/X11 driver combinations.
+	if (grab == current_grab)
+		return;
+
+	// On Linux, window creation is handled by vid_sdl3.c rather than GLimp_InitGraphics,
+	// so the local 'window' pointer may be NULL. Fall back to the active SDL window.
+	SDL_Window* w = (window != NULL) ? window : VID_GetSDLWindow();
+	if (w != NULL)
 	{
-		if (!SDL_SetWindowMouseGrab(window, grab))
+		if (!SDL_SetWindowMouseGrab(w, grab))
 			Com_Printf("WARNING: failed to lock mouse to game window, reason: %s\n", SDL_GetError());
 
-		if (!SDL_SetWindowRelativeMouseMode(window, grab))
+		if (!SDL_SetWindowRelativeMouseMode(w, grab))
 			Com_Printf("WARNING: failed to set relative mouse mode, reason: %s\n", SDL_GetError());
+
+		current_grab = grab;
+
+		// Flush any accumulated/warp mouse events that SDL may deliver immediately
+		// after enabling relative mode (common on X11 when cursor was off-center).
+		if (grab)
+			SDL_FlushEvents(SDL_EVENT_MOUSE_MOTION, SDL_EVENT_MOUSE_MOTION);
 	}
 }

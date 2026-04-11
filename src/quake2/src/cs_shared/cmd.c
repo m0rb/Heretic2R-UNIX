@@ -5,6 +5,7 @@
 //
 
 #include "qcommon.h"
+#include "compat.h"
 
 #define MAX_ALIAS_NAME	32
 
@@ -249,7 +250,9 @@ static qboolean Cmd_Exec(char* cmd)
 	FILE* f;
 	int len;
 
-	if (strchr(cmd, ':') != NULL || strstr(cmd, "\\\\") != NULL || strstr(cmd, "//") != NULL)
+	// morb was here. added cmd[0] == '/' check for Unix absolute paths.
+	// if (strchr(cmd, ':') != NULL || strstr(cmd, "\\\\") != NULL || strstr(cmd, "//") != NULL)
+	if (cmd[0] == '/' || strchr(cmd, ':') != NULL || strstr(cmd, "\\\\") != NULL || strstr(cmd, "//") != NULL)
 		Com_sprintf(filename, sizeof(filename), "%s", cmd);
 	else
 		Com_sprintf(filename, sizeof(filename), "%s/%s", FS_Userdir(), cmd);

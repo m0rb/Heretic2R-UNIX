@@ -5,6 +5,7 @@
 //
 
 #include "g_Main.h" //mxd
+#include <string.h>
 #include "cl_strings.h"
 #include "Monsters/g_AI.h" //mxd
 #include "g_Combat.h" //mxd
@@ -26,7 +27,11 @@
 #include "Vector.h"
 #include "g_Local.h"
 
+#ifdef _WIN32
 #define GAME_DECLSPEC	__declspec(dllexport)
+#else
+#define GAME_DECLSPEC	__attribute__((visibility("default")))
+#endif
 
 game_locals_t game;
 level_locals_t level;
@@ -364,7 +369,7 @@ static void EndDMLevel(void)
 	// See if it's in the map list.
 	if (sv_maplist->string[0] != 0)
 	{
-		char* maplist = _strdup(sv_maplist->string); //mxd. strdup -> _strdup
+		char* maplist = strdup(sv_maplist->string); //mxd. Use standard strdup on Unix
 		char* first = NULL;
 		char* ptr = NULL; //mxd
 		char* map = strtok_s(maplist, delimiters, &ptr); //mxd. strtok -> strtok_s

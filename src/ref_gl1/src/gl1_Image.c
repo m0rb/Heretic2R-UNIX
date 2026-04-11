@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_Image.c
 //
@@ -345,7 +346,7 @@ void R_UploadPaletted(const int level, const byte* data, const paletteRGB_t* pal
 	//mxd. Skipping qglColorTableEXT logic
 
 	const uint src_size = width * height;
-	const uint dst_size = src_size * sizeof(&upload_buffer);
+	const uint dst_size = src_size * sizeof(paletteRGBA_t);
 
 	//mxd. Use dynamically allocated buffer (original logic uses fixed-size 65536 (256 * 256) buffer instead).
 	if (dst_size > upload_buffer_size)
@@ -417,10 +418,19 @@ static void FixPalette(const image_t* image)
 	}
 }
 
-static void R_UploadM8(miptex_t* mt, const image_t* image) // H2: GL_Upload8M().
+static void R_UploadM8(miptex_t* mt, const int filesize, const image_t* image) // H2: GL_Upload8M().
 {
 	for (int mip = 0; mip < MIPLEVELS && mt->width[mip] > 0 && mt->height[mip] > 0; mip++)
+	{
+		const uint mip_size = mt->width[mip] * mt->height[mip];
+		if ((int)(mt->offsets[mip] + mip_size) > filesize) //mxd. Bounds check offset against file size to avoid passing garbage to GL.
+		{
+			ri.Con_Printf(PRINT_ALL, "R_UploadM8: mip %i offset %u out of bounds (filesize %i) for '%s'\n", mip, mt->offsets[mip], filesize, image->name);
+			break;
+		}
+
 		R_UploadPaletted(mip, (byte*)mt + mt->offsets[mip], image->palette, (int)mt->width[mip], (int)mt->height[mip]);
+	}
 
 	R_SetFilter(image);
 }
@@ -429,7 +439,7 @@ static void R_UploadM8(miptex_t* mt, const image_t* image) // H2: GL_Upload8M().
 static image_t* R_LoadM8(const char* name, const imagetype_t type) // H2: GL_LoadWal().
 {
 	miptex_t* mt;
-	ri.FS_LoadFile(name, (void**)&mt);
+	const int filesize = ri.FS_LoadFile(name, (void**)&mt);
 
 	if (mt == NULL)
 	{
@@ -469,8 +479,9 @@ static image_t* R_LoadM8(const char* name, const imagetype_t type) // H2: GL_Loa
 
 	FixPalette(image); //mxd
 
+	glGenTextures(1, (GLuint*)&image->texnum);
 	R_BindImage(image);
-	R_UploadM8(mt, image);
+	R_UploadM8(mt, filesize, image);
 	ri.FS_FreeFile(mt);
 
 	return image;
@@ -480,12 +491,15 @@ static image_t* R_LoadM8(const char* name, const imagetype_t type) // H2: GL_Loa
 
 #pragma region ========================== .M32 LOADING ==========================
 
-static void R_ApplyGamma32(miptex32_t* mt) // H2: GL_ApplyGamma32().
+static void R_ApplyGamma32(miptex32_t* mt, const int filesize) // H2: GL_ApplyGamma32().
 {
 	for (int mip = 0; mip < MIPLEVELS - 1; mip++) //TODO: last mip level is skipped. Unintentional?
 	{
 		const uint mip_size = mt->width[mip] * mt->height[mip];
 		if (mip_size == 0)
+			return;
+
+		if ((int)(mt->offsets[mip] + mip_size * sizeof(paletteRGBA_t)) > filesize) //mxd. Bounds check.
 			return;
 
 		// Adjust RGBA colors at offset...
@@ -499,10 +513,19 @@ static void R_ApplyGamma32(miptex32_t* mt) // H2: GL_ApplyGamma32().
 	}
 }
 
-static void R_UploadM32(miptex32_t* mt, const image_t* img) // H2: GL_Upload32M().
+static void R_UploadM32(miptex32_t* mt, const int filesize, const image_t* img) // H2: GL_Upload32M().
 {
 	for (int mip = 0; mip < MIPLEVELS && mt->width[mip] > 0 && mt->height[mip] > 0; mip++)
+	{
+		const uint mip_size = mt->width[mip] * mt->height[mip];
+		if ((int)(mt->offsets[mip] + mip_size * sizeof(paletteRGBA_t)) > filesize) //mxd. Bounds check offset against file size to avoid passing garbage to GL.
+		{
+			ri.Con_Printf(PRINT_ALL, "R_UploadM32: mip %i offset %u out of bounds (filesize %i) for '%s'\n", mip, mt->offsets[mip], filesize, img->name);
+			break;
+		}
+
 		glTexImage2D(GL_TEXTURE_2D, mip, GL_TEX_ALPHA_FORMAT, (int)mt->width[mip], (int)mt->height[mip], 0, GL_RGBA, GL_UNSIGNED_BYTE, (byte*)mt + mt->offsets[mip]);
+	}
 
 	R_SetFilter(img);
 }
@@ -512,7 +535,7 @@ static image_t* R_LoadM32(const char* name, const imagetype_t type) // H2: GL_Lo
 {
 	miptex32_t* mt;
 
-	ri.FS_LoadFile(name, (void**)&mt);
+	const int filesize = ri.FS_LoadFile(name, (void**)&mt);
 	if (mt == NULL)
 	{
 		ri.Con_Printf(PRINT_ALL, "R_LoadM32: can't load '%s'\n", name); //mxd. Com_Printf() -> ri.Con_Printf().
@@ -535,7 +558,7 @@ static image_t* R_LoadM32(const char* name, const imagetype_t type) // H2: GL_Lo
 		return NULL;
 	}
 
-	R_ApplyGamma32(mt);
+	R_ApplyGamma32(mt, filesize);
 
 	image_t* image = R_GetFreeImage();
 	strcpy_s(image->name, sizeof(image->name), name);
@@ -548,14 +571,60 @@ static image_t* R_LoadM32(const char* name, const imagetype_t type) // H2: GL_Lo
 	image->texnum = TEXNUM_IMAGES + (image - gltextures);
 	image->num_frames = (byte)mt->num_frames;
 
+	glGenTextures(1, (GLuint*)&image->texnum);
 	R_BindImage(image);
-	R_UploadM32(mt, image);
+	R_UploadM32(mt, filesize, image);
 	ri.FS_FreeFile(mt);
 
 	return image;
 }
 
 #pragma endregion
+
+// Creates a fallback texture programmatically (e.g., checkerboard pattern)
+image_t* R_CreateFallbackTexture(const char* name, const imagetype_t type)
+{
+	image_t* image = R_GetFreeImage();
+	strcpy_s(image->name, sizeof(image->name), name);
+	image->registration_sequence = registration_sequence;
+	image->width = 64;
+	image->height = 64;
+	image->type = type;
+	image->palette = NULL;
+	image->has_alpha = false;
+	image->texnum = TEXNUM_IMAGES + (image - gltextures);
+	image->num_frames = 1;
+
+	glGenTextures(1, (GLuint*)&image->texnum);
+
+	// Generate a simple 64x64 checkerboard pattern (magenta/black)
+	byte pixels[64 * 64 * 4];
+	for (int y = 0; y < 64; y++)
+	{
+		for (int x = 0; x < 64; x++)
+		{
+			int idx = (y * 64 + x) * 4;
+			qboolean white = ((x / 8) + (y / 8)) & 1;
+			pixels[idx + 0] = white ? 255 : 0;   // R
+			pixels[idx + 1] = 0;                   // G
+			pixels[idx + 2] = white ? 255 : 128;   // B
+			pixels[idx + 3] = 255;                 // A
+		}
+	}
+
+	R_BindImage(image);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	// Add to hash
+	const uint len = strlen(image->name);
+	const byte hash = image->name[len - 7] + image->name[len - 5] * image->name[len - 6];
+	image->next = gltextures_hashed[hash];
+	gltextures_hashed[hash] = image;
+
+	return image;
+}
 
 // Now with name hashing. When no texture found, returns r_notexture instead of NULL.
 image_t* R_FindImage(const char* name, const imagetype_t type) // H2: GL_FindImage()
@@ -685,6 +754,15 @@ void R_FreeUnusedImages(void)
 
 		// Missing: it_pic check
 
+		// morb was here. fixed for Unix port.
+		// BUGFIX: mxd. Skip images with no name — they are self-managed (e.g. cin_frame in
+		// gl1_DrawCinematic.c is allocated via R_GetFreeImage but never added to the hash and
+		// never given a name). R_FreeImage computes a hash from the name, so calling it with
+		// an empty name causes a uint underflow and an out-of-bounds read -> SIGSEGV.
+		// original: no name check; fell through to R_FreeImage() with empty name -> crash on Linux.
+		if (!image->name[0])
+			continue;
+
 		// Free it.
 		R_FreeImage(image);
 	}
@@ -695,6 +773,27 @@ void R_InitImages(void) // Q2: GL_InitImages()
 	registration_sequence = 1;
 	gl_state.inverse_intensity = 1.0f;
 
+	// The old GL context (if any) was destroyed before this call.
+	// Clear the texture cache without calling glDeleteTextures — those names
+	// belonged to the dead context and are invalid in the new one.
+	// Also free any CPU-side palette allocations that are still live.
+	for (int i = 0; i < numgltextures; i++)
+	{
+		if (gltextures[i].palette != NULL)
+		{
+			free(gltextures[i].palette);
+			gltextures[i].palette = NULL;
+		}
+	}
+	memset(gltextures, 0, sizeof(gltextures));
+	memset(gltextures_hashed, 0, sizeof(gltextures_hashed));
+	numgltextures = 0;
+
+	// Cached texture binds belong to the old context; reset them so the
+	// first R_BindImage() after re-init unconditionally calls glBindTexture.
+	gl_state.currenttextures[0] = -1;
+	gl_state.currenttextures[1] = -1;
+
 	R_InitMinlight(); // YQ2
 }
 
@@ -702,7 +801,9 @@ void R_ShutdownImages(void) // Q2: GL_ShutdownImages()
 {
 	image_t* image = &gltextures[0];
 	for (int i = 0; i < numgltextures; i++, image++)
-		if (image->registration_sequence != 0)
+		// morb was here. fixed for Unix port.
+		//if (image->registration_sequence != 0) // original: same crash risk as R_FreeUnusedImages — nameless cin_frame -> SIGSEGV.
+		if (image->registration_sequence != 0 && image->name[0]) // BUGFIX: mxd. Skip nameless self-managed images (same as R_FreeUnusedImages fix).
 			R_FreeImage(image);
 
 	//mxd. Free upload_buffer.
@@ -721,28 +822,30 @@ static void R_RefreshImage(image_t* image) // H2
 	if (gl_state.currenttextures[gl_state.currenttmu] == image->texnum) //BUGFIX: otherwise R_BindImage() won't re-bind it -- mxd.
 		gl_state.currenttextures[gl_state.currenttmu] = -1;
 
+	glGenTextures(1, (GLuint*)&image->texnum); // Allocate new name after delete.
+
 	const uint len = strlen(image->name);
 	if (strcmp(&image->name[len - 3], ".m8") == 0)
 	{
 		miptex_t* mt;
-		ri.FS_LoadFile(image->name, (void**)&mt);
+		const int filesize = ri.FS_LoadFile(image->name, (void**)&mt);
 
 		GrabPalette(mt->palette, image->palette);
 		FixPalette(image); //mxd
 
 		R_BindImage(image);
-		R_UploadM8(mt, image);
+		R_UploadM8(mt, filesize, image);
 
 		ri.FS_FreeFile(mt);
 	}
 	else if (strcmp(&image->name[len - 4], ".m32") == 0)
 	{
 		miptex32_t* mt;
-		ri.FS_LoadFile(image->name, (void**)&mt);
+		const int filesize = ri.FS_LoadFile(image->name, (void**)&mt);
 
-		R_ApplyGamma32(mt);
+		R_ApplyGamma32(mt, filesize);
 		R_BindImage(image);
-		R_UploadM32(mt, image);
+		R_UploadM32(mt, filesize, image);
 
 		ri.FS_FreeFile(mt);
 	}

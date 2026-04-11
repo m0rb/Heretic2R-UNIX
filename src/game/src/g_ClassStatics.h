@@ -6,8 +6,10 @@
 
 #pragma once
 
+// morb was here. moved #include "g_Local.h" to after ClassID_e definition to break circular include
+// (g_ClassStatics.h -> g_Local.h -> g_Edict.h -> g_ClassStatics.h).
+// #include "g_Local.h" // was here
 #include "g_Message.h"
-#include "g_Local.h"
 
 // If you add or remove classID's here, you MUST adjust the tables in m_stats.c accordingly, as well as the StaticsInit and Precache stuff.
 // Search for "NUM_CLASSIDS" if you're not certain what's effected by this...
@@ -75,6 +77,9 @@ typedef enum ClassID_e
 
 	NUM_CLASSIDS
 } ClassID_t;
+
+// morb was here. moved here from top of file (see above comment).
+#include "g_Local.h"
 
 #define NUM_ATTACK_RANGES	(NUM_CLASSIDS * 4)
 

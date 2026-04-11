@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_Model.c
 //
@@ -878,7 +879,9 @@ void RI_EndRegistration(void)
 {
 	model_t* mod = &mod_known[0];
 	for (int i = 0; i < mod_numknown; i++, mod++)
-		if (!mod->name[0] && mod->registration_sequence != registration_sequence)
+		// morb was here. fixed for Unix port.
+		//if (!mod->name[0] && mod->registration_sequence != registration_sequence) // original: logic inverted — freed already-empty slots (no-op) while stale named models leaked.
+		if (mod->name[0] && mod->registration_sequence != registration_sequence) //BUGFIX: mxd. Was '!mod->name[0]', which freed only already-empty slots (no-op) and never freed stale named models.
 			Mod_Free(mod); // Don't need this model.
 
 	R_FreeUnusedImages();

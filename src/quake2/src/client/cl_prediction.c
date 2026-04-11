@@ -11,6 +11,10 @@
 #include "p_main.h"
 #include "Vector.h"
 
+#ifndef _WIN32
+#include "../unix/compat.h"
+#endif
+
 #define MIN_TELEPORT_DISTANCE	640 //mxd. 80 world units. When distance between previous and current player origin > this, assume player teleported.
 
 int pred_pm_flags;
@@ -319,6 +323,9 @@ static void CL_PredictMovement_impl(void) //mxd. Surprisingly, NOT the biggest H
 		player_anim = playerExport.PlayerChickenData;
 	else
 		player_anim = playerExport.PlayerSeqData;
+
+	if (player_anim == NULL) // Player lib unloaded mid-frame (e.g. 'killserver' followed by 'wait').
+		return;
 
 	cl.playerinfo.uppermove = player_anim[cl.frame.playerstate.upperseq].move; //mxd. Original logic uses 'cl.frame.playerstate.uppermove_index' here (???).
 	cl.playerinfo.lowermove = player_anim[cl.frame.playerstate.lowerseq].move; //mxd. Original logic uses 'cl.frame.playerstate.lowermove_index' here (???).

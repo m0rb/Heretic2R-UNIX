@@ -1,3 +1,4 @@
+#include "g_local.h"
 //
 // g_func_Timer.c -- Originally part of g_func.c
 //

@@ -19,6 +19,7 @@
 #define GAME_NAME			VER_PRODUCTNAME_STR //mxd
 #define GAME_FULLNAME		GAME_NAME" "VERSIONDISP //mxd
 
+// Platform-specific build strings
 #ifdef _WIN32
 	#ifdef NDEBUG
 		#define BUILDSTRING "RELEASE"
@@ -30,6 +31,29 @@
 		#define CPUSTRING	"x64"
 	#else
 		#define CPUSTRING	"x86"
+	#endif
+#else
+	// Unix/Linux/macOS
+	#ifdef NDEBUG
+		#define BUILDSTRING "RELEASE"
+	#else
+		#define BUILDSTRING "DEBUG"
+	#endif
+
+	#if defined(__x86_64__) || defined(_M_X64)
+		#define CPUSTRING	"x86_64"
+	#elif defined(__i386__) || defined(_M_IX86)
+		#define CPUSTRING	"x86"
+	#elif defined(__aarch64__) || defined(_M_ARM64)
+		#define CPUSTRING	"arm64"
+	#elif defined(__arm__) || defined(_M_ARM)
+		#define CPUSTRING	"arm"
+	#elif defined(__ppc64__)
+		#define CPUSTRING	"ppc64"
+	#elif defined(__ppc__)
+		#define CPUSTRING	"ppc"
+	#else
+		#define CPUSTRING	"unknown"
 	#endif
 #endif
 
@@ -442,9 +466,9 @@ extern void Cmd_ForwardToServer(void);
 
 // Cvars are restricted from having the same names as commands to keep this interface from being ambiguous.
 
-extern cvar_t* cvar_vars;
-
 //mxd. Cvar_Get() defined in q_shared.h
+
+extern cvar_t* cvar_vars;
 
 // Will create the variable if it doesn't exist.
 Q2DLL_DECLSPEC extern cvar_t* Cvar_Set(const char* var_name, const char* value);

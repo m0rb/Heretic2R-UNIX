@@ -7,10 +7,11 @@
 #pragma once
 
 #include "Player.h"
+#include "g_items.h"
 
 // Chicken Branch.
 extern int ChickenBranchLwrStanding(playerinfo_t *info);
-extern void ChickenBranchIdle(playerinfo_t *info);
+extern int ChickenBranchIdle(playerinfo_t *info);
 
 // Player Lower Branch.
 extern int BranchLwrStanding(playerinfo_t *info);

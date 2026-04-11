@@ -7,9 +7,14 @@
 #include "client.h"
 #include "cl_effects.h"
 #include "cs_shared/cmodel.h"
+#include "../unix/clfx_dll_unix.h"
 #include "g_playstats.h"
 #include "Random.h"
 #include "Vector.h"
+
+#ifndef _WIN32
+#include "../unix/compat.h"
+#endif
 
 cvar_t* crosshair;
 static cvar_t* cl_stats;
@@ -40,7 +45,8 @@ static ScreenShakeInfo_t sshake;
 static void RegisterModels(void) // H2
 {
 	precache_models = true;
-	fxe.RegisterModels();
+	if (fxapi_initialized)
+		fxe.RegisterModels();
 	precache_models = false;
 }
 
@@ -182,6 +188,7 @@ void V_RenderView(const float stereo_separation)
 	// Build a refresh entity list and calc cl.sim* this also calls CL_CalcViewValues which loads v_forward, etc.
 	CL_AddEntities();
 
+
 	// Offset vieworg appropriately if we're doing stereo separation
 	if (stereo_separation != 0.0f)
 	{
@@ -222,7 +229,7 @@ void V_RenderView(const float stereo_separation)
 		cls.r_numdlights = 0;
 
 	if (!(int)cl_add_blend->value)
-		VectorClear(cl.refdef.blend);
+		memset(cl.refdef.blend, 0, sizeof(cl.refdef.blend)); // morb was here. was VectorClear (only cleared 3 of 4 floats).
 
 	cl.refdef.num_entities = cls.r_numentities;
 	cl.refdef.entities = cls.r_entities;

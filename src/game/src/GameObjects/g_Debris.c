@@ -12,6 +12,7 @@
 #include "Random.h"
 #include "Vector.h"
 #include "g_Local.h"
+#include "compat.h" // For min/max macros
 
 #pragma region ========================== Spawn debris logic ==========================
 

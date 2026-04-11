@@ -13,6 +13,7 @@
 #include "client/keys.h"
 #include "client/screen.h"
 #include "win32/dll_io/snd_dll.h"
+#include "compat.h"
 
 #define MAXPRINTMSG		4096
 #define MAX_NUM_ARGVS	50
@@ -41,6 +42,13 @@ static FILE* logfile;
 
 static int server_state;
 static int com_last_error = 0; //mxd
+
+// Early messages handling. The idea is to store all messages preceding "exec user.cfg" call in CL_Init()
+// (so setting logfile to 1 or 2 there results in all messages being logged).
+// Currently this stores ~40 early messages containing ~700 chars in total.
+#define MAX_EARLY_MESSAGES	128
+static char early_messages[MAXPRINTMSG * 2] = { 0 };
+static int num_early_messages = 0;
 
 #pragma region ========================== CLIENT / SERVER INTERACTIONS ====================
 
@@ -90,13 +98,6 @@ void Com_Printf(const char* fmt, ...)
 //mxd. Similar to Q2's Com_Printf.
 void Com_ColourPrintf(const PalIdx_t colour, const char* fmt, ...)
 {
-	//mxd. Early messages handling. The idea is to store all messages preceding "exec user.cfg" call in CL_Init()
-	// (so setting logfile to 1 or 2 there results in all messages being logged).
-	// Currently this stores ~40 early messages containing ~700 chars in total.
-#define MAX_EARLY_MESSAGES	128
-	static char early_messages[MAXPRINTMSG * 2] = { 0 };
-	static int num_early_messages = 0;
-
 	if (hideconprint == NULL || !(int)hideconprint->value)
 	{
 		va_list argptr;
@@ -237,6 +238,13 @@ H2R_NORETURN void Com_Error(const int code, const char* fmt, ...)
 
 		case ERR_DROP:
 			Com_ColourPrintf(P_ERROR, "*********************************\nERROR: %s\n*********************************\n", msg); //mxd. Com_Printf() in original logic.
+			//mxd. Flush early messages buffer before longjmp so error messages are visible during initialization
+			if (early_messages[0] != 0)
+			{
+				Sys_ConsoleOutput(early_messages);
+				early_messages[0] = 0;
+				num_early_messages = MAX_EARLY_MESSAGES;
+			}
 			SV_Shutdown(va("Server crashed: %s\n", msg), false);
 			CL_Drop();
 			recursive = false;
@@ -572,6 +580,8 @@ void Qcommon_Init(const int argc, char** argv)
 	if (setjmp(abortframe) != 0)
 		Sys_Error("Error during initialization");
 
+	Sys_ConsoleOutput("Qcommon_Init: Starting initialization\n");
+
 	z_chain.prev = &z_chain;
 	z_chain.next = &z_chain;
 
@@ -672,6 +682,7 @@ void Qcommon_Frame(int usec) //mxd. msec -> usec.
 	static int renderdelta = 1000000; // Time since last renderframe in microseconds.
 	static int clienttimedelta = 0; // Accumulated time since last client run.
 	static int servertimedelta = 0; // Accumulated time since last server run.
+	static qboolean first_frame = true; // H2R: Force first frame to render.
 
 	if (setjmp(abortframe))
 		return; // An ERR_DROP was thrown.
@@ -737,6 +748,17 @@ void Qcommon_Frame(int usec) //mxd. msec -> usec.
 		if (!renderframe || packetdelta + renderdelta / 2 < packettargetdelta)
 			packetframe = false;
 	}
+
+	// H2R: Force first frame to render to avoid black screen.
+	if (first_frame)
+	{
+		renderframe = true;
+		first_frame = false;
+	}
+
+	// Always allow packetframe when disconnected or connecting so CL_CheckForResend can auto-connect
+	if (cls.state == ca_disconnected || cls.state == ca_connecting)
+		packetframe = true;
 
 	// Dedicated server terminal console.
 	while (true)

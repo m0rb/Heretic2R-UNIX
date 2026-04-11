@@ -4,6 +4,8 @@
 // Copyright 1998 Raven Software
 //
 
+// morb was here
+#include <limits.h> // For INT_MAX.
 #include "ce_Effects.h"
 #include "ce_Utilities.h"
 #include "Matrix.h"

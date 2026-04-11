@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_DrawCinematic.c
 //
@@ -23,6 +24,11 @@ void Draw_InitCinematic(const int width, const int height) // H2
 	cin_frame->palette = malloc(sizeof(paletteRGB_t) * 256);
 	cin_frame->has_alpha = false;
 	cin_frame->texnum = TEXNUM_IMAGES + (cin_frame - gltextures);
+	// morb was here. fixed for Unix port.
+	// original: no glGenTextures call — slot-based texnum was used directly. On Windows drivers this
+	// happened to work if the slot had been previously occupied; on Linux/Mesa a fresh context has no
+	// texture objects at those names and renders black.
+	glGenTextures(1, (GLuint*)&cin_frame->texnum);
 
 	cin_frame_data = malloc(width * height);
 }

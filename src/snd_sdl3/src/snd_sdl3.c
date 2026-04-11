@@ -11,6 +11,11 @@
 #include "snd_wav.h"
 #include "Vector.h"
 #include "g_local.h"
+
+#ifndef _WIN32
+#include "compat.h"
+#endif
+
 #include <SDL3/SDL.h> //mxd. Needs to be included below engine stuff: includes stdbool.h, which messes up qboolean define...
 
 #define SDL_PAINTBUFFER_SIZE 2048
@@ -481,7 +486,10 @@ static void SNDSDL3_UpdateScaletable(void) // Q2: S_InitScaletable().
 		const int scale = (int)((float)i * 8.0f * 256.0f * s_volume->value);
 
 		for (int j = 0; j < 256; j++)
-			snd_scaletable[i][j] = (char)j * scale;
+			// morb was here. was: snd_scaletable[i][j] = (char)j * scale;
+			// on ARM64/GCC 'char' defaults to unsigned, so values 128-255 would not sign-extend
+			// to negative. Explicit (signed char) required.
+			snd_scaletable[i][j] = (signed char)j * scale;
 	}
 }
 
@@ -531,7 +539,9 @@ qboolean SNDSDL3_Cache(sfx_t* sfx, const wavinfo_t* info, byte* data)
 		if (sc->width == 2)
 			((short*)sc->data)[i] = (short)sample;
 		else
-			((char*)sc->data)[i] = (char)(sample >> 8);
+			// morb was here. was: ((char*)sc->data)[i] = (char)(sample >> 8);
+			// explicit (signed char) — must match the sign interpretation in snd_scaletable.
+			((signed char*)sc->data)[i] = (signed char)(sample >> 8);
 	}
 
 	return true;

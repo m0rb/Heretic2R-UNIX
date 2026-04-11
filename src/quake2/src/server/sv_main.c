@@ -8,22 +8,24 @@
 #include "sv_effects.h"
 #include "cl_strings.h"
 #include "win32/dll_io/clfx_dll.h"
+#include "../unix/clfx_dll.h"
+#include "../unix/compat.h"
 
-netadr_t master_adr[MAX_MASTERS]; // Address of group servers.
+netadr_t master_adr[MAX_MASTERS]; // Address of group servers
 
 client_t* sv_client; // Current client
 
 cvar_t* sv_protocol; //mxd. Server protocol version.
 cvar_t* sv_paused;
 
-static cvar_t* rcon_password; // Password for remote server commands.
+static cvar_t* rcon_password; // Password for remote server commands
 
 cvar_t* dmflags; // H2
-static cvar_t* advancedstaff; // H2
-static cvar_t* blood_level; // H2
+cvar_t* advancedstaff; // H2
+cvar_t* blood_level; // H2
 
-static cvar_t* timeout; // Seconds without any message.
-static cvar_t* zombietime; // Seconds to sink messages after disconnect.
+static cvar_t* timeout; // Seconds without any message
+static cvar_t* zombietime; // Seconds to sink messages after disconnect
 
 cvar_t* allow_download;
 cvar_t* allow_download_players;
@@ -35,10 +37,9 @@ cvar_t* maxclients; // FIXME: rename to sv_maxclients
 static cvar_t* sv_showclamp;
 
 static cvar_t* hostname;
-static cvar_t* public_server; // Should heartbeats be sent.
-cvar_t* sv_entfile; // YQ2 external .ent loading.
+static cvar_t* public_server; // Should heartbeats be sent
 
-static cvar_t* sv_reconnect_limit; // Minimum seconds between connect messages.
+static cvar_t* sv_reconnect_limit; // Minimum seconds between connect messages
 
 // H2:
 cvar_t* sv_welcome_mess;
@@ -52,7 +53,8 @@ cvar_t* sv_jumpcinematic;
 cvar_t* sv_cooptimeout;
 static cvar_t* sv_loopcoop;
 
-cvar_t* r_farclipdist;
+cvar_t* r_farclipdist; // H2
+cvar_t* r_nearclipdist; // H2
 
 qboolean is_local_client; // H2
 
@@ -325,7 +327,10 @@ static void SVC_DirectConnect(void)
 
 		if (NET_CompareBaseAdr(adr, &client->netchan.remote_address) && (client->netchan.qport == qport || adr->port == client->netchan.remote_address.port))
 		{
-			if (svs.realtime - client->lastconnect < (int)(sv_reconnect_limit->value * 1000)) // H2: missing !NET_IsLocalAddress(adr) check
+			// morb was here. Q2/YQ2 exempts loopback from the reconnect throttle; H2 dropped that guard.
+			// On slow hardware the client retries before sv_reconnect_limit expires → infinite loop.
+			// if (svs.realtime - client->lastconnect < (int)(sv_reconnect_limit->value * 1000))
+			if (!NET_IsLocalAddress(adr) && svs.realtime - client->lastconnect < (int)(sv_reconnect_limit->value * 1000))
 			{
 				Com_DPrintf("%s:reconnect rejected : too soon\n", NET_AdrToString(adr));
 				return;
@@ -642,13 +647,22 @@ static void SV_RunGameFrame(void)
 	sv.time = sv.framenum * 100;
 
 	// Don't run if paused // H2: extra 'sv_freezeworldset' check.
-	if ((!(int)sv_paused->value && !(int)sv_freezeworldset->value) || (int)maxclients->value > 1)
+	if ((!(int)sv_paused->value && !(int)sv_freezeworldset->value) || maxclients->value > 1)
 	{
-		// H2: new loop logic.
+		// morb was here. fixed for Unix port.
+		// H2: new loop logic. Cap at 1000 frames to prevent infinite loop if sv_jumpcinematic was
+		// persisted across sessions (it previously had CVAR_ARCHIVE) or if the cinematic script
+		// never reaches FEATURE_CINEMATICS disable.
+		//do
+		//{
+		//	ge->RunFrame();
+		//} while ((int)sv_jumpcinematic->value && (int)sv_cinematicfreeze->value); // H2: new loop logic.
+		int jump_frames = 0;
 		do
 		{
 			ge->RunFrame();
-		} while ((int)sv_jumpcinematic->value && (int)sv_cinematicfreeze->value);
+			jump_frames++;
+		} while ((int)sv_jumpcinematic->value && (int)sv_cinematicfreeze->value && jump_frames < 1000);
 
 		// Never get more than one tic behind.
 		if (sv.time < (uint)svs.realtime)
@@ -656,7 +670,7 @@ static void SV_RunGameFrame(void)
 			if ((int)sv_showclamp->value)
 				Com_Printf("sv highclamp\n");
 
-			svs.realtime = (int)sv.time;
+			svs.realtime = (uint)sv.time;
 		}
 	}
 }
@@ -834,15 +848,14 @@ void SV_Init(void)
 	sv_pers_fx_send_cut_off = Cvar_Get("sv_pers_fx_send_cut_off", "300", 0);
 	sv_noclientfx = Cvar_Get("sv_noclientfx", "0", 0);
 	sv_cinematicfreeze = Cvar_Get("sv_cinematicfreeze", "0", 0);
-	sv_jumpcinematic = Cvar_Get("sv_jumpcinematic", "0", CVAR_ARCHIVE);
+	// morb was here. fixed for Unix port.
+	//sv_jumpcinematic = Cvar_Get("sv_jumpcinematic", "0", CVAR_ARCHIVE); // CVAR_ARCHIVE caused persisted non-zero value to trigger infinite do-while on next session start.
+	sv_jumpcinematic = Cvar_Get("sv_jumpcinematic", "0", 0);
 	sv_cooptimeout = Cvar_Get("sv_cooptimeout", "0", 0);
 	sv_loopcoop = Cvar_Get("sv_loopcoop", "0", 0);
 
-	r_farclipdist = Cvar_Get("r_farclipdist", "4096.0", 0); // Not imported in Q2
-
 	public_server = Cvar_Get("public", "0", 0);
 	sv_reconnect_limit = Cvar_Get("sv_reconnect_limit", "3", CVAR_ARCHIVE);
-	sv_entfile = Cvar_Get("sv_entfile", "1", CVAR_ARCHIVE); // YQ2 external .ent loading.
 
 	SZ_Init(&net_message, net_message_buffer, sizeof(net_message_buffer));
 	CLFX_LoadDll(); // H2

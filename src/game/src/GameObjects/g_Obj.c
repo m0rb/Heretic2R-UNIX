@@ -1,3 +1,4 @@
+#include "g_local.h"
 //
 // g_Obj.c
 //

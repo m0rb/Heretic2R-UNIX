@@ -22,7 +22,10 @@ int MSG_ReadChar(sizebuf_t* sb)
 	if (sb->readcount + 1 > sb->cursize)
 		c = -1;
 	else
-		c = (char)sb->data[sb->readcount];
+		// morb was here. was: c = (char)sb->data[sb->readcount];
+		// on ARM64/GCC 'char' is unsigned by default, so a byte value of 0xFF would become 255
+		// instead of -1, breaking the end-of-buffer sentinel checks in MSG_ReadString / MSG_ReadStringLine.
+		c = (signed char)sb->data[sb->readcount];
 
 	sb->readcount++;
 
@@ -106,7 +109,8 @@ char* MSG_ReadString(sizebuf_t* sb)
 	int l = 0;
 	do
 	{
-		const char c = (char)MSG_ReadChar(sb);
+		// morb was here. was: const char c = (char)MSG_ReadChar(sb); — unsigned char on ARM64 makes c==−1 unreachable.
+		const int c = MSG_ReadChar(sb);
 		if (c == -1 || c == 0)
 			break;
 
@@ -126,7 +130,8 @@ char* MSG_ReadStringLine(sizebuf_t* sb)
 	int l = 0;
 	do
 	{
-		const char c = (char)MSG_ReadChar(sb);
+		// morb was here. was: const char c = (char)MSG_ReadChar(sb); — unsigned char on ARM64 makes c==−1 unreachable.
+		const int c = MSG_ReadChar(sb);
 		if (c == -1 || c == 0 || c == '\n')
 			break;
 
@@ -316,7 +321,7 @@ void MSG_ReadEffects(sizebuf_t* sb, EffectsBuffer_t* fxBuf)
 	}
 }
 
-#ifdef QUAKE2_DLL //mxd. Avoid referencing unneeded stuff in Client Effects...
+#if defined(QUAKE2_DLL) && !defined(CLIENT_EFFECTS_DLL) //mxd. Avoid referencing unneeded stuff in Client Effects...
 
 // Written by MSG_WriteJoints().
 void MSG_ReadJoints(sizebuf_t* sb, entity_state_t* ent)

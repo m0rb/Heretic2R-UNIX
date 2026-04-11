@@ -5,11 +5,13 @@
 //
 
 #include "server.h"
+#include "g_local.h" // For full edict_t definition
 #include "sv_effects.h"
 #include "cs_shared/cmodel.h"
 #include "cs_shared/tokens.h"
 #include "client/screen.h"
 #include "Vector.h"
+#include "../unix/compat.h"
 
 server_static_t svs; // Persistent server info
 server_t sv; // Local server
@@ -540,7 +542,6 @@ void SV_Map(const qboolean attractloop, const char* levelstring, const qboolean 
 
 	// Spawn server.
 	SCR_BeginLoadingPlaque(); // For local system.
-	SV_BroadcastCommand("changing\n");
 
 	const char* ext = ((len <= 4) ? NULL : level + len - 4); //mxd
 
