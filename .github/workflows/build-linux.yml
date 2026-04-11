@@ -70,7 +70,9 @@ jobs:
           sudo cmake --install SDL3-build
 
       - name: Build
-        run: make -j$(nproc)
+        run: |
+          make -j$(nproc)
+          make server -j$(nproc)
 
       - name: Stage release artifacts
         run: |

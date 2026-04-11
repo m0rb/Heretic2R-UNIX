@@ -18,7 +18,9 @@ jobs:
           brew install make gcc sdl3 pkg-config
 
       - name: Build
-        run: make -j$(sysctl -n hw.logicalcpu)
+        run: |
+          make -j$(sysctl -n hw.logicalcpu)
+          make server -j$(sysctl -n hw.logicalcpu)
 
       - name: Stage release artifacts
         run: |

@@ -21,6 +21,7 @@ jobs:
             pkg install -y gmake gcc sdl3 pkgconf mesa-libs
           run: |
             gmake -j$(sysctl -n hw.ncpu)
+            gmake server -j$(sysctl -n hw.ncpu)
             mkdir -p dist dist-ded
             cp build/release/heretic2r dist/
             cp -r build/release/base dist/
