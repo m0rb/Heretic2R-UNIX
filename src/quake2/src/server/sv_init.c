@@ -5,7 +5,7 @@
 //
 
 #include "server.h"
-#include "g_local.h" // For full edict_t definition
+#include "g_Local.h" // For full edict_t definition
 #include "sv_effects.h"
 #include "cs_shared/cmodel.h"
 #include "cs_shared/tokens.h"

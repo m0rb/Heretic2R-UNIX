@@ -9,7 +9,7 @@
 #include "gl1_Draw.h"
 #include "gl1_Misc.h"
 #include "gl1_Local.h"
-#include "game.h"
+#include "Game.h"
 #include "Vector.h"
 #include "client/vid.h"
 

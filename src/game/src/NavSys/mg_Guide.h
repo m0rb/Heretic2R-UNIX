@@ -7,7 +7,7 @@
 #pragma once
 
 #include "g_Edict.h"
-#include "buoy.h"
+#include "mg_Buoy.h"
 
 #define MONSTER_SEARCH_TIME		10 // Monsters search for player for 10 seconds after losing him before giving up.
 

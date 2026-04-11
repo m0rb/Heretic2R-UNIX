@@ -7,7 +7,7 @@
 #pragma once
 
 #include "Player.h"
-#include "g_items.h"
+#include "g_Items.h"
 
 // Chicken Branch.
 extern int ChickenBranchLwrStanding(playerinfo_t *info);

@@ -4,7 +4,7 @@
 // Copyright 1998 Raven Software
 //
 
-#include "g_local.h"
+#include "g_Local.h"
 #include "g_func_Door.h"
 #include "g_Combat.h"
 #include "g_Debris.h"

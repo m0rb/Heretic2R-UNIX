@@ -8,7 +8,7 @@
 #include "p_anim_branch.h"
 #include "p_main.h"
 #include "p_weapon.h"
-#include "g_items.h"
+#include "g_Items.h"
 #include "cl_strings.h"
 #include "compat.h"
 

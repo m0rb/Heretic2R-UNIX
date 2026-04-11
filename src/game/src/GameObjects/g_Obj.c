@@ -1,4 +1,4 @@
-#include "g_local.h"
+#include "g_Local.h"
 //
 // g_Obj.c
 //
@@ -3643,4 +3643,3 @@ void SP_obj_bloodsplat(edict_t* self)
 	ObjectInit(self, 2, 100, MAT_FLESH, SOLID_NOT);
 }
 
-#pragma endregion

@@ -6,8 +6,8 @@
 
 #include "ce_Effects.h"
 #include "ce_Utilities.h"
-#include "fx_debris.h" //mxd
-#include "fx_smoke.h" //mxd
+#include "fx_Debris.h" //mxd
+#include "fx_Smoke.h" //mxd
 #include "Random.h"
 #include "Vector.h"
 

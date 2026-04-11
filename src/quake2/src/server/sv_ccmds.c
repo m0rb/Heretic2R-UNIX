@@ -5,7 +5,7 @@
 //
 
 #include "server.h"
-#include "g_local.h"
+#include "g_Local.h"
 #include "cl_strings.h"
 #include "cs_shared/cmodel.h"
 #include "client/screen.h"

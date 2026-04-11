@@ -8,7 +8,7 @@
 
 #include "q_Shared.h" // For byte, vec3_t, qboolean, uint, trace_t
 #include "p_types.h"  // For physicsType_t, deadState_t
-#include "g_items.h"  // For gitem_t
+#include "g_Items.h"  // For gitem_t
 
 // These types are needed by multiple headers and must be defined before any edict_t definition.
 

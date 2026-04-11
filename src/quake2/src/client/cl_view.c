@@ -8,7 +8,7 @@
 #include "cl_effects.h"
 #include "cs_shared/cmodel.h"
 #include "../unix/clfx_dll_unix.h"
-#include "g_playstats.h"
+#include "g_PlayStats.h"
 #include "Random.h"
 #include "Vector.h"
 

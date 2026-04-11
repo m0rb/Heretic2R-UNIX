@@ -8,7 +8,7 @@
 #include <dlfcn.h>
 #include "p_dll.h"
 #ifdef GAME_DLL
-	#include "g_local.h"
+	#include "g_Local.h"
 #else
 	#include "dll_io_unix.h"
 #endif

@@ -4,7 +4,7 @@
 // Copyright 1998 Raven Software
 //
 
-#include "g_local.h"
+#include "g_Local.h"
 #include "g_func_Button.h"
 #include "g_DefaultMessageHandler.h"
 #include "g_func_Utility.h"

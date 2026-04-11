@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "game.h" // For MAX_ENT_CLUSTERS and full type definitions via g_Types.h
+#include "Game.h" // For MAX_ENT_CLUSTERS and full type definitions via g_Types.h
 #include "g_MonsterInfo.h" // For moveinfo_t and monsterinfo_t
 #include "g_Message.h" // For MsgQueue_t and G_MessageHandler_t
 #include "g_ClassStatics.h" // For ClassID_e - must be included before struct definition

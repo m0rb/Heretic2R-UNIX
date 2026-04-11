@@ -9,7 +9,7 @@
 #include "Player/p_Client.h" //mxd
 #include "Player/p_Teleport.h"
 #include "Vector.h"
-#include "g_local.h"
+#include "g_Local.h"
 #include "compat.h"
 
 // Spawn the Spell teleport effect - from the player.

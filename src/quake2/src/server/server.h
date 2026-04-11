@@ -8,7 +8,7 @@
 
 #include "qcommon.h"
 #include "qfiles.h"
-#include "game.h"
+#include "Game.h"
 #include "g_Edict.h" // For full struct edict_s definition
 #include "q_Physics.h"
 #include "SinglyLinkedList.h"

@@ -10,7 +10,7 @@
 #include "snd_ogg.h"
 #include "snd_wav.h"
 #include "Vector.h"
-#include "g_local.h"
+#include "g_Local.h"
 
 #ifndef _WIN32
 #include "compat.h"
