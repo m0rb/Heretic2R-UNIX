@@ -90,6 +90,8 @@ endif
 ifeq ($(UNAME),Darwin)
   CFLAGS += -DMACOS_X -arch $(ARCH)
   LDFLAGS := -arch $(ARCH)
+  # Symbols referenced by plugins are resolved at dlopen time from the host exe.
+  SHARED_LDFLAGS := -undefined dynamic_lookup
   SHARED_EXT := .dylib
   EXE_EXT :=
 endif
@@ -299,7 +301,7 @@ game: $(BUILD_DIR)/base/gamex86$(SHARED_EXT)
 $(BUILD_DIR)/base/gamex86$(SHARED_EXT): $(GAME_OBJS)
 	@echo "  LINK    $@"
 	@mkdir -p $(BUILD_DIR)/base
-	@$(CXX) $(CXXFLAGS) -shared -o $@ $(GAME_OBJS) $(LIBS)
+	@$(CXX) $(CXXFLAGS) -shared $(SHARED_LDFLAGS) -o $@ $(GAME_OBJS) $(LIBS)
 
 # Player DLL
 player: $(BUILD_DIR)/base/Player$(SHARED_EXT)
@@ -307,13 +309,13 @@ player: $(BUILD_DIR)/base/Player$(SHARED_EXT)
 $(BUILD_DIR)/base/Player$(SHARED_EXT): $(PLAYER_OBJS)
 	@echo "  CC      $@"
 	@mkdir -p $(BUILD_DIR)/base
-	@$(CC) $(filter-out -fvisibility=hidden,$(CFLAGS)) -fPIC -DPLAYER_DLL -shared -o $@ $(PLAYER_OBJS) $(LIBS)
+	@$(CC) $(filter-out -fvisibility=hidden,$(CFLAGS)) -fPIC -DPLAYER_DLL -shared $(SHARED_LDFLAGS) -o $@ $(PLAYER_OBJS) $(LIBS)
 
 # Client Effects DLL
 clfx: $(CLFX_OBJS)
 	@echo "  LINK    Client Effects$(SHARED_EXT)"
 	@mkdir -p $(BUILD_DIR)/base
-	@$(CC) $(CLFX_CFLAGS) -shared -o "$(BUILD_DIR)/base/Client Effects$(SHARED_EXT)" $(CLFX_OBJS) $(LIBS)
+	@$(CC) $(CLFX_CFLAGS) -shared $(SHARED_LDFLAGS) -o "$(BUILD_DIR)/base/Client Effects$(SHARED_EXT)" $(CLFX_OBJS) $(LIBS)
 
 CLFX_CFLAGS := $(filter-out -fvisibility=hidden,$(CFLAGS)) -fPIC -DCLIENT_EFFECTS_DLL \
 	-include ./src/quake2/src/unix/compat.h
