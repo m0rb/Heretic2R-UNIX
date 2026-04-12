@@ -825,11 +825,18 @@ qboolean SNDSDL3_BackendInit(void)
 // Shuts the SDL backend down.
 void SNDSDL3_BackendShutdown(void)
 {
+	if (stream == NULL)
+		return;
+
 	si.Com_Printf("Closing SDL audio device...\n");
 
 	SDL_PauseAudioDevice(SDL_GetAudioStreamDevice(stream));
+	// SDL_DestroyAudioStream also closes the device when created via SDL_OpenAudioDeviceStream.
+	// Do NOT call SDL_QuitSubSystem(SDL_INIT_AUDIO) after this — SDL3 internally frees the device
+	// struct during DestroyAudioStream, and QuitSubSystem would then try to iterate/lock the
+	// already-freed device list, causing a SIGSEGV in pthread_mutex_lock.
 	SDL_DestroyAudioStream(stream);
-	SDL_QuitSubSystem(SDL_INIT_AUDIO);
+	stream = NULL;
 
 	free(sound.buffer);
 	sound.buffer = NULL;
