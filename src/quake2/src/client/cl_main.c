@@ -32,6 +32,7 @@ cvar_t* cl_autoskins;
 static cvar_t* cl_timeout;
 cvar_t* cl_predict; //mxd. Use CL_Predict() instead!
 cvar_t* cl_maxfps;
+cvar_t* cl_minfps; // T-Mod compatibility
 
 cvar_t* cl_add_particles;
 cvar_t* cl_add_lights;
@@ -546,16 +547,23 @@ static void CL_CheckForResend(void)
 // Q2 counterpart
 static void CL_Connect_f(void)
 {
-	if (Cmd_Argc() != 2)
+	const int argc = Cmd_Argc();
+	if (argc < 2 || argc > 3)
 	{
-		Com_Printf("Usage: connect <server>\n");
+		Com_Printf("Usage: connect <server>[:<port>]  or  connect <server> <port>\n");
 		return;
 	}
 
 	if (Com_ServerState())
 		SV_Shutdown("Server quit\n", false); // If running a local server, kill it and reissue.
 
-	const char* server = Cmd_Argv(1);
+	// Support both "connect ip:port" and "connect ip port" forms.
+	char server[MAX_OSPATH];
+	if (argc == 3)
+		Com_sprintf(server, sizeof(server), "%s:%s", Cmd_Argv(1), Cmd_Argv(2));
+	else
+		strncpy_s(server, sizeof(server), Cmd_Argv(1), sizeof(server) - 1);
+
 	NET_Config(true); // Allow remote.
 	CL_Disconnect();
 

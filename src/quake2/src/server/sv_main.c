@@ -819,7 +819,8 @@ void SV_Init(void)
 	Cvar_Get("fraglimit", "0", CVAR_SERVERINFO);
 	Cvar_Get("timelimit", "0", CVAR_SERVERINFO);
 	Cvar_Get("cheats", "0", CVAR_SERVERINFO | CVAR_LATCH);
-	sv_protocol = Cvar_Get("protocol", va("%i", H2R_PROTOCOL_VERSION), CVAR_ARCHIVE | CVAR_SERVERINFO | CVAR_NOSET); // H2: defaults to PROTOCOL_VERSION, never used. //mxd. +CVAR_ARCHIVE flag.
+	// morb was here. removed CVAR_NOSET so the user can set protocol 51 to connect to original H2 servers.
+	sv_protocol = Cvar_Get("protocol", va("%i", H2R_PROTOCOL_VERSION), CVAR_ARCHIVE | CVAR_SERVERINFO);
 
 	//mxd. Make sure protocol is valid.
 	if (SV_PROTOCOL != H2R_PROTOCOL_VERSION && SV_PROTOCOL != PROTOCOL_VERSION)

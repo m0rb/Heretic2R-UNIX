@@ -45,6 +45,7 @@ console_t con;
 
 cvar_t* cl_timedemo;
 cvar_t* cl_maxfps;
+cvar_t* cl_minfps;
 
 // ---------------------------------------------------------------------------
 // Version string sent to connecting clients
@@ -68,6 +69,7 @@ void Con_Init(void)
 {
 	cl_timedemo = Cvar_Get("timedemo",  "0",  0);
 	cl_maxfps   = Cvar_Get("cl_maxfps", "30", 0);
+	cl_minfps   = Cvar_Get("cl_minfps",  "5", 0);
 }
 
 void Con_Print(const char* txt) {} // common.c already calls Sys_ConsoleOutput after Con_Print.

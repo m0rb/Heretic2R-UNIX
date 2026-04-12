@@ -621,6 +621,7 @@ void Qcommon_Init(const int argc, char** argv)
 	//mxd. These two must be initialized here to work in DEDICATED mode.
 	cl_timedemo = Cvar_Get("timedemo", "0", 0);
 	cl_maxfps = Cvar_Get("cl_maxfps", "30", 0); // H2_1.07: "30" -> "60".
+	cl_minfps = Cvar_Get("cl_minfps", "5", 0); // T-Mod compatibility: server enforces this via stuffcmd.
 
 	log_stats = Cvar_Get("log_stats", "0", 0);
 	developer = Cvar_Get("developer", "0", 0);
