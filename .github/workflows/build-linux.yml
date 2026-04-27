@@ -18,6 +18,8 @@ jobs:
             arch: x86_64
           - runner: ubuntu-24.04-arm
             arch: arm64
+          - runner: ubuntu-24.04-riscv
+            arch: riscv64
 
     runs-on: ${{ matrix.runner }}
 
@@ -100,58 +102,3 @@ jobs:
         with:
           name: heretic2r-server-linux-${{ matrix.arch }}
           path: heretic2r-server-linux-${{ matrix.arch }}.tar.gz
-
-  build-riscv64:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build on Linux (riscv64)
-        uses: vmactions/linux-vm@v1
-        with:
-          arch: riscv64
-          usesh: true
-          prepare: |
-            apt-get update
-            apt-get install -y \
-              build-essential git make pkg-config cmake ninja-build \
-              libasound2-dev libpulse-dev libaudio-dev libfribidi-dev \
-              libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev \
-              libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
-              libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev \
-              libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev \
-              libibus-1.0-dev libudev-dev libthai-dev
-
-          run: |
-            git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
-            cmake -S SDL3-src -B SDL3-build -G Ninja \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DSDL_SHARED=ON \
-              -DSDL_STATIC=OFF \
-              -DSDL_TEST=OFF
-            cmake --build SDL3-build --parallel
-            sudo cmake --install SDL3-build
-
-            make -j$(nproc)
-            make server -j$(nproc)
-
-            mkdir -p dist dist-ded
-            cp build/release/heretic2r dist/
-            cp -r build/release/base dist/
-            cp build/release/heretic2r-server dist-ded/
-            cp -r build/release/base dist-ded/
-            tar czf heretic2r-linux-riscv64.tar.gz -C dist .
-            tar czf heretic2r-server-linux-riscv64.tar.gz -C dist-ded .
-
-      - name: Upload client artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-linux-riscv64
-          path: heretic2r-linux-riscv64.tar.gz
-
-      - name: Upload dedicated server artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-server-linux-riscv64
-          path: heretic2r-server-linux-riscv64.tar.gz
