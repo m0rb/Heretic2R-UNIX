@@ -175,8 +175,8 @@ jobs:
         with:
           usesh: true
           prepare: |
-            pkgman install -y cmake ninja pkgconfig mesa_haiku_devel
-
+            pkgman install -y cmake ninja pkgconfig libexecinfo_devel
+            
           run: |
             git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
             cmake -S SDL3-src -B SDL3-build -G Ninja \
