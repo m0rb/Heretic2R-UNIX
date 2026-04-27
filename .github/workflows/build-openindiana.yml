@@ -1,10 +1,7 @@
 name: Build (OpenIndiana)
 
 on:
-  push:
-    branches: [ main, unix ]
-  pull_request:
-    branches: [ main, unix ]
+  workflow_call:
   workflow_dispatch:
 
 jobs:
@@ -28,7 +25,8 @@ jobs:
               -DCMAKE_INSTALL_PREFIX=/usr/local \
               -DSDL_SHARED=ON \
               -DSDL_STATIC=OFF \
-              -DSDL_TEST=OFF
+              -DSDL_TEST=OFF \
+              -DSDL_KMSDRM=OFF
             cmake --build SDL3-build --parallel
             cmake --install SDL3-build
 

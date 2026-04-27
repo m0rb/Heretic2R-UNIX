@@ -1,10 +1,7 @@
 name: Build (Solaris)
 
 on:
-  push:
-    branches: [ main, unix ]
-  pull_request:
-    branches: [ main, unix ]
+  workflow_call:
   workflow_dispatch:
 
 jobs:
@@ -22,17 +19,21 @@ jobs:
             pkg install -q --accept developer/versioning/git developer/gcc developer/build/cmake developer/build/gnu-make developer/build/pkg-config x11/library/mesa
 
           run: |
+            # 64-bit dbus headers live under /usr/lib/64/pkgconfig on Solaris.
+            export PKG_CONFIG_PATH=/usr/lib/64/pkgconfig
+
             git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
             cmake -S SDL3-src -B SDL3-build -G "Unix Makefiles" \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INSTALL_PREFIX=/usr/local \
               -DSDL_SHARED=ON \
               -DSDL_STATIC=OFF \
-              -DSDL_TEST=OFF
+              -DSDL_TEST=OFF \
+              -DSDL_KMSDRM=OFF
             cmake --build SDL3-build --parallel
             cmake --install SDL3-build
 
-            export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+            export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/64/pkgconfig
 
             NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
             gmake -j$NCPU

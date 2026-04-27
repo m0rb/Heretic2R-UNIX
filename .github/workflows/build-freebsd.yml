@@ -1,10 +1,7 @@
 name: Build (FreeBSD)
 
 on:
-  push:
-    branches: [ main, unix ]
-  pull_request:
-    branches: [ main, unix ]
+  workflow_call:
   workflow_dispatch:
 
 
