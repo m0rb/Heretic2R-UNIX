@@ -138,14 +138,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build on FreeBSD (x86_64)
+
+      - name: Build on FreeBSD
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
-          prepare: pkg install -y gmake gcc sdl3 pkgconf mesa-libs
+          prepare: |
+            pkg install -y gmake gcc sdl3 pkgconf mesa-libs
           run: |
             gmake -j$(sysctl -n hw.ncpu)
-            gmake server -j$(sysctl -n hw.ncpu)
             mkdir -p dist dist-ded
             cp build/release/heretic2r dist/
             cp -r build/release/base dist/
@@ -153,116 +154,16 @@ jobs:
             cp -r build/release/base dist-ded/
             tar czf heretic2r-freebsd.tar.gz -C dist .
             tar czf heretic2r-server-freebsd.tar.gz -C dist-ded .
+
       - uses: actions/upload-artifact@v4
         with:
           name: heretic2r-freebsd
           path: heretic2r-freebsd.tar.gz
+
       - uses: actions/upload-artifact@v4
         with:
           name: heretic2r-server-freebsd
           path: heretic2r-server-freebsd.tar.gz
-
-  build-freebsd-aarch64:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build on FreeBSD (aarch64)
-        uses: vmactions/freebsd-vm@v1
-        with:
-          arch: arm64
-          usesh: true
-          prepare: pkg install -y gmake gcc sdl3 pkgconf mesa-libs
-          run: |
-            gmake -j$(sysctl -n hw.ncpu)
-            gmake server -j$(sysctl -n hw.ncpu)
-            mkdir -p dist dist-ded
-            cp build/release/heretic2r dist/
-            cp -r build/release/base dist/
-            cp build/release/heretic2r-server dist-ded/
-            cp -r build/release/base dist-ded/
-            tar czf heretic2r-freebsd-aarch64.tar.gz -C dist .
-            tar czf heretic2r-server-freebsd-aarch64.tar.gz -C dist-ded .
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-freebsd-aarch64
-          path: heretic2r-freebsd-aarch64.tar.gz
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-server-freebsd-aarch64
-          path: heretic2r-server-freebsd-aarch64.tar.gz
-
-  build-freebsd-riscv64:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build on FreeBSD (riscv64)
-        uses: vmactions/freebsd-vm@v1
-        with:
-          arch: riscv64
-          usesh: true
-          prepare: pkg install -y gmake gcc sdl3 pkgconf mesa-libs
-          run: |
-            gmake -j$(sysctl -n hw.ncpu)
-            gmake server -j$(sysctl -n hw.ncpu)
-            mkdir -p dist dist-ded
-            cp build/release/heretic2r dist/
-            cp -r build/release/base dist/
-            cp build/release/heretic2r-server dist-ded/
-            cp -r build/release/base dist-ded/
-            tar czf heretic2r-freebsd-riscv64.tar.gz -C dist .
-            tar czf heretic2r-server-freebsd-riscv64.tar.gz -C dist-ded .
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-freebsd-riscv64
-          path: heretic2r-freebsd-riscv64.tar.gz
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-server-freebsd-riscv64
-          path: heretic2r-server-freebsd-riscv64.tar.gz
-
-  build-linux-riscv64:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build on Linux (riscv64)
-        uses: vmactions/linux-vm@v1
-        with:
-          arch: riscv64
-          usesh: true
-          prepare: |
-            apt-get update
-            apt-get install -y \
-              build-essential git make pkg-config cmake ninja-build \
-              libasound2-dev libpulse-dev libaudio-dev libfribidi-dev \
-              libjack-dev libsndio-dev libx11-dev libxext-dev libxrandr-dev \
-              libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
-              libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev \
-              libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev \
-              libibus-1.0-dev libudev-dev libthai-dev
-          run: |
-            git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
-            cmake -S SDL3-src -B SDL3-build -G Ninja \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST=OFF
-            cmake --build SDL3-build --parallel
-            sudo cmake --install SDL3-build
-            make -j$(nproc)
-            make server -j$(nproc)
-            mkdir -p dist dist-ded
-            cp build/release/heretic2r dist/
-            cp -r build/release/base dist/
-            cp build/release/heretic2r-server dist-ded/
-            cp -r build/release/base dist-ded/
-            tar czf heretic2r-linux-riscv64.tar.gz -C dist .
-            tar czf heretic2r-server-linux-riscv64.tar.gz -C dist-ded .
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-linux-riscv64
-          path: heretic2r-linux-riscv64.tar.gz
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-server-linux-riscv64
-          path: heretic2r-server-linux-riscv64.tar.gz
 
   build-haiku:
     runs-on: ubuntu-latest
@@ -308,260 +209,8 @@ jobs:
           name: heretic2r-server-haiku
           path: heretic2r-server-haiku.tar.gz
 
-  build-openbsd:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build on OpenBSD (x86_64)
-        uses: vmactions/openbsd-vm@v1
-        with:
-          usesh: true
-          prepare: pkg_add sdl3 gmake pkgconf
-          run: |
-            gmake -j$(sysctl -n hw.ncpu)
-            gmake server -j$(sysctl -n hw.ncpu)
-            mkdir -p dist dist-ded
-            cp build/release/heretic2r dist/
-            cp -r build/release/base dist/
-            cp build/release/heretic2r-server dist-ded/
-            cp -r build/release/base dist-ded/
-            tar czf heretic2r-openbsd.tar.gz -C dist .
-            tar czf heretic2r-server-openbsd.tar.gz -C dist-ded .
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-openbsd
-          path: heretic2r-openbsd.tar.gz
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-server-openbsd
-          path: heretic2r-server-openbsd.tar.gz
-
-  build-openbsd-aarch64:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build on OpenBSD (aarch64)
-        uses: vmactions/openbsd-vm@v1
-        with:
-          arch: arm64
-          usesh: true
-          prepare: pkg_add sdl3 gmake pkgconf
-          run: |
-            gmake -j$(sysctl -n hw.ncpu)
-            gmake server -j$(sysctl -n hw.ncpu)
-            mkdir -p dist dist-ded
-            cp build/release/heretic2r dist/
-            cp -r build/release/base dist/
-            cp build/release/heretic2r-server dist-ded/
-            cp -r build/release/base dist-ded/
-            tar czf heretic2r-openbsd-aarch64.tar.gz -C dist .
-            tar czf heretic2r-server-openbsd-aarch64.tar.gz -C dist-ded .
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-openbsd-aarch64
-          path: heretic2r-openbsd-aarch64.tar.gz
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-server-openbsd-aarch64
-          path: heretic2r-server-openbsd-aarch64.tar.gz
-
-  build-openbsd-riscv64:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build on OpenBSD (riscv64)
-        uses: vmactions/openbsd-vm@v1
-        with:
-          arch: riscv64
-          usesh: true
-          prepare: pkg_add sdl3 gmake pkgconf
-          run: |
-            gmake -j$(sysctl -n hw.ncpu)
-            gmake server -j$(sysctl -n hw.ncpu)
-            mkdir -p dist dist-ded
-            cp build/release/heretic2r dist/
-            cp -r build/release/base dist/
-            cp build/release/heretic2r-server dist-ded/
-            cp -r build/release/base dist-ded/
-            tar czf heretic2r-openbsd-riscv64.tar.gz -C dist .
-            tar czf heretic2r-server-openbsd-riscv64.tar.gz -C dist-ded .
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-openbsd-riscv64
-          path: heretic2r-openbsd-riscv64.tar.gz
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-server-openbsd-riscv64
-          path: heretic2r-server-openbsd-riscv64.tar.gz
-
-  build-netbsd:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build on NetBSD (x86_64)
-        uses: vmactions/netbsd-vm@v1
-        with:
-          usesh: true
-          prepare: pkgin -y install cmake ninja-build gmake pkg-config libexecinfo
-          run: |
-            git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
-            cmake -S SDL3-src -B SDL3-build -G Ninja \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX=/usr/pkg \
-              -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST=OFF
-            cmake --build SDL3-build --parallel
-            cmake --install SDL3-build
-            export PKG_CONFIG_PATH=/usr/pkg/lib/pkgconfig
-            NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
-            gmake -j$NCPU
-            gmake server -j$NCPU
-            mkdir -p dist dist-ded
-            cp build/release/heretic2r dist/
-            cp -r build/release/base dist/
-            cp /usr/pkg/lib/libSDL3.so.0 dist/
-            cp SDL3-src/LICENSE.txt dist/LICENSE.SDL3.txt
-            cp build/release/heretic2r-server dist-ded/
-            cp -r build/release/base dist-ded/
-            tar czf heretic2r-netbsd.tar.gz -C dist .
-            tar czf heretic2r-server-netbsd.tar.gz -C dist-ded .
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-netbsd
-          path: heretic2r-netbsd.tar.gz
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-server-netbsd
-          path: heretic2r-server-netbsd.tar.gz
-
-  build-netbsd-aarch64:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build on NetBSD (aarch64)
-        uses: vmactions/netbsd-vm@v1
-        with:
-          arch: arm64
-          usesh: true
-          prepare: pkgin -y install cmake ninja-build gmake pkg-config libexecinfo
-          run: |
-            git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
-            cmake -S SDL3-src -B SDL3-build -G Ninja \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX=/usr/pkg \
-              -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST=OFF
-            cmake --build SDL3-build --parallel
-            cmake --install SDL3-build
-            export PKG_CONFIG_PATH=/usr/pkg/lib/pkgconfig
-            NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
-            gmake -j$NCPU
-            gmake server -j$NCPU
-            mkdir -p dist dist-ded
-            cp build/release/heretic2r dist/
-            cp -r build/release/base dist/
-            cp /usr/pkg/lib/libSDL3.so.0 dist/
-            cp SDL3-src/LICENSE.txt dist/LICENSE.SDL3.txt
-            cp build/release/heretic2r-server dist-ded/
-            cp -r build/release/base dist-ded/
-            tar czf heretic2r-netbsd-aarch64.tar.gz -C dist .
-            tar czf heretic2r-server-netbsd-aarch64.tar.gz -C dist-ded .
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-netbsd-aarch64
-          path: heretic2r-netbsd-aarch64.tar.gz
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-server-netbsd-aarch64
-          path: heretic2r-server-netbsd-aarch64.tar.gz
-
-  build-openindiana:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build on OpenIndiana
-        uses: vmactions/openindiana-vm@v1
-        with:
-          usesh: true
-          prepare: |
-            pkg install -q --accept developer/gcc-14 developer/build/cmake developer/build/gnu-make developer/build/pkg-config x11/library/mesa
-          run: |
-            git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
-            cmake -S SDL3-src -B SDL3-build -G "Unix Makefiles" \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX=/usr/local \
-              -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST=OFF
-            cmake --build SDL3-build --parallel
-            cmake --install SDL3-build
-            export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
-            NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
-            gmake -j$NCPU
-            gmake server -j$NCPU
-            mkdir -p dist dist-ded
-            cp build/release/heretic2r dist/
-            cp -r build/release/base dist/
-            cp /usr/local/lib/libSDL3.so.0 dist/
-            cp SDL3-src/LICENSE.txt dist/LICENSE.SDL3.txt
-            cp build/release/heretic2r-server dist-ded/
-            cp -r build/release/base dist-ded/
-            tar czf heretic2r-openindiana.tar.gz -C dist .
-            tar czf heretic2r-server-openindiana.tar.gz -C dist-ded .
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-openindiana
-          path: heretic2r-openindiana.tar.gz
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-server-openindiana
-          path: heretic2r-server-openindiana.tar.gz
-
-  build-solaris:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build on Solaris
-        uses: vmactions/solaris-vm@v1
-        with:
-          usesh: true
-          prepare: |
-            pkg install -q --accept developer/gcc developer/build/cmake developer/build/gnu-make developer/build/pkg-config x11/library/mesa
-          run: |
-            git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
-            cmake -S SDL3-src -B SDL3-build -G "Unix Makefiles" \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_INSTALL_PREFIX=/usr/local \
-              -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST=OFF
-            cmake --build SDL3-build --parallel
-            cmake --install SDL3-build
-            export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
-            NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
-            gmake -j$NCPU
-            gmake server -j$NCPU
-            mkdir -p dist dist-ded
-            cp build/release/heretic2r dist/
-            cp -r build/release/base dist/
-            cp /usr/local/lib/libSDL3.so.0 dist/
-            cp SDL3-src/LICENSE.txt dist/LICENSE.SDL3.txt
-            cp build/release/heretic2r-server dist-ded/
-            cp -r build/release/base dist-ded/
-            tar czf heretic2r-solaris.tar.gz -C dist .
-            tar czf heretic2r-server-solaris.tar.gz -C dist-ded .
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-solaris
-          path: heretic2r-solaris.tar.gz
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: heretic2r-server-solaris
-          path: heretic2r-server-solaris.tar.gz
-
   release:
-    needs: [ build-linux-x86_64, build-linux-arm64, build-linux-riscv64, build-macos, build-freebsd, build-freebsd-aarch64, build-freebsd-riscv64, build-haiku, build-openbsd, build-openbsd-aarch64, build-openbsd-riscv64, build-netbsd, build-netbsd-aarch64, build-openindiana, build-solaris ]
-    if: always()
+    needs: [ build-linux-x86_64, build-linux-arm64, build-macos, build-freebsd, build-haiku ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -577,7 +226,6 @@ jobs:
           name: "Latest build"
           prerelease: true
           make_latest: true
-          fail_on_unmatched_files: false
           body: |
             Automated rolling release — built from `${{ github.ref_name }}` @ `${{ github.sha }}`.
 
@@ -585,19 +233,9 @@ jobs:
           files: |
             heretic2r-linux-x86_64.tar.gz
             heretic2r-linux-arm64.tar.gz
-            heretic2r-linux-riscv64.tar.gz
             heretic2r-macos.tar.gz
             heretic2r-freebsd.tar.gz
-            heretic2r-freebsd-aarch64.tar.gz
-            heretic2r-freebsd-riscv64.tar.gz
             heretic2r-haiku.tar.gz
-            heretic2r-openbsd.tar.gz
-            heretic2r-openbsd-aarch64.tar.gz
-            heretic2r-openbsd-riscv64.tar.gz
-            heretic2r-netbsd.tar.gz
-            heretic2r-netbsd-aarch64.tar.gz
-            heretic2r-openindiana.tar.gz
-            heretic2r-solaris.tar.gz
 
       - name: Create or update dedicated server rolling release
         uses: softprops/action-gh-release@v2
@@ -605,7 +243,6 @@ jobs:
           tag_name: latest-ded
           name: "Latest dedicated server build"
           prerelease: true
-          fail_on_unmatched_files: false
           body: |
             Automated rolling release — built from `${{ github.ref_name }}` @ `${{ github.sha }}`.
 
@@ -614,16 +251,6 @@ jobs:
           files: |
             heretic2r-server-linux-x86_64.tar.gz
             heretic2r-server-linux-arm64.tar.gz
-            heretic2r-server-linux-riscv64.tar.gz
             heretic2r-server-macos.tar.gz
             heretic2r-server-freebsd.tar.gz
-            heretic2r-server-freebsd-aarch64.tar.gz
-            heretic2r-server-freebsd-riscv64.tar.gz
             heretic2r-server-haiku.tar.gz
-            heretic2r-server-openbsd.tar.gz
-            heretic2r-server-openbsd-aarch64.tar.gz
-            heretic2r-server-openbsd-riscv64.tar.gz
-            heretic2r-server-netbsd.tar.gz
-            heretic2r-server-netbsd-aarch64.tar.gz
-            heretic2r-server-openindiana.tar.gz
-            heretic2r-server-solaris.tar.gz
