@@ -13,6 +13,7 @@
 #include "SpellsDefensive/spl_Teleport.h"
 #include "Vector.h"
 #include "g_Local.h"
+#include "compat.h"
 
 #define MACEBALL_UPSPEED			200.0f
 #define MACEBALL_SPEED				250.0f

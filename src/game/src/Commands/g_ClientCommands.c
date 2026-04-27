@@ -4,6 +4,8 @@
 // Copyright 1998 Raven Software
 //
 
+// g_Local.h needs to be included first --morb
+#include "g_Local.h"
 #include "g_ClientCommands.h" //mxd
 #include "g_Combat.h" //mxd
 #include "g_Items.h"
@@ -15,12 +17,12 @@
 #include "Player/p_HUD.h" //mxd
 #include "Player/p_Morph.h" //mxd
 #include "Player/p_View.h" //mxd
+#include "compat.h" // for UNIX port. --morb
 #include "cl_strings.h"
 #include "p_anims.h"
 #include "p_dll.h" //mxd
 #include "Random.h"
 #include "Vector.h"
-#include "g_Local.h"
 
 qboolean self_spawn; // True when spawned manually using 'spawn' ccmd.
 

@@ -251,7 +251,7 @@ static qboolean MorkBeamUpdate(client_entity_t* self, centity_t* owner) //mxd. N
 
 	// Create particles.
 	int num_particles = (int)(floorf((float)(irand(6, 9)) * self->r.scale));
-	num_particles = min(500, num_particles);
+	num_particles = (num_particles < 500 ? num_particles : 500);
 
 	for (int i = 0; i < num_particles; i++)
 	{
@@ -556,7 +556,7 @@ static qboolean BuoyUpdate(client_entity_t* self, centity_t* owner)
 		if (owner->current.frame == 0)
 			return false;
 
-		num_parts = min(5, owner->current.frame);
+		num_parts = (owner->current.frame < 5 ? owner->current.frame : 5);
 	}
 	else
 	{

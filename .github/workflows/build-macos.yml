@@ -1,0 +1,48 @@
+name: Build (macOS)
+
+on:
+  push:
+    branches: [ main, unix ]
+  pull_request:
+    branches: [ main, unix ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew install make gcc sdl3 pkg-config
+
+      - name: Build
+        run: |
+          make -j$(sysctl -n hw.logicalcpu)
+          make server -j$(sysctl -n hw.logicalcpu)
+
+      - name: Stage release artifacts
+        run: |
+          mkdir -p dist dist-ded
+          cp build/release/heretic2r dist/
+          cp -r build/release/base dist/
+          cp build/release/heretic2r-server dist-ded/
+          cp -r build/release/base dist-ded/
+
+      - name: Create archives
+        run: |
+          tar czf heretic2r-macos.tar.gz -C dist .
+          tar czf heretic2r-server-macos.tar.gz -C dist-ded .
+
+      - name: Upload client artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-macos
+          path: heretic2r-macos.tar.gz
+
+      - name: Upload dedicated server artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-server-macos
+          path: heretic2r-server-macos.tar.gz

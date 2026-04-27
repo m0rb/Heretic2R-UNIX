@@ -12,6 +12,7 @@
 #include "EffectFlags.h"
 #include "Reference.h"
 #include "Vector.h"
+#include "../unix/clfx_dll_unix.h"
 
 ResourceManager_t cl_FXBufMngr;
 
@@ -372,7 +373,8 @@ static void CL_DeltaEntity(frame_t* frame, const int newnum, const entity_state_
 
 	if ((ent->flags & CF_INUSE) && ent->prev.usageCount != state->usageCount) // H2
 	{
-		fxe.RemoveClientEffects(ent);
+		if (fxe.RemoveClientEffects != NULL)
+			fxe.RemoveClientEffects(ent);
 
 		if (ent->prev.rootJoint != NULL_ROOT_JOINT)
 		{
@@ -538,7 +540,8 @@ static void CL_ParsePacketEntities(const frame_t* oldframe, frame_t* newframe)
 			if (GetB(bits, U_ENT_FREED)) // H2
 			{
 				ent->flags &= ~CF_INUSE;
-				fxe.RemoveClientEffects(ent);
+				if (fxe.RemoveClientEffects != NULL)
+					fxe.RemoveClientEffects(ent);
 
 				if (ent->prev.rootJoint != NULL_ROOT_JOINT)
 				{
@@ -1104,8 +1107,11 @@ void CL_AddEntities(void)
 	if ((int)cl_timedemo->value)
 		cl.lerpfrac = 1.0f;
 
-	fxe.AddPacketEntities(&cl.frame);
-	fxe.AddEffects(CL_FREEZEWORLD);
+	if (fxapi_initialized)
+	{
+		fxe.AddPacketEntities(&cl.frame);
+		fxe.AddEffects(CL_FREEZEWORLD);
+	}
 
 	CL_CalcViewValues();
 }

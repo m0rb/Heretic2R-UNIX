@@ -5,10 +5,10 @@
 //
 
 #include <float.h> //mxd
-#include "m_PlaguesSithra.h"
-#include "m_PlaguesSithra_shared.h"
-#include "m_PlaguesSithra_anim.h"
-#include "m_PlaguesSithra_moves.h"
+#include "m_PlagueSsithra.h"
+#include "m_PlagueSsithra_shared.h"
+#include "m_PlagueSsithra_anim.h"
+#include "m_PlagueSsithra_moves.h"
 #include "g_DefaultMessageHandler.h"
 #include "g_Utilities.h"
 #include "GameObjects/g_Debris.h" //mxd

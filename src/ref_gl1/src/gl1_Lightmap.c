@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_Lightmap.c
 //
@@ -23,7 +24,7 @@ void LM_InitBlock(void)
 // Q2 counterpart
 void LM_UploadBlock(const qboolean dynamic)
 {
-	R_Bind(gl_state.lightmap_textures + (dynamic ? 0 : gl_lms.current_lightmap_texture));
+	R_Bind((int)gl_lms.texture_names[dynamic ? 0 : gl_lms.current_lightmap_texture]);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); //mxd. qglTexParameterf -> qglTexParameteri
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); //mxd. qglTexParameterf -> qglTexParameteri
@@ -195,14 +196,19 @@ void LM_BeginBuildingLightmaps(void) //mxd. Removed unused model_t* arg.
 	}
 
 	r_newrefdef.lightstyles = lightstyles;
-	gl_state.lightmap_textures = TEXNUM_LIGHTMAPS; //mxd. Set only here, never changed.
+	gl_state.lightmap_textures = TEXNUM_LIGHTMAPS; //mxd. Set only here. No longer used for actual binding (see gl_lms.texture_names).
 	gl_lms.current_lightmap_texture = 1;
 
-	//mxd. Skip gl_monolightmap logic.
-	gl_lms.internal_format = GL_TEX_SOLID_FORMAT;
+	// Use RGBA to match GL_LIGHTMAP_FORMAT (GL_RGBA, 4 bytes per pixel).
+	// GL_TEX_SOLID_FORMAT (3) is a legacy RGB-only format that mismatches the
+	// 4-byte upload data, resulting in corrupt/black lightmaps on modern drivers.
+	gl_lms.internal_format = GL_RGBA;
 
-	// Initialize the dynamic lightmap texture.
-	R_Bind(gl_state.lightmap_textures);
+	// Generate driver-allocated texture names for all lightmap slots.
+	glGenTextures(MAX_LIGHTMAPS + 1, gl_lms.texture_names);
+
+	// Initialize the dynamic lightmap texture (slot 0).
+	R_Bind((int)gl_lms.texture_names[0]);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); //mxd. qglTexParameterf -> qglTexParameteri
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); //mxd. qglTexParameterf -> qglTexParameteri

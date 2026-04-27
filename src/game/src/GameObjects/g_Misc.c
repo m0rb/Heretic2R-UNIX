@@ -1,3 +1,4 @@
+#include "g_Local.h"
 //
 // g_Misc.c
 //

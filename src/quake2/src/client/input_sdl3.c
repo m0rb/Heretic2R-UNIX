@@ -10,6 +10,7 @@
 #include "glimp_sdl3.h"
 #include "qcommon.h"
 #include "win32/dll_io/vid_dll.h"
+#include "../unix/compat.h"
 
 #include <SDL3/SDL.h>
 
@@ -262,28 +263,22 @@ void IN_Update(void) // YQ2
 			case SDL_EVENT_MOUSE_BUTTON_DOWN:
 			case SDL_EVENT_MOUSE_BUTTON_UP:
 			{
-				int key;
+				int key = 0;
 
 				switch (event.button.button)
 				{
-					case SDL_BUTTON_LEFT:
-						key = K_MOUSE1;
-						break;
-
-					case SDL_BUTTON_MIDDLE:
-						key = K_MOUSE3;
-						break;
-
-					case SDL_BUTTON_RIGHT:
-						key = K_MOUSE2;
-						break;
-
-					default:
-						return;
+					case SDL_BUTTON_LEFT:   key = K_MOUSE1; break;
+					case SDL_BUTTON_MIDDLE: key = K_MOUSE3; break;
+					case SDL_BUTTON_RIGHT:  key = K_MOUSE2; break;
+					default: break; // Ignore extra buttons; do NOT return (would exit the event loop early).
 				}
 
+				if (key == 0)
+					break;
+
 				const uint time = (uint)(event.button.timestamp / NANOSECONDS_IN_MILLISECOND);
-				Key_Event(key, (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN), time);
+				const qboolean down = (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN);
+				Key_Event(key, down, time);
 			} break;
 
 			case SDL_EVENT_MOUSE_MOTION:
@@ -342,6 +337,7 @@ void IN_Update(void) // YQ2
 
 			case SDL_EVENT_WINDOW_FOCUS_GAINED:
 				se.Activate(true); //mxd. Also activates music backend.
+				GLimp_ResetGrabState(); // Re-apply grab to the focused window on the next frame.
 				break;
 
 			case SDL_EVENT_WINDOW_SHOWN:
@@ -360,7 +356,10 @@ void IN_Update(void) // YQ2
 	// Grab and ungrab the mouse if the console is opened.
 	// Calling GLimp_GrabInput() each frame is a bit ugly but simple and should work.
 	// The called SDL functions return after a cheap check, if there's nothing to do.
-	GLimp_GrabInput(IN_ShouldGrabInput());
+	{
+		const qboolean should_grab = IN_ShouldGrabInput();
+		GLimp_GrabInput(should_grab);
+	}
 
 	// We need to save the frame time so other subsystems know the exact time of the last input events.
 	sys_frame_time = curtime; //mxd. Sys_Milliseconds() -> curtime.

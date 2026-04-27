@@ -6,7 +6,7 @@
 
 #include "Skeletons.h"
 
-int numJointsInSkeleton[] = 
+int numJointsInSkeleton[] __attribute__((visibility("default"))) = 
 {
 	NUM_JOINTS_RAVEN,
 	NUM_JOINTS_BOX,
@@ -16,7 +16,7 @@ int numJointsInSkeleton[] =
 	NUM_JOINTS_CORVUS,
 };
 
-int numNodesInSkeleton[] =
+int numNodesInSkeleton[] __attribute__((visibility("default"))) =
 {
 	2,	// RAVEN
 	0,	// BOX
@@ -113,7 +113,7 @@ static void CreatePlagueElfSkel(void* skeletalJoints, const uint jointSize, Arra
 	jointNodes[nodeIndex].next = ARRAYEDLISTNODE_NULL;
 }
 
-CreateSkeleton_t SkeletonCreators[NUM_SKELETONS] =
+CreateSkeleton_t SkeletonCreators[NUM_SKELETONS] __attribute__((visibility("default"))) =
 {
 	CreateRavenSkel,
 	CreateBoxSkel,

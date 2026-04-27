@@ -111,7 +111,7 @@ CScript::CScript(const char* script_name, edict_t* new_owner)
 	Clear();
 
 	owner = new_owner;
-	strcpy_s(name, script_name); //mxd. strcpy -> strcpy_s.
+	strcpy_s(name, sizeof(name), script_name); //mxd. strcpy -> strcpy_s.
 
 	LoadFile();
 }
@@ -1318,7 +1318,14 @@ void CScript::HandleMove()
 	delete move_duration_var;
 
 	if (!signaler_added) //mxd. Otherwise signaler_var will be deleted by signaling routine.
+	{
+		// Pre-fire the signal if the entity was null (move was skipped) so that any
+		// subsequent WAIT_ANY / WAIT_ALL resolves immediately instead of blocking forever. --morb
+		//delete signaler_var;
+		if (signaler_var != nullptr)
+			signaler_var->Signal(nullptr);
 		delete signaler_var;
+	}
 }
 
 void CScript::HandleRotate()
@@ -1403,7 +1410,13 @@ void CScript::HandleRotate()
 	delete rotation_duration_var;
 
 	if (!signaler_added) //mxd. Otherwise signaler_var will be deleted by signaling routine.
+	{
+		// same issue as HandleMove — pre-fire required. --morb
+		//delete signaler_var; 
+		if (signaler_var != nullptr) 
+			signaler_var->Signal(nullptr);
 		delete signaler_var;
+	}
 }
 
 void CScript::HandleUse()
@@ -1518,7 +1531,13 @@ void CScript::HandleAnimate()
 	delete moving_var;
 
 	if (!signaler_added) //mxd. Otherwise signaler_var will be deleted by signaling routine.
+	{
+		// same issue as HandleMove — pre-fire required. --morb
+		//delete signaler_var;
+		if (signaler_var != nullptr)
+			signaler_var->Signal(nullptr);
 		delete signaler_var;
+	}
 }
 
 void CScript::HandleCopyPlayerAttributes()
@@ -1552,6 +1571,14 @@ void CScript::HandleSetViewAngles()
 		Error("Invalid stack for HandleSetViewAngles()");
 
 	edict_t* player_ent = player_var->GetEdictValue();
+
+	// test for nullptrs. segfaults. --morb
+	if (player_ent == nullptr || player_ent->client == nullptr)
+	{
+		delete angles_var;
+		delete player_var;
+		return;
+	}
 
 	// Set angles.
 	player_ent->client->ps.pmove.delta_angles[PITCH] = 0;
@@ -1751,10 +1778,10 @@ void CScript::FinishWait(edict_t* which, const bool execute) //mxd. Second var n
 	char text[1024];
 
 	va_start(argptr, format);
-	vsprintf_s(text, format, argptr); //mxd. vsprintf -> vsprintf_s.
+	vsprintf_s(text, sizeof(text), format, argptr); //mxd. vsprintf -> vsprintf_s.
 	va_end(argptr);
 
-	gi.error(text);
+	gi.error("%s", text);
 }
 
 void CScript::StartDebug()
@@ -1775,13 +1802,13 @@ void CScript::DebugLine(const char* format, ...) const
 	char text[1024];
 
 	va_start(argptr, format);
-	vsprintf_s(text, format, argptr); //mxd. vsprintf -> vsprintf_s.
+	vsprintf_s(text, sizeof(text), format, argptr); //mxd. vsprintf -> vsprintf_s.
 	va_end(argptr);
 
 	Com_Printf("%s", text);
 
 #ifdef _DEBUG
-	DBG_IDEPrint("%s", text); //mxd. OutputDebugString() in original logic. Changed to avoid <windows.h>.
+	DBG_IDEPrint("%s", text); //mxd. OutputDebugString() in original logic. Changed to avoid <windows.h>.*
 #endif
 }
 

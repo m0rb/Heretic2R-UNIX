@@ -4,6 +4,11 @@
 // Copyright 1998 Raven Software
 //
 
+// Include C++ headers BEFORE C headers to avoid extern "C" conflicts
+#include <unordered_map>
+#include <list>
+#include <string>
+
 #include "sc_Main.h"
 #include "sc_CScript.h"
 #include "Events/sc_ExecuteEvent.h"
@@ -106,7 +111,7 @@ extern "C" void ScriptUse(edict_t* ent, edict_t* other, edict_t* activator) //mx
 extern "C" void SP_script_runner(edict_t* ent)
 {
 	char script_path[MAX_OSPATH]; //mxd. MAX_PATH in original logic.
-	sprintf_s(script_path, "ds/%s.os", st.script); //mxd. sprintf -> sprintf_s.
+	sprintf_s(script_path, sizeof(script_path), "ds/%s.os", st.script); //mxd. sprintf -> sprintf_s.
 
 	ent->Script = new CScript(script_path, ent);
 	Scripts.push_back(ent->Script);
