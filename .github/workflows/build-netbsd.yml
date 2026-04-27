@@ -26,10 +26,13 @@ jobs:
         with:
           arch: ${{ matrix.arch == 'x86_64' && '' || matrix.arch }}
           usesh: true
-          prepare: pkg_add cmake ninja-build gmake pkg-config libexecinfo git
+          prepare: pkg_add cmake ninja-build gmake pkg-config libexecinfo
 
           run: |
-            git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
+            # Use NetBSD ftp to fetch the SDL3 tarball — avoids the git/pcre2 version conflict.
+            ftp -o SDL3.tar.gz https://github.com/libsdl-org/SDL/releases/download/release-3.2.10/SDL3-3.2.10.tar.gz
+            tar xzf SDL3.tar.gz
+            mv SDL3-3.2.10 SDL3-src
             cmake -S SDL3-src -B SDL3-build -G Ninja \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INSTALL_PREFIX=/usr/pkg \

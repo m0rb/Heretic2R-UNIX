@@ -10,6 +10,14 @@ on:
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+          - arch: arm64
+          - arch: riscv64
+
     runs-on: ubuntu-latest
 
     steps:
