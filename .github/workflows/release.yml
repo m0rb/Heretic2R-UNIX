@@ -186,8 +186,9 @@ jobs:
             cmake --build SDL3-build --parallel
             cmake --install SDL3-build
             export PKG_CONFIG_PATH=/boot/system/non-packaged/lib/pkgconfig
-            make -j$(sysctl -n hw.ncpu)
-            make server -j$(sysctl -n hw.ncpu)
+            NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
+            make -j$NCPU
+            make server -j$NCPU
             mkdir -p dist dist-ded
             cp build/release/heretic2r dist/
             cp -r build/release/base dist/
