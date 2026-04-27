@@ -1,0 +1,92 @@
+name: Build (NetBSD)
+
+on:
+  push:
+    branches: [ main, unix ]
+  pull_request:
+    branches: [ main, unix ]
+  workflow_dispatch:
+
+jobs:
+  build-x86_64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build on NetBSD (x86_64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          prepare: pkgin -y install cmake ninja-build gmake pkg-config libexecinfo
+          run: |
+            git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
+            cmake -S SDL3-src -B SDL3-build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX=/usr/pkg \
+              -DSDL_SHARED=ON \
+              -DSDL_STATIC=OFF \
+              -DSDL_TEST=OFF
+            cmake --build SDL3-build --parallel
+            cmake --install SDL3-build
+            export PKG_CONFIG_PATH=/usr/pkg/lib/pkgconfig
+            NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
+            gmake -j$NCPU
+            gmake server -j$NCPU
+            mkdir -p dist dist-ded
+            cp build/release/heretic2r dist/
+            cp -r build/release/base dist/
+            cp /usr/pkg/lib/libSDL3.so.0 dist/
+            cp SDL3-src/LICENSE.txt dist/LICENSE.SDL3.txt
+            cp build/release/heretic2r-server dist-ded/
+            cp -r build/release/base dist-ded/
+            tar czf heretic2r-netbsd.tar.gz -C dist .
+            tar czf heretic2r-server-netbsd.tar.gz -C dist-ded .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-netbsd
+          path: heretic2r-netbsd.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-server-netbsd
+          path: heretic2r-server-netbsd.tar.gz
+
+  build-aarch64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build on NetBSD (aarch64)
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: arm64
+          usesh: true
+          prepare: pkgin -y install cmake ninja-build gmake pkg-config libexecinfo
+          run: |
+            git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
+            cmake -S SDL3-src -B SDL3-build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX=/usr/pkg \
+              -DSDL_SHARED=ON \
+              -DSDL_STATIC=OFF \
+              -DSDL_TEST=OFF
+            cmake --build SDL3-build --parallel
+            cmake --install SDL3-build
+            export PKG_CONFIG_PATH=/usr/pkg/lib/pkgconfig
+            NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
+            gmake -j$NCPU
+            gmake server -j$NCPU
+            mkdir -p dist dist-ded
+            cp build/release/heretic2r dist/
+            cp -r build/release/base dist/
+            cp /usr/pkg/lib/libSDL3.so.0 dist/
+            cp SDL3-src/LICENSE.txt dist/LICENSE.SDL3.txt
+            cp build/release/heretic2r-server dist-ded/
+            cp -r build/release/base dist-ded/
+            tar czf heretic2r-netbsd-aarch64.tar.gz -C dist .
+            tar czf heretic2r-server-netbsd-aarch64.tar.gz -C dist-ded .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-netbsd-aarch64
+          path: heretic2r-netbsd-aarch64.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-server-netbsd-aarch64
+          path: heretic2r-server-netbsd-aarch64.tar.gz

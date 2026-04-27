@@ -1,4 +1,4 @@
-name: Build (FreeBSD)
+name: Build (OpenBSD)
 
 on:
   push:
@@ -12,11 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build on FreeBSD (x86_64)
-        uses: vmactions/freebsd-vm@v1
+      - name: Build on OpenBSD (x86_64)
+        uses: vmactions/openbsd-vm@v1
         with:
           usesh: true
-          prepare: pkg install -y gmake gcc sdl3 pkgconf mesa-libs
+          prepare: pkg_add sdl3 gmake pkgconf
           run: |
             gmake -j$(sysctl -n hw.ncpu)
             gmake server -j$(sysctl -n hw.ncpu)
@@ -25,27 +25,27 @@ jobs:
             cp -r build/release/base dist/
             cp build/release/heretic2r-server dist-ded/
             cp -r build/release/base dist-ded/
-            tar czf heretic2r-freebsd.tar.gz -C dist .
-            tar czf heretic2r-server-freebsd.tar.gz -C dist-ded .
+            tar czf heretic2r-openbsd.tar.gz -C dist .
+            tar czf heretic2r-server-openbsd.tar.gz -C dist-ded .
       - uses: actions/upload-artifact@v4
         with:
-          name: heretic2r-freebsd
-          path: heretic2r-freebsd.tar.gz
+          name: heretic2r-openbsd
+          path: heretic2r-openbsd.tar.gz
       - uses: actions/upload-artifact@v4
         with:
-          name: heretic2r-server-freebsd
-          path: heretic2r-server-freebsd.tar.gz
+          name: heretic2r-server-openbsd
+          path: heretic2r-server-openbsd.tar.gz
 
   build-aarch64:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build on FreeBSD (aarch64)
-        uses: vmactions/freebsd-vm@v1
+      - name: Build on OpenBSD (aarch64)
+        uses: vmactions/openbsd-vm@v1
         with:
           arch: arm64
           usesh: true
-          prepare: pkg install -y gmake gcc sdl3 pkgconf mesa-libs
+          prepare: pkg_add sdl3 gmake pkgconf
           run: |
             gmake -j$(sysctl -n hw.ncpu)
             gmake server -j$(sysctl -n hw.ncpu)
@@ -54,27 +54,27 @@ jobs:
             cp -r build/release/base dist/
             cp build/release/heretic2r-server dist-ded/
             cp -r build/release/base dist-ded/
-            tar czf heretic2r-freebsd-aarch64.tar.gz -C dist .
-            tar czf heretic2r-server-freebsd-aarch64.tar.gz -C dist-ded .
+            tar czf heretic2r-openbsd-aarch64.tar.gz -C dist .
+            tar czf heretic2r-server-openbsd-aarch64.tar.gz -C dist-ded .
       - uses: actions/upload-artifact@v4
         with:
-          name: heretic2r-freebsd-aarch64
-          path: heretic2r-freebsd-aarch64.tar.gz
+          name: heretic2r-openbsd-aarch64
+          path: heretic2r-openbsd-aarch64.tar.gz
       - uses: actions/upload-artifact@v4
         with:
-          name: heretic2r-server-freebsd-aarch64
-          path: heretic2r-server-freebsd-aarch64.tar.gz
+          name: heretic2r-server-openbsd-aarch64
+          path: heretic2r-server-openbsd-aarch64.tar.gz
 
   build-riscv64:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build on FreeBSD (riscv64)
-        uses: vmactions/freebsd-vm@v1
+      - name: Build on OpenBSD (riscv64)
+        uses: vmactions/openbsd-vm@v1
         with:
           arch: riscv64
           usesh: true
-          prepare: pkg install -y gmake gcc sdl3 pkgconf mesa-libs
+          prepare: pkg_add sdl3 gmake pkgconf
           run: |
             gmake -j$(sysctl -n hw.ncpu)
             gmake server -j$(sysctl -n hw.ncpu)
@@ -83,13 +83,13 @@ jobs:
             cp -r build/release/base dist/
             cp build/release/heretic2r-server dist-ded/
             cp -r build/release/base dist-ded/
-            tar czf heretic2r-freebsd-riscv64.tar.gz -C dist .
-            tar czf heretic2r-server-freebsd-riscv64.tar.gz -C dist-ded .
+            tar czf heretic2r-openbsd-riscv64.tar.gz -C dist .
+            tar czf heretic2r-server-openbsd-riscv64.tar.gz -C dist-ded .
       - uses: actions/upload-artifact@v4
         with:
-          name: heretic2r-freebsd-riscv64
-          path: heretic2r-freebsd-riscv64.tar.gz
+          name: heretic2r-openbsd-riscv64
+          path: heretic2r-openbsd-riscv64.tar.gz
       - uses: actions/upload-artifact@v4
         with:
-          name: heretic2r-server-freebsd-riscv64
-          path: heretic2r-server-freebsd-riscv64.tar.gz
+          name: heretic2r-server-openbsd-riscv64
+          path: heretic2r-server-openbsd-riscv64.tar.gz
