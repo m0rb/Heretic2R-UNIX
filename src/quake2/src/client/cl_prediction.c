@@ -433,9 +433,15 @@ static void CL_PredictMovement_impl(void) //mxd. Surprisingly, NOT the biggest H
 
 		VectorCopy_Macro(pm.cmd.angles, old_cmd_angles);
 
-		pm.cmd.forwardmove = (short)cl.playerinfo.fwdvel;
-		pm.cmd.sidemove = (short)cl.playerinfo.sidevel;
-		pm.cmd.upmove = (short)cl.playerinfo.upvel;
+		// For protocol 55 (H2R) servers, override movement with server-reported velocity.
+		// Protocol 51 (H2 1.06) servers send fwdvel=0 after jumps and stop delta-updating it,
+		// which causes prediction to freeze. For protocol 51 use the keyboard input directly.
+		if (cls.serverProtocol == H2R_PROTOCOL_VERSION)
+		{
+			pm.cmd.forwardmove = (short)cl.playerinfo.fwdvel;
+			pm.cmd.sidemove = (short)cl.playerinfo.sidevel;
+			pm.cmd.upmove = (short)cl.playerinfo.upvel;
+		}
 
 		pm.knockbackfactor = Clamp(cl.playerinfo.knockbacktime - cl.playerinfo.leveltime, 0.0f, 1.0f);
 		pm.groundentity = (struct edict_s*)cl.playerinfo.groundentity;

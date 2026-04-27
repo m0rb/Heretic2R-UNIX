@@ -645,6 +645,10 @@ void M_Init(void)
 	m_item_contrast = Cvar_Get("m_item_contrast", "Contrast", 0);
 	m_item_minlight = Cvar_Get("m_item_minlight", "Min. light level", 0); //mxd
 	m_item_detail = Cvar_Get("m_item_detail", "Detail Level", 0);
+	m_item_vsync        = Cvar_Get("m_item_vsync",        "VSync",         0); // YQ2
+	m_item_consolescale = Cvar_Get("m_item_consolescale", "Console Scale", 0); // YQ2
+	m_item_hudscale     = Cvar_Get("m_item_hudscale",     "HUD Scale",     0); // YQ2
+	m_item_menuscale    = Cvar_Get("m_item_menuscale",    "Menu Scale",    0); // YQ2
 
 	// Options / Video Settings menus.
 	m_item_defaults = Cvar_Get("m_item_defaults", "Reset to Defaults", 0);
@@ -927,6 +931,25 @@ qboolean Menu_SlideItem(const menuframework_t* menu, const int dir) //mxd. Retur
 	}
 }
 
+// YQ2: available height for menu items between the title and the screen bottom.
+#define MENU_AVAIL_H	(DEF_HEIGHT - MENU_TITLE_HEIGHT * 2 - 4)
+
+// YQ2: returns the index of the last item visible from menu->scroll given MENU_AVAIL_H.
+static int Menu_LastVisible(const menuframework_t* menu)
+{
+	if (menu->nitems == 0)
+		return -1;
+	const int first_y = menu->items[menu->scroll]->y;
+	int last = menu->scroll;
+	for (int i = menu->scroll; i < menu->nitems; i++)
+	{
+		if (menu->items[i]->y - first_y + 22 > MENU_AVAIL_H)
+			break;
+		last = i;
+	}
+	return last;
+}
+
 // This function takes the given menu, the direction, and attempts to adjust
 // the menu's cursor so that it's at the next available slot.
 void Menu_AdjustCursor(menuframework_t* menu, const int dir)
@@ -960,6 +983,23 @@ void Menu_AdjustCursor(menuframework_t* menu, const int dir)
 				break;
 		}
 	}
+
+	// YQ2: keep the cursor within the visible window; scroll if needed and recenter.
+	if (menu->cursor < menu->scroll)
+	{
+		menu->scroll = menu->cursor;
+		Menu_Center(menu);
+	}
+	else
+	{
+		int last_vis = Menu_LastVisible(menu);
+		if (menu->cursor > last_vis)
+		{
+			while (menu->cursor > Menu_LastVisible(menu) && menu->scroll < menu->nitems - 1)
+				menu->scroll++;
+			Menu_Center(menu);
+		}
+	}
 }
 
 void Menu_Center(menuframework_t* menu)
@@ -967,10 +1007,18 @@ void Menu_Center(menuframework_t* menu)
 	int width = 0;
 	for (int i = 0; i < menu->nitems; i++)
 		width = max(width, menu->items[i]->width);
-
 	menu->width = width;
 
-	const int height = menu->items[menu->nitems - 1]->y + 22; //mxd. 10 (con char height + 2?) in original logic. Changed to font1 char height.
+	if (menu->nitems == 0)
+		return;
+
+	// YQ2: center only the visible slice so menu->y is always correct even when scrolled.
+	// Menu_Draw temporarily subtracts items[scroll]->y from menu->y so the first visible
+	// item lands at menu->y and items above scroll are shifted off-screen.
+	const int last_vis = Menu_LastVisible(menu);
+	const int first_y  = menu->items[menu->scroll]->y;
+	const int span_y   = (last_vis >= 0 ? menu->items[last_vis]->y : first_y) - first_y;
+	const int height   = span_y + 22; //mxd. font1 char height.
 	menu->y = (DEF_HEIGHT - height) / 2 + MENU_TITLE_HEIGHT; //mxd. Factor in menu title height.
 }
 
@@ -990,23 +1038,27 @@ static void Slider_Draw(menuslider_t* slider, const qboolean selected)
 	slider->range = (slider->curvalue - slider->minvalue) / (slider->maxvalue - slider->minvalue);
 	slider->range = Clamp(slider->range, 0.0f, 1.0f);
 
+	// YQ2: slider widgets use menu scale, independent of console/HUD scale.
+	const int ms = SCR_GetMenuScale();
+	const int mc = CONCHAR_SIZE * ms;
+
 	// Draw BG left.
 	x = (M_GetMenuLabelX(0) * ui_screen_width / DEF_WIDTH) + ui_screen_offset_x; //mxd. Convert page center to real screen size.
-	x -= (SLIDER_RANGE * ui_char_size) / 2; //mxd. Offset by slider size.
+	x -= (SLIDER_RANGE * mc) / 2; //mxd. Offset by slider size.
 
 	y = (y + CONCHAR_LINE_HEIGHT) * viddef.height / DEF_HEIGHT;
-	re.DrawChar(x - ui_char_size, y, ui_scale, 15, color, false);
+	re.DrawChar(x - mc, y, ms, 15, color, false);
 
 	// Draw BG mid.
 	int ox = x;
-	for (int i = 0; i < SLIDER_RANGE; i++, ox += ui_char_size)
-		re.DrawChar(ox, y, ui_scale, 1, color, false);
+	for (int i = 0; i < SLIDER_RANGE; i++, ox += mc)
+		re.DrawChar(ox, y, ms, 1, color, false);
 
 	// Draw BG right.
-	re.DrawChar(x + ui_char_size * SLIDER_RANGE, y, ui_scale, 2, color, false);
+	re.DrawChar(x + mc * SLIDER_RANGE, y, ms, 2, color, false);
 
 	// Draw slider value.
-	re.DrawChar(x + (int)(slider->range * (float)ui_char_size * (SLIDER_RANGE - 1)), y, ui_scale, 3, color, false);
+	re.DrawChar(x + (int)(slider->range * (float)mc * (SLIDER_RANGE - 1)), y, ms, 3, color, false);
 }
 
 static void Field_Draw(const menufield_t* field, const qboolean selected)
@@ -1024,36 +1076,43 @@ static void Field_Draw(const menufield_t* field, const qboolean selected)
 		y += CONCHAR_LINE_HEIGHT * 2;
 	}
 
+	// YQ2: field widgets use menu scale, independent of console/HUD scale.
+	const int ms = SCR_GetMenuScale();
+	const int mc = CONCHAR_SIZE * ms;
+
 	int x = (M_GetMenuLabelX(0) * ui_screen_width / DEF_WIDTH) + ui_screen_offset_x; //mxd. Convert page center to real screen size.
-	x -= (field->visible_length * ui_char_size) / 2; //mxd. Offset by field size.
+	x -= (field->visible_length * mc) / 2; //mxd. Offset by field size.
 	y = (y - CONCHAR_SIZE) * viddef.height / DEF_HEIGHT;
 
 	// Draw field BG corners.
-	const int half_size = ui_char_size / 2; //mxd
-	re.DrawChar(x - ui_char_size, y - half_size, ui_scale, 18, color, false);
-	re.DrawChar(x - ui_char_size, y + half_size, ui_scale, 24, color, false);
-	re.DrawChar(x + field->visible_length * ui_char_size, y - half_size, ui_scale, 20, color, false);
-	re.DrawChar(x + field->visible_length * ui_char_size, y + half_size, ui_scale, 26, color, false);
+	const int half_size = mc / 2; //mxd
+	re.DrawChar(x - mc, y - half_size, ms, 18, color, false);
+	re.DrawChar(x - mc, y + half_size, ms, 24, color, false);
+	re.DrawChar(x + field->visible_length * mc, y - half_size, ms, 20, color, false);
+	re.DrawChar(x + field->visible_length * mc, y + half_size, ms, 26, color, false);
 
 	// Draw field BG middle part.
 	int ox = x;
-	for (int i = 0; i < field->visible_length; i++, ox += ui_char_size)
+	for (int i = 0; i < field->visible_length; i++, ox += mc)
 	{
-		re.DrawChar(ox, y - half_size, ui_scale, 19, color, false);
-		re.DrawChar(ox, y + half_size, ui_scale, 25, color, false);
+		re.DrawChar(ox, y - half_size, ms, 19, color, false);
+		re.DrawChar(ox, y + half_size, ms, 25, color, false);
 	}
 
 	// Draw field value.
 	char value[128];
 	strncpy_s(value, sizeof(value), field->buffer + field->visible_offset, field->visible_length); //mxd. strncpy -> strncpy_s
-	DrawString(x, y, value, TextPalette[P_MENUFIELD], -1); //TODO: don't need text shadow here...
+	for (int fi = 0; value[fi] != '\0' && fi < field->visible_length; fi++)
+	{
+		re.DrawChar(x + fi * mc, y, ms, (unsigned char)value[fi], TextPalette[P_MENUFIELD], false);
+	}
 
 	// Draw cursor?
 	if ((menufield_t*)Menu_ItemAtCursor(field->generic.parent) == field)
 	{
 		const int offset = ((field->visible_offset != 0) ? field->visible_length : field->cursor);
 		const int ch = ((curtime / 250 & 1) ? 11 : ' '); //mxd. Sys_Milliseconds() -> curtime.
-		re.DrawChar(x + offset * ui_char_size, y, ui_scale, ch, color, false);
+		re.DrawChar(x + offset * mc, y, ms, ch, color, false);
 	}
 }
 
@@ -1179,8 +1238,19 @@ static void SpinControl_Draw(const menulist_t* list, const qboolean selected)
 
 void Menu_Draw(const menuframework_t* menu)
 {
-	// Draw contents.
-	for (int i = 0; i < menu->nitems; i++)
+	if (menu->nitems == 0)
+		return;
+
+	// YQ2: shift menu->y so items[scroll] lands at the centered top-of-visible position,
+	// while items above scroll are pushed off-screen.  Restore afterward.
+	menuframework_t* m = (menuframework_t*)menu;
+	const int scroll_y_base = menu->items[menu->scroll]->y;
+	m->y -= scroll_y_base;
+
+	const int last_vis = Menu_LastVisible(menu);
+
+	// Draw contents — only the visible slice [scroll, last_vis].
+	for (int i = menu->scroll; i <= last_vis; i++)
 	{
 		menucommon_t* item = menu->items[i];
 
@@ -1214,6 +1284,31 @@ void Menu_Draw(const menuframework_t* menu)
 			default: //mxd. Added default case.
 				Sys_Error("Unexpected menu item type %i", item->type);
 				break;
+		}
+	}
+
+	// Restore menu->y before drawing scroll arrows (arrows use absolute coords).
+	m->y += scroll_y_base;
+
+	// YQ2: draw scroll arrows when more items exist above or below the visible window.
+	if (menu->scroll > 0 || last_vis < menu->nitems - 1)
+	{
+		const int ms = SCR_GetMenuScale();
+		const int mc = CONCHAR_SIZE * ms;
+		const paletteRGBA_t color = { .r = 255, .g = 255, .b = 255, .a = 180 };
+		const int ax = (M_GetMenuLabelX(0) * ui_screen_width / DEF_WIDTH) + ui_screen_offset_x;
+
+		if (menu->scroll > 0)
+		{
+			// Arrow above the first visible item.
+			const int vy = (menu->items[menu->scroll]->y + menu->y) * viddef.height / DEF_HEIGHT - mc;
+			re.DrawChar(ax, vy, ms, '^', color, false);
+		}
+		if (last_vis < menu->nitems - 1)
+		{
+			// Arrow below the last visible item.
+			const int vy = (menu->items[last_vis]->y + menu->y) * viddef.height / DEF_HEIGHT + mc;
+			re.DrawChar(ax, vy, ms, 'v', color, false);
 		}
 	}
 }
@@ -1295,18 +1390,22 @@ void Menu_DrawTextBlock(const char* message, const int max_line_length) // H2
 {
 	char buffer[1024];
 
+	// YQ2: menu text blocks use menu scale, independent of console/HUD scale.
+	const int ms = SCR_GetMenuScale();
+	const int mc = CONCHAR_SIZE * ms;
+
 	int color_index = P_OBJ_NORMAL;
 	const int num_lines = SplitLines(buffer, sizeof(buffer), message, max_line_length);
 	int y = 80 * viddef.height / DEF_HEIGHT;
 	char* s = buffer;
 
-	for (int i = 0; i < num_lines; i++, s++, y += ui_char_size)
+	for (int i = 0; i < num_lines; i++, s++, y += mc)
 	{
 		int text_len; //mxd
 		const int str_len = GetLineLength(s, &text_len);
 		int x = M_GetMenuLabelX(0); // Get page center in DEF_WIDTH x DEF_HEIGHT screen size.
 		x = (x * ui_screen_width / DEF_WIDTH) + ui_screen_offset_x; // Convert to real screen size.
-		x -= text_len * ui_char_size / 2; // Factor in line length. Use text length without special markers --mxd.
+		x -= text_len * mc / 2; // Factor in line length. Use text length without special markers --mxd.
 
 		for (int c = 0; c < str_len; c++, s++)
 		{
@@ -1324,8 +1423,8 @@ void Menu_DrawTextBlock(const char* message, const int max_line_length) // H2
 				{
 					paletteRGBA_t color = TextPalette[color_index];
 					color.a = (byte)(cls.m_menualpha * 255.0f);
-					re.DrawChar(x, y, ui_scale, *s, color, false);
-					x += ui_char_size;
+					re.DrawChar(x, y, ms, *s, color, false);
+					x += mc;
 				} break;
 			}
 		}

@@ -38,6 +38,10 @@ extern cvar_t* m_item_brightness;
 extern cvar_t* m_item_contrast;
 extern cvar_t* m_item_minlight; // YQ2
 extern cvar_t* m_item_detail;
+extern cvar_t* m_item_vsync;        // YQ2
+extern cvar_t* m_item_consolescale; // YQ2
+extern cvar_t* m_item_hudscale;     // YQ2
+extern cvar_t* m_item_menuscale;    // YQ2
 
 // Action keys.
 extern cvar_t* m_item_attack;
@@ -145,6 +149,7 @@ typedef struct
 	int cursor;
 	int width;
 	int nitems;
+	int scroll;  // YQ2: index of first visible item (auto-managed by Menu_AdjustCursor)
 	menucommon_t* items[MAXMENUITEMS];
 } menuframework_t;
 

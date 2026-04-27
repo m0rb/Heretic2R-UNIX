@@ -748,7 +748,7 @@ void M_WalkmonsterStartGo(edict_t* self) //mxd. Named 'walkmonster_start_go' in 
 		self->yaw_speed = 20.0f;
 
 	//mxd. Original logic invariantly sets viewheight to 25 instead. 
-	//morb was here. updated to handle edgecases on unix.
+	//Updated to handle edgecases on UNIX. --morb
 	if (self->viewheight <= 0 || self->viewheight >= (int)(self->maxs[2] * self->s.scale) - 1)
 		self->viewheight = 25;
 
@@ -774,7 +774,7 @@ void M_FlymonsterStartGo(edict_t* self) //mxd. Named 'flymonster_start_go' in or
 		self->yaw_speed = 10.0f;
 
 	//mxd. Original logic sets viewheight to 25 if it's 0 instead.
-	//morb was here. updated to handle edgecases on unix.
+	//Updated to handle edgecases on UNIX. --morb
 	if (self->viewheight <= 0 || self->viewheight >= (int)(self->maxs[2] * self->s.scale) - 1)
 		self->viewheight = 25;
 

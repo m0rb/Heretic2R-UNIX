@@ -1319,11 +1319,9 @@ void CScript::HandleMove()
 
 	if (!signaler_added) //mxd. Otherwise signaler_var will be deleted by signaling routine.
 	{
-		// morb was here. fixed for Unix port.
 		// Pre-fire the signal if the entity was null (move was skipped) so that any
-		// subsequent WAIT_ANY / WAIT_ALL on this signaler resolves immediately instead
-		// of blocking the script forever.
-		//delete signaler_var; // original: null entity left signaler unregistered, blocking any subsequent WAIT_ANY/WAIT_ALL forever.
+		// subsequent WAIT_ANY / WAIT_ALL resolves immediately instead of blocking forever. --morb
+		//delete signaler_var;
 		if (signaler_var != nullptr)
 			signaler_var->Signal(nullptr);
 		delete signaler_var;
@@ -1413,9 +1411,9 @@ void CScript::HandleRotate()
 
 	if (!signaler_added) //mxd. Otherwise signaler_var will be deleted by signaling routine.
 	{
-		// morb was here. fixed for Unix port.
-		//delete signaler_var; // original: same issue as HandleMove — pre-fire required.
-		if (signaler_var != nullptr) // Pre-fire signal for null entity (same as HandleMove).
+		// same issue as HandleMove — pre-fire required. --morb
+		//delete signaler_var; 
+		if (signaler_var != nullptr) 
 			signaler_var->Signal(nullptr);
 		delete signaler_var;
 	}
@@ -1534,9 +1532,9 @@ void CScript::HandleAnimate()
 
 	if (!signaler_added) //mxd. Otherwise signaler_var will be deleted by signaling routine.
 	{
-		// morb was here. fixed for Unix port.
-		//delete signaler_var; // original: same issue as HandleMove — pre-fire required.
-		if (signaler_var != nullptr) // Pre-fire signal for null entity (same as HandleMove).
+		// same issue as HandleMove — pre-fire required. --morb
+		//delete signaler_var;
+		if (signaler_var != nullptr)
 			signaler_var->Signal(nullptr);
 		delete signaler_var;
 	}
@@ -1574,8 +1572,7 @@ void CScript::HandleSetViewAngles()
 
 	edict_t* player_ent = player_var->GetEdictValue();
 
-	// morb was here. fixed for Unix port.
-	// original: no null check; dereferencing player_ent->client with a null player crashed the engine during cinematics where the player entity is not yet set.
+	// test for nullptrs. segfaults. --morb
 	if (player_ent == nullptr || player_ent->client == nullptr)
 	{
 		delete angles_var;

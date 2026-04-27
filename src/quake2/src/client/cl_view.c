@@ -229,7 +229,7 @@ void V_RenderView(const float stereo_separation)
 		cls.r_numdlights = 0;
 
 	if (!(int)cl_add_blend->value)
-		memset(cl.refdef.blend, 0, sizeof(cl.refdef.blend)); // morb was here. was VectorClear (only cleared 3 of 4 floats).
+		memset(cl.refdef.blend, 0, sizeof(cl.refdef.blend)); // VectorClear (only cleared 3 of 4 floats) --morb
 
 	cl.refdef.num_entities = cls.r_numentities;
 	cl.refdef.entities = cls.r_entities;

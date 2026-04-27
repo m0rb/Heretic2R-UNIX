@@ -111,8 +111,8 @@ static int LoadTextFile(char* name, char** addr)
 
 	if (length <= 0)
 	{
-		// morb was here. Non-fatal on dedicated servers / stripped installs.
-		// was: Sys_Error("LoadTextFile: unable to load '%s'", name);
+		//Non-fatal on dedicated servers / stripped installs. --morb
+		//Sys_Error("LoadTextFile: unable to load '%s'", name);
 		Com_Printf("WARNING: LoadTextFile: unable to load '%s' -- level messages disabled\n", name);
 		*addr = NULL;
 		return 0;

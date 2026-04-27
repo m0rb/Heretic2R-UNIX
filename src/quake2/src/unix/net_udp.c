@@ -1,9 +1,15 @@
-/*
- * net_udp.c -- Unix UDP network support for Heretic2R
- * Copyright 1998 Raven Software
- * Copyright (C) 2010-2024 Yamagi Quake 2 Contributors (GPLv2)
- * Unix port by morb
- */
+//
+// net_udp.c -- UDP network support
+//
+// Copyright (C) 1997-2001 Id Software, Inc.
+// Copyright (C) 1998 Raven Software
+//
+// Heretic2R UNIX port by morb
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -144,7 +150,6 @@ static qboolean NET_StringToSockaddr(const char* s, struct sockaddr_in* sadr)
 
 	strcpy(copy, s);
 
-	// Strip off a trailing :port if present
 	for (colon = copy; *colon != 0; colon++)
 	{
 		if (*colon == ':')
@@ -290,8 +295,7 @@ void NET_SendPacket(const netsrc_t sock, const int length, const void* data, con
 			net_socket = ip_sockets[sock];
 			break;
 
-		// morb was here. NA_IPX / NA_BROADCAST_IPX are not supported on Unix — skip silently.
-		// Previously these fell to the fatal error below, crashing on "Join a server".
+		// IPX not supported. Sorry!
 		case NA_IPX:
 		case NA_BROADCAST_IPX:
 			return;
@@ -310,11 +314,9 @@ void NET_SendPacket(const netsrc_t sock, const int length, const void* data, con
 	{
 		const int err = errno;
 
-		// Wouldblock is silent
 		if (err == EWOULDBLOCK || err == EAGAIN)
 			return;
 
-		// Some PPP links don't allow broadcasts
 		if (err == EADDRNOTAVAIL && to->type == NA_BROADCAST)
 			return;
 
@@ -341,7 +343,6 @@ static int NET_IPSocket(const char* net_interface, const int port)
 		return 0;
 	}
 
-	// Make it non-blocking
 	if (ioctl(newsocket, FIONBIO, &optval) == -1)
 	{
 		Com_Printf("WARNING: UDP_OpenSocket: ioctl FIONBIO: %s\n", NET_ErrorString());
@@ -349,7 +350,6 @@ static int NET_IPSocket(const char* net_interface, const int port)
 		return 0;
 	}
 
-	// Make it broadcast capable
 	if (setsockopt(newsocket, SOL_SOCKET, SO_BROADCAST, &optval, sizeof(optval)) == -1)
 	{
 		Com_Printf("WARNING: UDP_OpenSocket: setsockopt SO_BROADCAST: %s\n", NET_ErrorString());
@@ -400,7 +400,6 @@ static void NET_OpenIP(void)
 			Com_Error(ERR_FATAL, "Couldn't allocate dedicated server IP port");
 	}
 
-	// Dedicated servers don't need client ports
 	if (is_dedicated)
 		return;
 
@@ -431,13 +430,11 @@ void NET_Config(const qboolean multiplayer)
 
 	if (multiplayer)
 	{
-		// Open sockets
 		if (!(int)noudp->value)
 			NET_OpenIP();
 	}
 	else
 	{
-		// Shut down any existing sockets
 		for (int i = 0; i < NUM_SOCKETS; i++)
 		{
 			if (ip_sockets[i] != 0)
@@ -458,5 +455,5 @@ void NET_Init(void)
 
 void NET_Shutdown(void)
 {
-	NET_Config(false); // Close sockets
+	NET_Config(false);
 }

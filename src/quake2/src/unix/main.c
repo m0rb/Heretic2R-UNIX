@@ -1,9 +1,16 @@
 //
-// main.c -- Entry point for Heretic2R Unix port
+// main.c -- Welcome To Your Doom, Heretic!
 //
-// Copyright (C) 2010-2024 Yamagi Quake 2 Contributors (GPLv2)
-// Unix port by morb
+// Copyright (C) 1997-2001 Id Software, Inc.
+// Copyright (C) 2011 Yamagi Burmeister
+// Copyright (C) 1998 Raven Software
 //
+// Heretic2R UNIX port by morb
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,14 +56,12 @@ static void install_signal_handlers(void)
 
 int main(int argc, char** argv)
 {
-    printf("Heretic2R-Unix\n");
+    printf("Heretic2R-UNIX\n");
 
     install_signal_handlers();
 
-    // Initialize the game engine
     Qcommon_Init(argc, argv);
-    
-    // Main game loop
+
     long long oldtime = Sys_Microseconds();
     while (1)
     {
@@ -65,13 +70,13 @@ int main(int argc, char** argv)
 
         if (usec > 0)
         {
-            curtime = (int)(newtime / 1000LL); // Keep global time for network/input code (mirrors sys_win.c).
+            curtime = (int)(newtime / 1000LL); 
             Qcommon_Frame(usec);
         }
 
         oldtime = newtime;
-        struct timespec ts = {0, 1000000}; // 1 millisecond
-        nanosleep(&ts, NULL); // Prevent busy waiting
+        struct timespec ts = {0, 1000000};
+        nanosleep(&ts, NULL); 
     }
 
     return 0;

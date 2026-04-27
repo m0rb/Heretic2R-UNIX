@@ -209,6 +209,18 @@ qboolean CL_CheckOrDownloadFile(const char* filename)
 
 	strcpy_s(cls.downloadname, sizeof(cls.downloadname), filename); //mxd. strcpy -> strcpy_s
 
+	// Normalize Windows-style backslashes to forward slashes so paths from Windows servers
+	// are valid on Unix filesystems. Also strip any leading slash so the path is relative
+	// (server stores files without a leading slash).
+	for (char* p = cls.downloadname; *p; p++)
+		if (*p == '\\') *p = '/';
+	{
+		char* p = cls.downloadname;
+		while (*p == '/') p++;
+		if (p != cls.downloadname)
+			memmove(cls.downloadname, p, strlen(p) + 1);
+	}
+
 	// Download to a temp name, and only rename when done, so if interrupted a runt file won't be left.
 	COM_StripExtension(cls.downloadname, cls.downloadtempname);
 	strcat_s(cls.downloadtempname, sizeof(cls.downloadtempname), ".tmp"); //mxd. strcat -> strcat_s

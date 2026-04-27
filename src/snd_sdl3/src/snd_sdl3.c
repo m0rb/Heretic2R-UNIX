@@ -486,9 +486,8 @@ static void SNDSDL3_UpdateScaletable(void) // Q2: S_InitScaletable().
 		const int scale = (int)((float)i * 8.0f * 256.0f * s_volume->value);
 
 		for (int j = 0; j < 256; j++)
-			// morb was here. was: snd_scaletable[i][j] = (char)j * scale;
-			// on ARM64/GCC 'char' defaults to unsigned, so values 128-255 would not sign-extend
-			// to negative. Explicit (signed char) required.
+			//snd_scaletable[i][j] = (char)j * scale;
+			// ARM64: 'char' defaults to unsigned. Explicit (signed char) required. --morb
 			snd_scaletable[i][j] = (signed char)j * scale;
 	}
 }
@@ -539,8 +538,8 @@ qboolean SNDSDL3_Cache(sfx_t* sfx, const wavinfo_t* info, byte* data)
 		if (sc->width == 2)
 			((short*)sc->data)[i] = (short)sample;
 		else
-			// morb was here. was: ((char*)sc->data)[i] = (char)(sample >> 8);
-			// explicit (signed char) — must match the sign interpretation in snd_scaletable.
+			//()(char*)sc->data)[i] = (char)(sample >> 8);
+			// explicit (signed char) — must match the sign interpretation in snd_scaletable. --morb
 			((signed char*)sc->data)[i] = (signed char)(sample >> 8);
 	}
 
@@ -742,6 +741,11 @@ static void SNDSDL3_FillSDL3AudioBuffer(byte* sdl_stream, const int length)
 static void SNDSDL3_AudioStreamCallback(void* userdata, SDL_AudioStream* sdl_stream, int additional_amount, int total_amount)
 {
 	if (additional_amount < 1)
+		return;
+
+	// Guard against shutdown race: PipeWire may fire one last callback after
+	// SDL_PauseAudioDevice / SDL_DestroyAudioStream has freed sound.buffer.
+	if (sound.buffer == NULL || samplesize == 0)
 		return;
 
 	byte* data = SDL_stack_alloc(byte, additional_amount);

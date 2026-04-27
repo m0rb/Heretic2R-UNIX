@@ -20,6 +20,15 @@ static byte gammatable[256];
 int gl_filter_min = GL_NEAREST_MIPMAP_LINEAR; // Q2: GL_LINEAR_MIPMAP_NEAREST; H2: GL_NEAREST.
 int gl_filter_max = GL_LINEAR;
 
+// Module-level cache for R_BlendFunc / R_AlphaFunc.  Promoted from function-static
+// so R_InitImages can invalidate them after a GL context is recreated — otherwise
+// R_SetDefaultState's wrapper calls find stale "already set" values and skip the
+// glBlendFunc / glAlphaFunc calls on the fresh context, leaving it at GL defaults.
+static GLenum r_blend_sfactor = GL_ONE;   // GL default
+static GLenum r_blend_dfactor = GL_ZERO;  // GL default
+static GLenum r_alpha_func    = GL_ALWAYS; // GL default
+static GLfloat r_alpha_ref    = 0.0f;      // GL default
+
 //mxd
 static paletteRGBA_t* upload_buffer = NULL;
 static uint upload_buffer_size = 0;
@@ -141,30 +150,22 @@ void R_TexEnv(const GLint mode) // Q2: GL_TexEnv()
 //mxd. Added to avoid redundant OpenGL state changes (according to gDEBugger, ~97% of glBlendFunc() calls are redundant).
 void R_BlendFunc(const GLenum sfactor, const GLenum dfactor) //mxd
 {
-	// Default values, according to https://linux.die.net/man/3/glblendfunc
-	static GLenum cur_sfactor = GL_ONE;
-	static GLenum cur_dfactor = GL_ZERO;
-
-	if (sfactor != cur_sfactor || dfactor != cur_dfactor)
+	if (sfactor != r_blend_sfactor || dfactor != r_blend_dfactor)
 	{
 		glBlendFunc(sfactor, dfactor);
-		cur_sfactor = sfactor;
-		cur_dfactor = dfactor;
+		r_blend_sfactor = sfactor;
+		r_blend_dfactor = dfactor;
 	}
 }
 
 //mxd. Added to avoid redundant OpenGL state changes (according to gDEBugger, ~97% of glAlphaFunc() calls are redundant).
 void R_AlphaFunc(const GLenum func, const GLfloat ref)
 {
-	// Default values, according to https://linux.die.net/man/3/glalphafunc
-	static GLenum cur_func = GL_ALWAYS;
-	static GLfloat cur_ref = 0.0f;
-
-	if (func != cur_func || ref != cur_ref)
+	if (func != r_alpha_func || ref != r_alpha_ref)
 	{
 		glAlphaFunc(func, ref);
-		cur_func = func;
-		cur_ref = ref;
+		r_alpha_func = func;
+		r_alpha_ref = ref;
 	}
 }
 
@@ -423,7 +424,7 @@ static void R_UploadM8(miptex_t* mt, const int filesize, const image_t* image) /
 	for (int mip = 0; mip < MIPLEVELS && mt->width[mip] > 0 && mt->height[mip] > 0; mip++)
 	{
 		const uint mip_size = mt->width[mip] * mt->height[mip];
-		if ((int)(mt->offsets[mip] + mip_size) > filesize) //mxd. Bounds check offset against file size to avoid passing garbage to GL.
+		if ((int)(mt->offsets[mip] + mip_size) > filesize) // Bounds check --morb
 		{
 			ri.Con_Printf(PRINT_ALL, "R_UploadM8: mip %i offset %u out of bounds (filesize %i) for '%s'\n", mip, mt->offsets[mip], filesize, image->name);
 			break;
@@ -499,7 +500,7 @@ static void R_ApplyGamma32(miptex32_t* mt, const int filesize) // H2: GL_ApplyGa
 		if (mip_size == 0)
 			return;
 
-		if ((int)(mt->offsets[mip] + mip_size * sizeof(paletteRGBA_t)) > filesize) //mxd. Bounds check.
+		if ((int)(mt->offsets[mip] + mip_size * sizeof(paletteRGBA_t)) > filesize) // Bounds check --morb
 			return;
 
 		// Adjust RGBA colors at offset...
@@ -518,7 +519,7 @@ static void R_UploadM32(miptex32_t* mt, const int filesize, const image_t* img) 
 	for (int mip = 0; mip < MIPLEVELS && mt->width[mip] > 0 && mt->height[mip] > 0; mip++)
 	{
 		const uint mip_size = mt->width[mip] * mt->height[mip];
-		if ((int)(mt->offsets[mip] + mip_size * sizeof(paletteRGBA_t)) > filesize) //mxd. Bounds check offset against file size to avoid passing garbage to GL.
+		if ((int)(mt->offsets[mip] + mip_size * sizeof(paletteRGBA_t)) > filesize) //Bounds check --morb
 		{
 			ri.Con_Printf(PRINT_ALL, "R_UploadM32: mip %i offset %u out of bounds (filesize %i) for '%s'\n", mip, mt->offsets[mip], filesize, img->name);
 			break;
@@ -754,12 +755,7 @@ void R_FreeUnusedImages(void)
 
 		// Missing: it_pic check
 
-		// morb was here. fixed for Unix port.
-		// BUGFIX: mxd. Skip images with no name — they are self-managed (e.g. cin_frame in
-		// gl1_DrawCinematic.c is allocated via R_GetFreeImage but never added to the hash and
-		// never given a name). R_FreeImage computes a hash from the name, so calling it with
-		// an empty name causes a uint underflow and an out-of-bounds read -> SIGSEGV.
-		// original: no name check; fell through to R_FreeImage() with empty name -> crash on Linux.
+		// fix for nameless self-managed images --morb
 		if (!image->name[0])
 			continue;
 
@@ -773,10 +769,6 @@ void R_InitImages(void) // Q2: GL_InitImages()
 	registration_sequence = 1;
 	gl_state.inverse_intensity = 1.0f;
 
-	// The old GL context (if any) was destroyed before this call.
-	// Clear the texture cache without calling glDeleteTextures — those names
-	// belonged to the dead context and are invalid in the new one.
-	// Also free any CPU-side palette allocations that are still live.
 	for (int i = 0; i < numgltextures; i++)
 	{
 		if (gltextures[i].palette != NULL)
@@ -789,10 +781,13 @@ void R_InitImages(void) // Q2: GL_InitImages()
 	memset(gltextures_hashed, 0, sizeof(gltextures_hashed));
 	numgltextures = 0;
 
-	// Cached texture binds belong to the old context; reset them so the
-	// first R_BindImage() after re-init unconditionally calls glBindTexture.
 	gl_state.currenttextures[0] = -1;
 	gl_state.currenttextures[1] = -1;
+
+	r_blend_sfactor = GL_ONE;
+	r_blend_dfactor = GL_ZERO;
+	r_alpha_func    = GL_ALWAYS;
+	r_alpha_ref     = 0.0f;
 
 	R_InitMinlight(); // YQ2
 }
@@ -801,9 +796,9 @@ void R_ShutdownImages(void) // Q2: GL_ShutdownImages()
 {
 	image_t* image = &gltextures[0];
 	for (int i = 0; i < numgltextures; i++, image++)
-		// morb was here. fixed for Unix port.
-		//if (image->registration_sequence != 0) // original: same crash risk as R_FreeUnusedImages — nameless cin_frame -> SIGSEGV.
-		if (image->registration_sequence != 0 && image->name[0]) // BUGFIX: mxd. Skip nameless self-managed images (same as R_FreeUnusedImages fix).
+		// same crash -- nameless cin_frame segfault --morb
+		//if (image->registration_sequence != 0) 
+		if (image->registration_sequence != 0 && image->name[0])
 			R_FreeImage(image);
 
 	//mxd. Free upload_buffer.

@@ -340,8 +340,9 @@ static void SV_SpawnServer(const char* server, const char* spawnpoint, const ser
 	SV_CreateBaseline();
 
 	// Check for a savegame.
+	// H2: ConstructEntities must run AFTER ReadLevel so that ReadEdict's msgQ memset
+	// doesn't orphan the nodes ConstructEntities just allocated.
 	const qboolean revisiting = SV_CheckForSavegame();
-
 	ge->ConstructEntities(); // H2
 	ge->CheckCoopTimeout(revisiting); // H2
 
@@ -429,7 +430,7 @@ void SV_InitGame(void)
 	// Init game
 	SV_InitGameProgs();
 
-	if (ge != NULL) // morb was here. ge may be NULL if game DLL failed to load.
+	if (ge != NULL) // ge may be NULL if game DLL failed to load. --morb
 	{
 		for (int i = 0; i < (int)maxclients->value; i++)
 		{

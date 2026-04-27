@@ -1,23 +1,25 @@
-/*
-* snd_dll.c -- Sound DLL interface (Unix)
- *
- * Copyright 1998 Raven Software
- * Unix port by morb
- */
+//
+// snd_dll.c -- Sound backend
+//
+// Copyright (C) 1997-2001 Id Software, Inc.
+// Copyright (C) 1998 Raven Software
+// UNIX port for Heretic2R by morb
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
 
 #include "../../../qcommon/qcommon.h"
 #include "snd_dll.h"
 #include "../client/client.h"
 
-// External declaration from snd_main.c
 extern snd_export_t GetSoundAPI(const snd_import_t snd_import);
 
-// Sound library info
 sndlib_info_t sndlib_infos[MAX_SNDLIBS];
 int num_sndlib_infos = 0;
 cvar_t* snd_dll = NULL;
 
-// Sound initialization
 void SND_Init(void)
 {
 	Com_Printf("\n------- Initializing sound -------\n");
@@ -75,13 +77,11 @@ void SND_Init(void)
 	Com_Printf("------------------------------------\n");
 }
 
-// Null sound initialization (for dedicated servers)
 void SND_InitNull(void)
 {
 	Com_Printf("SND_InitNull: Null sound system initialized\n");
 }
 
-// Sound shutdown
 void SND_Shutdown(void)
 {
 	if (se.Shutdown != NULL)

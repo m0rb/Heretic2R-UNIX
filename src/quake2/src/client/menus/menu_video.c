@@ -20,6 +20,10 @@ cvar_t* m_item_brightness;
 cvar_t* m_item_contrast;
 cvar_t* m_item_minlight; // YQ2
 cvar_t* m_item_detail;
+cvar_t* m_item_vsync;        // YQ2
+cvar_t* m_item_consolescale; // YQ2
+cvar_t* m_item_hudscale;     // YQ2
+cvar_t* m_item_menuscale;    // YQ2
 
 static float m_gamma;
 static float m_brightness;
@@ -36,6 +40,10 @@ static menuslider_t s_brightness_slider;
 static menuslider_t s_contrast_slider;
 static menuslider_t s_minlight_slider; // YQ2
 static menuslider_t s_detail_slider;
+static menulist_t s_vsync_list;        // YQ2
+static menulist_t s_consolescale_list; // YQ2
+static menulist_t s_hudscale_list;     // YQ2
+static menulist_t s_menuscale_list;    // YQ2
 
 static const char* ref_list_titles[MAX_REFLIBS];
 static int initial_reflib_index; // vid_ref index when entering menu.
@@ -80,6 +88,31 @@ static void UpdateDetailFunc(void* self) // H2
 {
 	const menuslider_t* slider = (menuslider_t*)self;
 	Cvar_SetValue("r_detail", slider->curvalue);
+}
+
+static void UpdateVSyncFunc(void* self) // YQ2
+{
+	const menulist_t* list = (menulist_t*)self;
+	Cvar_SetValue("r_vsync", (float)list->curvalue);
+}
+
+// Scale list: index 0 = Auto (-1), indices 1-4 = 1x-4x.
+static void UpdateConsoleScaleFunc(void* self) // YQ2
+{
+	const menulist_t* list = (menulist_t*)self;
+	Cvar_SetValue("r_consolescale", list->curvalue == 0 ? -1.0f : (float)list->curvalue);
+}
+
+static void UpdateHUDScaleFunc(void* self) // YQ2
+{
+	const menulist_t* list = (menulist_t*)self;
+	Cvar_SetValue("r_hudscale", list->curvalue == 0 ? -1.0f : (float)list->curvalue);
+}
+
+static void UpdateMenuScaleFunc(void* self) // YQ2
+{
+	const menulist_t* list = (menulist_t*)self;
+	Cvar_SetValue("r_menuscale", list->curvalue == 0 ? -1.0f : (float)list->curvalue);
 }
 
 static void ApplyChanges(const qboolean close_menu) //mxd. +close_menu arg.
@@ -157,6 +190,8 @@ void VID_PreMenuInit(void)
 static void VID_MenuInit(void)
 {
 	static const char* target_fps_names[] = { "30", "60", "90", "120", "240", NULL }; //mxd
+	static const char* vsync_names[]        = { "Off", "On", "Adaptive", NULL };        // YQ2
+	static const char* scale_names[]        = { "Auto", "1x", "2x", "3x", "4x", NULL }; // YQ2
 
 	static char name_driver[MAX_QPATH];
 	static char name_vidmode[MAX_QPATH];
@@ -166,6 +201,10 @@ static void VID_MenuInit(void)
 	static char name_contrast[MAX_QPATH];
 	static char name_minlight[MAX_QPATH]; // YQ2
 	static char name_detail[MAX_QPATH];
+	static char name_vsync[MAX_QPATH];        // YQ2
+	static char name_consolescale[MAX_QPATH]; // YQ2
+	static char name_hudscale[MAX_QPATH];     // YQ2
+	static char name_menuscale[MAX_QPATH];    // YQ2
 
 	VID_PreMenuInit();
 
@@ -270,6 +309,51 @@ static void VID_MenuInit(void)
 	s_detail_slider.maxvalue = 3.0f;
 	s_detail_slider.curvalue = m_r_detail->value; //mxd. Original version used Cvar_VariableValue("r_detail") here.
 
+	Com_sprintf(name_vsync, sizeof(name_vsync), "\x02%s", m_item_vsync->string);
+	s_vsync_list.generic.type = MTYPE_SPINCONTROL;
+	s_vsync_list.generic.x = 0;
+	s_vsync_list.generic.y = 300;
+	s_vsync_list.generic.name = name_vsync;
+	s_vsync_list.generic.width = re.BF_Strlen(name_vsync);
+	s_vsync_list.generic.flags = QMF_SINGLELINE;
+	s_vsync_list.generic.callback = UpdateVSyncFunc;
+	s_vsync_list.itemnames = vsync_names;
+	s_vsync_list.curvalue = ClampI((int)Cvar_VariableValue("r_vsync"), 0, 2); // YQ2
+
+	Com_sprintf(name_consolescale, sizeof(name_consolescale), "\x02%s", m_item_consolescale->string);
+	s_consolescale_list.generic.type = MTYPE_SPINCONTROL;
+	s_consolescale_list.generic.x = 0;
+	s_consolescale_list.generic.y = 340;
+	s_consolescale_list.generic.name = name_consolescale;
+	s_consolescale_list.generic.width = re.BF_Strlen(name_consolescale);
+	s_consolescale_list.generic.flags = QMF_SINGLELINE;
+	s_consolescale_list.generic.callback = UpdateConsoleScaleFunc;
+	s_consolescale_list.itemnames = scale_names;
+	// cvar -1 = Auto (index 0); 1-4 = 1x-4x (indices 1-4)
+	s_consolescale_list.curvalue = (r_consolescale->value < 0) ? 0 : ClampI((int)r_consolescale->value, 1, 4); // YQ2
+
+	Com_sprintf(name_hudscale, sizeof(name_hudscale), "\x02%s", m_item_hudscale->string);
+	s_hudscale_list.generic.type = MTYPE_SPINCONTROL;
+	s_hudscale_list.generic.x = 0;
+	s_hudscale_list.generic.y = 380;
+	s_hudscale_list.generic.name = name_hudscale;
+	s_hudscale_list.generic.width = re.BF_Strlen(name_hudscale);
+	s_hudscale_list.generic.flags = QMF_SINGLELINE;
+	s_hudscale_list.generic.callback = UpdateHUDScaleFunc;
+	s_hudscale_list.itemnames = scale_names;
+	s_hudscale_list.curvalue = (r_hudscale->value < 0) ? 0 : ClampI((int)r_hudscale->value, 1, 4); // YQ2
+
+	Com_sprintf(name_menuscale, sizeof(name_menuscale), "\x02%s", m_item_menuscale->string);
+	s_menuscale_list.generic.type = MTYPE_SPINCONTROL;
+	s_menuscale_list.generic.x = 0;
+	s_menuscale_list.generic.y = 420;
+	s_menuscale_list.generic.name = name_menuscale;
+	s_menuscale_list.generic.width = re.BF_Strlen(name_menuscale);
+	s_menuscale_list.generic.flags = QMF_SINGLELINE;
+	s_menuscale_list.generic.callback = UpdateMenuScaleFunc;
+	s_menuscale_list.itemnames = scale_names;
+	s_menuscale_list.curvalue = (r_menuscale->value < 0) ? 0 : ClampI((int)r_menuscale->value, 1, 4); // YQ2
+
 	Menu_AddItem(&s_video_menu, &s_ref_list);
 	Menu_AddItem(&s_video_menu, &s_mode_list);
 	Menu_AddItem(&s_video_menu, &s_target_fps_list); //mxd
@@ -278,6 +362,10 @@ static void VID_MenuInit(void)
 	Menu_AddItem(&s_video_menu, &s_contrast_slider);
 	Menu_AddItem(&s_video_menu, &s_minlight_slider); // YQ2
 	Menu_AddItem(&s_video_menu, &s_detail_slider);
+	Menu_AddItem(&s_video_menu, &s_vsync_list);        // YQ2
+	Menu_AddItem(&s_video_menu, &s_consolescale_list); // YQ2
+	Menu_AddItem(&s_video_menu, &s_hudscale_list);     // YQ2
+	Menu_AddItem(&s_video_menu, &s_menuscale_list);    // YQ2
 
 	Menu_Center(&s_video_menu);
 }

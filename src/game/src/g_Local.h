@@ -13,7 +13,7 @@
 // Define GAME_INCLUDE so that game.h does not define the short, server-visible 'gclient_t' and 'edict_t' structures
 // because we define the game versions in this file.
 #define GAME_INCLUDE
-// morb was here. was: #define GAME_DLL — Makefile already passes -DGAME_DLL on the command line; redefining it here triggers a -Wmacro-redefined warning.
+//Makefile already passes -DGAME_DLL on the command line; redefining ittriggers a -Wmacro-redefined warning. --morb
 #ifndef GAME_DLL
 #define GAME_DLL // Expose game-internal function declarations (e.g. in g_Items.h).
 #endif
@@ -21,7 +21,7 @@
 #include "Game.h"
 #include "g_HitLocation.h" //mxd
 #include "Player/p_Items.h" //mxd
-#include "compat.h" // Unix: min/max and safe string functions
+#include "compat.h" //  min/max and safe string functions for UNIX port. --morb
 
 // The "gameversion" client command will print this plus compile date.
 #define GAMEVERSION		"Heretic2v16"
@@ -624,3 +624,4 @@ extern qboolean FindTarget(edict_t* self);
 #define DEACTIVATE_BUOYS	deactivate_buoys->value
 #define ANARCHY				anarchy->value
 #define IMPACT_DAMAGE		impact_damage->value
+#define CHEATING_MONSTERS	cheating_monsters->value

@@ -165,8 +165,51 @@ jobs:
           name: heretic2r-server-freebsd
           path: heretic2r-server-freebsd.tar.gz
 
+  build-haiku:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build on Haiku
+        uses: vmactions/haiku-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkgman install -y cmake ninja pkgconfig mesa_haiku_devel
+
+          run: |
+            git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
+            cmake -S SDL3-src -B SDL3-build -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_INSTALL_PREFIX=/boot/system/non-packaged \
+              -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TEST=OFF
+            cmake --build SDL3-build --parallel
+            cmake --install SDL3-build
+            export PKG_CONFIG_PATH=/boot/system/non-packaged/lib/pkgconfig
+            make -j$(sysctl -n hw.ncpu)
+            make server -j$(sysctl -n hw.ncpu)
+            mkdir -p dist dist-ded
+            cp build/release/heretic2r dist/
+            cp -r build/release/base dist/
+            cp /boot/system/non-packaged/lib/libSDL3.so.0 dist/
+            cp SDL3-src/LICENSE.txt dist/LICENSE.SDL3.txt
+            cp build/release/heretic2r-server dist-ded/
+            cp -r build/release/base dist-ded/
+            tar czf heretic2r-haiku.tar.gz -C dist .
+            tar czf heretic2r-server-haiku.tar.gz -C dist-ded .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-haiku
+          path: heretic2r-haiku.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-server-haiku
+          path: heretic2r-server-haiku.tar.gz
+
   release:
-    needs: [ build-linux-x86_64, build-linux-arm64, build-macos, build-freebsd ]
+    needs: [ build-linux-x86_64, build-linux-arm64, build-macos, build-freebsd, build-haiku ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -191,6 +234,7 @@ jobs:
             heretic2r-linux-arm64.tar.gz
             heretic2r-macos.tar.gz
             heretic2r-freebsd.tar.gz
+            heretic2r-haiku.tar.gz
 
       - name: Create or update dedicated server rolling release
         uses: softprops/action-gh-release@v2
@@ -208,3 +252,4 @@ jobs:
             heretic2r-server-linux-arm64.tar.gz
             heretic2r-server-macos.tar.gz
             heretic2r-server-freebsd.tar.gz
+            heretic2r-server-haiku.tar.gz

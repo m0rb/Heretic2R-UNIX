@@ -1,26 +1,24 @@
 //
-// vid_dll.h -- Video DLL interface stub for Unix
+// vid_dll.h -- SDL3 video backend
 //
-// Copyright 1998 Raven Software
-// Unix port by morb
+// Copyright (C) 1997-2001 Id Software, Inc.
+// Copyright (C) 1998 Raven Software
 //
+// Heretic2R UNIX port by morb
 
 #ifndef _VID_DLL_H_
 #define _VID_DLL_H_
 
 #include "../../../qcommon/qcommon.h"
 
-// Unix video stub - variadic to match fxi interface
 extern void VID_Error(int err_level, const char* fmt, ...);
 extern void VID_Printf(int print_level, const char* fmt, ...);
 
-// Video cvars (defined in vid_sdl3.c)
 extern cvar_t *vid_gamma;
 extern cvar_t *vid_brightness;
 extern cvar_t *vid_contrast;
 extern cvar_t *vid_mode;
 
-// Video mode and renderer info (for menu_video.c compatibility)
 typedef struct
 {
 	int width;
@@ -46,6 +44,6 @@ extern cvar_t *vid_ref;
 extern qboolean vid_restart_required;
 
 #include <SDL3/SDL.h>
-extern SDL_Window* VID_GetSDLWindow(void); // Returns the active SDL window for input grab etc.
+extern SDL_Window* VID_GetSDLWindow(void);
 
 #endif /* _VID_DLL_H_ */

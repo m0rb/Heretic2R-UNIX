@@ -430,6 +430,7 @@ void CL_InitClientEffects(const char* dll_name)
 	fxi.Trace = CL_Trace;
 	fxi.InCameraPVS = InCameraPVS;
 
+	// Look up the DLL entry point.
 	GetfxAPI = (GetfxAPI_t)Sys_GetProcAddress(clfx_library, "GetfxAPI");
 	if (GetfxAPI == NULL)
 	{

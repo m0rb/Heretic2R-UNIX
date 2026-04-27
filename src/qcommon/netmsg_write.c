@@ -307,14 +307,23 @@ static float ClampAngleRad(const float angle) // H2
 //mxd. Parsed by MSG_ReadJoints().
 static void MSG_WriteJoints(sizebuf_t* sb, const int joint_index) // H2
 {
+	if (joint_index < 0 || joint_index >= ge->numSkeletalJoints)
+		return;
+
 	const G_SkeletalJoint_t* joint = &ge->skeletalJoints[joint_index];
 
 	// Write child joints first.
 	int child = joint->children;
-	while (child != -1)
+	while (child != ARRAYEDLISTNODE_NULL)
 	{
-		MSG_WriteJoints(sb, ge->jointNodes[child].data);
-		child = ge->jointNodes[child].next;
+		const int data = ge->jointNodes[child].data;
+		if (data < 0 || data >= ge->numSkeletalJoints || data == joint_index)
+			break; // Guard against zero-init or corrupt skeleton data.
+		MSG_WriteJoints(sb, data);
+		const int next = ge->jointNodes[child].next;
+		if (next == child)
+			break; // Guard against zero-init self-loop on next pointer.
+		child = next;
 	}
 
 	// Check for changes.
@@ -699,7 +708,7 @@ void MSG_WriteDeltaEntity(const entity_state_t* from, entity_state_t* to, sizebu
 
 	if (GetB(bits, U_JOINTED))
 	{
-		MSG_WriteJoints(msg, to->rootJoint);
+		MSG_WriteJoints(msg, (int)to->rootJoint);
 		MSG_WriteByte(msg, 0);
 	}
 

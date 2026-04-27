@@ -366,9 +366,17 @@ static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheigh
 
 	if (!noclip_mode && trace.fraction != 1.0f)
 	{
+		// Bmodel entities (elevators, moving platforms) can cause frame-to-frame
+		// oscillation when the camera ray just barely crosses the entity surface.
+		// Blend rather than snap for those cases; world clips still snap as usual.
+		const qboolean hit_bmodel = interpolate && (trace.ent != (struct edict_s*)(-1));
+
 		if ((int)cl_camera_clipdamp->value)
 		{
-			VectorCopy(trace.endpos, end_2);
+			if (hit_bmodel)
+				VectorLerp(old_vieworg, 0.8f, trace.endpos, end_2);
+			else
+				VectorCopy(trace.endpos, end_2);
 		}
 		else
 		{
@@ -377,7 +385,12 @@ static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheigh
 			CL_Trace(end, mins, maxs, end_2, MASK_CAMERA, CTF_CLIP_TO_ALL, &trace);
 
 			if (trace.fraction != 1.0f)
-				VectorCopy(trace.endpos, end_2);
+			{
+				if (interpolate && trace.ent != (struct edict_s*)(-1))
+					VectorLerp(old_vieworg, 0.8f, trace.endpos, end_2);
+				else
+					VectorCopy(trace.endpos, end_2);
+			}
 		}
 	}
 

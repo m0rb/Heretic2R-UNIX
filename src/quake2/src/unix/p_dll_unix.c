@@ -1,9 +1,15 @@
 //
-// p_dll.c -- Player DLL interface (Unix version)
+// p_dll_unix.c -- Player shared library interface
 //
-// Copyright 1998 Raven Software
-// Unix port by morb
+// Copyright (C) 1997-2001 Id Software, Inc.
+// Copyright (C) 1998 Raven Software
 //
+// Heretic2R UNIX port by morb
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
 
 #include <dlfcn.h>
 #include "p_dll.h"
@@ -14,13 +20,10 @@
 #endif
 #include "qcommon.h"
 
-// Structure containing functions and data pointers exported from the player DLL.
 player_export_t	playerExport __attribute__((visibility("default")));
 
-// Handle to player DLL.
 static void* player_library = NULL;
 
-// Define pointers to all the .so functions which other code will dynamically link with.
 #ifndef PLAYER_DLL
 void (*P_Init)(void);
 void (*P_Shutdown)(void);
@@ -92,8 +95,6 @@ void P_Freelib(void)
 
 		player_library = NULL;
 
-		// Nullify exported data pointers so CL_PredictMovement doesn't access freed memory
-		// before P_Load() is called again.
 		playerExport.PlayerSeqData = NULL;
 		playerExport.PlayerChickenData = NULL;
 	}
@@ -103,9 +104,6 @@ uint P_Load(char *name)
 {
 	DWORD playerdll_chksum;
 
-	// If already loaded, skip unload/reload to avoid invalidating server entity
-	// classname pointers that point into Player.so static data (g_items.c sets
-	// ent->classname = item->classname, a pointer into the loaded .so).
 	if (player_library != NULL)
 	{
 #ifdef GAME_DLL

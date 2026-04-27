@@ -18,7 +18,7 @@
 // This is a precaution against having a malicious server instruct clients to write files over areas they shouldn't.
 
 #include "qcommon.h"
-#include "compat.h"
+#include "compat.h" // for UNIX port. --morb
 #include "qfiles.h"
 
 #ifndef _WIN32
@@ -26,9 +26,7 @@
 #include <sys/stat.h>
 #include <string.h>
 
-// morb was here. fixed for Unix port.
-// FS_FixCasePath and its call-site in FS_FOpenFile are new — the Windows build uses case-insensitive
-// NTFS so no equivalent was needed in the original code. On Linux the filesystem is case-sensitive;
+// FS_FixCasePath and FS_FOpenFile are new — On most UNIX-likes,filesystems are case-sensitive;
 // this function does a component-wise case-insensitive directory scan to resolve the correct path.
 
 // Walk each component of 'path' doing case-insensitive directory lookups.
@@ -90,9 +88,6 @@ static qboolean FS_FixCasePath(char* path, const size_t maxlen)
 			{
 				if (strcasecmp(ent->d_name, tok) == 0)
 				{
-					// BUGFIX: mxd. Use a temporary buffer — passing 'resolved' as both the
-					// snprintf destination and a format argument is undefined behaviour and
-					// can corrupt the path under optimising compilers.
 					char tmp[MAX_OSPATH];
 					const size_t rlen2 = strlen(resolved);
 					if (rlen2 > 0 && resolved[rlen2 - 1] == '/')
@@ -241,9 +236,8 @@ int FS_FOpenFile(const char* filename, FILE** file)
 	// Check for links first
 	for (const filelink_t* link = fs_links; link != NULL; link = link->next)
 	{
-		// morb was here. use filepath (backslashes already converted) for both the comparison
-		// and the tail so the netpath is clean on Linux.
-		// if (!strncmp(filename, link->from, link->fromlength))
+		// use filepath for comparison and the tail so the netpath is clean on UNIX-likes --morb
+		//if (!strncmp(filename, link->from, link->fromlength))
 		if (!strncmp(filepath, link->from, link->fromlength))
 		{
 			// Com_sprintf(netpath, sizeof(netpath), "%s%s", link->to, filename + link->fromlength);
@@ -279,9 +273,8 @@ int FS_FOpenFile(const char* filename, FILE** file)
 				continue;
 
 			// H2: do binary search instead of iteration, because pak filenames are sorted alphabetically.
-			// morb was here. The binary search assumes Q_stricmp ordering (case-insensitive).
-			// Some third-party pak files use raw ASCII ordering instead. If the binary search
-			// misses, fall back to a linear case-insensitive scan before giving up.
+			// Binary search assumes Q_stricmp ordering. Some third-party pak files use raw ASCII. 
+			//Fall back to a linear case-insensitive scan before giving up. --morb
 			int found_index = -1;
 			{
 				int start = 0;
@@ -329,19 +322,17 @@ int FS_FOpenFile(const char* filename, FILE** file)
 		else
 		{
 			// Check a file in the directory tree
-			// morb was here. use filepath (backslashes already converted to '/') not filename.
-			// on Linux backslashes are literal characters, so e.g. 'models/items\defense' would never open.
-			// Com_sprintf(netpath, sizeof(netpath), "%s/%s", search->filename, filename);
+			// use filepath, not filename. --morb
+			//Com_sprintf(netpath, sizeof(netpath), "%s/%s", search->filename, filename);
 			Com_sprintf(netpath, sizeof(netpath), "%s/%s", search->filename, filepath);
 
-			// morb was here. fixed for Unix port.
 			//if (fopen_s(file, netpath, "rb") != 0) //mxd. fopen -> fopen_s
-			//	continue; // original: case mismatch silently fell through to pak file on Windows (case-insensitive FS); on Linux this caused the wrong (pak) version to be loaded.
+			//continue; 
+			// Case mismatch silently fell through to pak file on Windows. --morb
 			if (fopen_s(file, netpath, "rb") != 0) //mxd. fopen -> fopen_s
 			{
 #ifndef _WIN32
-				// On Linux the filesystem is case-sensitive; try a component-wise
-				// case-insensitive scan before giving up (e.g. "Bumper.smk" vs "bumper.smk").
+				// try a case-insensitive scan before giving up --morb
 				char fixedpath[MAX_OSPATH];
 				strcpy_s(fixedpath, sizeof(fixedpath), netpath);
 				if (FS_FixCasePath(fixedpath, sizeof(fixedpath)) && fopen_s(file, fixedpath, "rb") == 0)
@@ -703,11 +694,9 @@ static void FS_Path_f(void)
 // Allows enumerating all of the directories in the search path
 char* FS_NextPath(const char* prevpath)
 {
-	// morb was here. Rewritten to iterate the searchpath list directly rather than
-	// using the fs_gamedir global as a start sentinel. The old code compared prevpath
-	// against the fs_gamedir *pointer*, but searchpath_t::filename is a separate buffer
-	// with a *copy* of the same string — so pointer equality never matched and the
-	// iterator stopped after the first (gamedir) entry, never reaching base/.
+	// Rewritten to iterate the searchpath list directly rather than use the fs_gamedir global. 
+	// The old code compared prevpath against the fs_gamedir ptr, but searchpath_t::filename 
+	// is a separate buffer. Pointer equality never matched and the iterator never reached base/. --morb
 	qboolean found = (prevpath == NULL);
 
 	for (searchpath_t* s = fs_searchpaths; s != NULL; s = s->next)
@@ -812,8 +801,8 @@ void FS_InitFilesystem(void)
 		char userdir[MAX_OSPATH];
 
 		//mxd. Change userdir location from "c:/Games/Heretic2/user" to "c:\Users\[User]\Saved Games\Heretic2R/base".
-		// morb was here. Sys_GetOSUserDir already returns ~/.Heretic2R; don't append /Heretic2R again.
-		// was: strcat_s(buffer, sizeof(buffer), "/Heretic2R");
+		// Sys_GetOSUserDir already returns ~/.Heretic2R; don't append /Heretic2R again. --morb
+		//strcat_s(buffer, sizeof(buffer), "/Heretic2R");
 		if (Sys_GetOSUserDir(buffer, sizeof(buffer)))
 		{
 			use_modern_userdir = true;
@@ -830,7 +819,6 @@ void FS_InitFilesystem(void)
 		fs_userdir = Cvar_Get("userdir", userdir, 0); // "C:\Games\Heretic2/base"
 	}
 
-	// morb was here. simplified config dir — heretic2r.cfg lives directly in the userdir (base/).
-	// was: configs/ subdir under userdir, with skin-named files (e.g. configs/male/Corvus.cfg).
+	// Simplified config dir — heretic2r.cfg lives directly in the userdir (base/). --morb
 	fs_configsdir = Cvar_Get("configsdir", fs_userdir->string, CVAR_NOSET);
 }

@@ -1006,8 +1006,8 @@ static int RI_GetReferencedID(const struct model_s* model) // H2 //mxd. Named 'G
 	const fmdl_t* temp = model->extradata;
 
 	//mxd. H2 Toolkit code checks for qboolean model->model_type.
-	// morb was here. fixed for Unix port.
-	//if (model->type == mod_fmdl && temp->referenceType > REF_NULL && temp->referenceType < NUM_REFERENCED) // original: no null check on temp -> SIGSEGV when extradata is null during entity parse after map load.
+	// need NULL check to prevent segfault. --morb
+	//if (model->type == mod_fmdl && temp->referenceType > REF_NULL && temp->referenceType < NUM_REFERENCED) 
 	if (model->type == mod_fmdl && temp != NULL && temp->referenceType > REF_NULL && temp->referenceType < NUM_REFERENCED) //BUGFIX: mxd. Added null check for temp.
 		return temp->referenceType;
 

@@ -22,9 +22,8 @@ int MSG_ReadChar(sizebuf_t* sb)
 	if (sb->readcount + 1 > sb->cursize)
 		c = -1;
 	else
-		// morb was here. was: c = (char)sb->data[sb->readcount];
-		// on ARM64/GCC 'char' is unsigned by default, so a byte value of 0xFF would become 255
-		// instead of -1, breaking the end-of-buffer sentinel checks in MSG_ReadString / MSG_ReadStringLine.
+		//c = (char)sb->data[sb->readcount];
+		// ARM64: 'char' is unsigned by default
 		c = (signed char)sb->data[sb->readcount];
 
 	sb->readcount++;
@@ -109,7 +108,8 @@ char* MSG_ReadString(sizebuf_t* sb)
 	int l = 0;
 	do
 	{
-		// morb was here. was: const char c = (char)MSG_ReadChar(sb); — unsigned char on ARM64 makes c==−1 unreachable.
+		//const char c = (char)MSG_ReadChar(sb); 
+		// unsigned char on ARM64 makes c==−1 unreachable. --morb
 		const int c = MSG_ReadChar(sb);
 		if (c == -1 || c == 0)
 			break;
@@ -130,7 +130,8 @@ char* MSG_ReadStringLine(sizebuf_t* sb)
 	int l = 0;
 	do
 	{
-		// morb was here. was: const char c = (char)MSG_ReadChar(sb); — unsigned char on ARM64 makes c==−1 unreachable.
+		//const char c = (char)MSG_ReadChar(sb); 
+		// unsigned char on ARM64 makes c==−1 unreachable. --morb
 		const int c = MSG_ReadChar(sb);
 		if (c == -1 || c == 0 || c == '\n')
 			break;

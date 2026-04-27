@@ -1,13 +1,10 @@
 //
-// clfx_stub.c -- Minimal Client Effects stub for Unix.
+// clfx_stub.c -- Client Effects
 //
-// Provides entity rendering (AddPacketEntities) without particle/visual effects.
-// This is sufficient for basic gameplay: player model, items, world entities all
-// render correctly. Particle effects, tracers, etc. are absent.
+// Copyright (C) 1997-2001 Id Software, Inc.
+// Copyright (C) 1998 Raven Software
 //
-// Implements the client_fx_export_t interface defined by Raven Software (Copyright 1998).
-// This file is original work by morb for the Heretic2R Unix port.
-//
+// Heretic2R UNIX port by morb
 
 #include <string.h>
 #include "../client/client.h"
@@ -27,10 +24,6 @@ static client_fx_import_t fxi;
 
 static char clfx_string[128] = "Heretic II v1.06";
 
-// ============================================================
-// Light style state (mirrors CL_LightStyles / LightStyles.c)
-// ============================================================
-
 typedef struct
 {
 	int   length;
@@ -40,11 +33,8 @@ typedef struct
 static stub_lightstyle_t stub_lightstyles[MAX_LIGHTSTYLES];
 static int stub_ls_lastofs = -1;
 
-// Compute current light style values from pattern + time, then push into
-// fxi.cls->r_lightstyles so the renderer can use them.
 static void Stub_RunAndAddLightStyles(void)
 {
-	// Sample at 10 Hz (100 ms buckets) like the real CL_RunLightStyles.
 	const int ofs = (int)(*fxi.leveltime * 10.0f);
 
 	if (ofs != stub_ls_lastofs)
@@ -71,10 +61,6 @@ static void Stub_RunAndAddLightStyles(void)
 	}
 }
 
-// ============================================================
-// Stub implementations
-// ============================================================
-
 static void Stub_Init(void) {}
 static void Stub_ShutDown(void) {}
 static void Stub_Clear(void)
@@ -94,14 +80,14 @@ static void Stub_SetLightstyle(const int i)
 	stub_lightstyles[i].length = len < MAX_QPATH ? len : MAX_QPATH - 1;
 	for (int j = 0; j < stub_lightstyles[i].length; j++)
 		stub_lightstyles[i].map[j] = (float)(s[j] - 'a') / (float)('m' - 'a');
-	stub_ls_lastofs = -1; // Force recompute on next frame.
+	stub_ls_lastofs = -1;
 }
 static level_map_info_t* Stub_GetLMI(void) { return NULL; }
 static int Stub_GetLMIMax(void) { return 0; }
 
 // Format strings for each FX type (indexed by FX_Type_t enum from FX.h).
 // Used to skip/consume the correct number of bytes from the network message.
-// Extracted from src/client effects/Client Effects.c - clientEffectSpawners[].formatString.
+// Yanked from src/client effects/Client Effects.c - clientEffectSpawners[].formatString.
 static const char* fx_format_strings[] = {
     "s",         // [0]  FX_REMOVE_EFFECTS
     NULL,        // [1]  FX_TEST
@@ -266,7 +252,6 @@ static const char* fx_format_strings[] = {
     NULL,        // [160]
 };
 
-// Minimal sizebuf_t read helpers (MSG_* have hidden visibility from the main exe).
 static inline int SB_ReadByte(sizebuf_t* sb)
 {
     if (sb->readcount + 1 > sb->cursize) { sb->readcount++; return -1; }
@@ -284,8 +269,6 @@ static inline void SB_Skip(sizebuf_t* sb, int n)
     sb->readcount += n;
 }
 
-// Skip format-string bytes for one effect without spawning anything.
-// Byte counts per format char match the MSG_Read* implementations in netmsg_read.c.
 static void SkipEffectParams(sizebuf_t* msg_read, const int flags, const int effect)
 {
     if (effect < 0 || effect >= (int)(sizeof(fx_format_strings) / sizeof(fx_format_strings[0])))
@@ -314,11 +297,7 @@ static void SkipEffectParams(sizebuf_t* msg_read, const int flags, const int eff
     }
     (void)flags;
 }
-
-// Consume a client effects message from the network stream (when owner=NULL)
-// or from an entity's clientEffects buffer (when owner!=NULL), without spawning
-// any visual effects.
-// Mirrors ParseEffects in Main.c.
+.
 static void ParseClientEffects(centity_t* owner)
 {
     sizebuf_t* msg_read;
@@ -359,7 +338,7 @@ static void ParseClientEffects(centity_t* owner)
 
         if (effect & EFFECT_PRED_INFO)
         {
-            SB_Skip(msg_read, 1); // event_id
+            SB_Skip(msg_read, 1);
             effect &= ~EFFECT_PRED_INFO;
         }
 
@@ -378,7 +357,7 @@ static void ParseClientEffects(centity_t* owner)
         }
 
         if (!(flags & CEF_OWNERS_ORIGIN))
-            SB_Skip(msg_read, 6); // position: 3x short (MSG_ReadPos)
+            SB_Skip(msg_read, 6);
 
         if (owner != NULL && !(flags & (CEF_BROADCAST | CEF_MULTICAST)))
             fx_buf->freeBlock = msg_read->readcount;
@@ -389,7 +368,6 @@ static void ParseClientEffects(centity_t* owner)
             fx_buf->freeBlock = msg_read->readcount;
     }
 
-    // Free entity effect buffer (mirrors original logic).
     if (owner != NULL)
     {
         fx_buf->freeBlock = 0;
@@ -400,10 +378,6 @@ static void ParseClientEffects(centity_t* owner)
         fx_buf->bufSize = 0;
     }
 }
-
-// ============================================================
-// AddPacketEntities -- core entity rendering
-// ============================================================
 
 static entity_t sv_ents[MAX_SERVER_ENTITIES];
 static fmnodeinfo_t sv_ents_fmnodeinfos[MAX_SERVER_ENTITIES][MAX_FM_MESH_NODES];
@@ -434,7 +408,6 @@ static void AddServerEntities(const frame_t* frame)
 		const int effects = s1->effects;
 		const int renderfx = s1->renderfx;
 
-		// Set frame.
 		if (effects & EF_ANIM_ALL)
 			ent->frame = autoanim;
 		else if (effects & EF_ANIM_ALLFAST)
@@ -445,11 +418,9 @@ static void AddServerEntities(const frame_t* frame)
 		ent->oldframe = cent->prev.frame;
 		ent->backlerp = 1.0f - fxi.cl->lerpfrac;
 
-		// Handle flex-model nodes.
 		ent->fmnodeinfo = sv_ents_fmnodeinfos[pnum];
 		memcpy(ent->fmnodeinfo, s1->fmnodeinfo, sizeof(s1->fmnodeinfo));
 
-		// Interpolate origin.
 		{
 			vec3_t dist;
 			VectorSubtract(cent->current.origin, cent->prev.origin, dist);
@@ -463,10 +434,8 @@ static void AddServerEntities(const frame_t* frame)
 		VectorCopy(ent->origin, ent->oldorigin);
 		VectorCopy(cent->origin, cent->lerp_origin);
 
-		// Set model.
 		if (s1->modelindex == 255)
 		{
-			// Player model: use client info.
 			clientinfo_t* ci = &fxi.cl->clientinfo[s1->clientnum];
 			const int skinnum = (s1->skinnum < SKIN_MAX ? s1->skinnum : 0);
 
@@ -489,7 +458,6 @@ static void AddServerEntities(const frame_t* frame)
 
 		ent->scale = s1->scale;
 
-		// Use white color if entity has none set.
 		if (s1->color.c != 0)
 			ent->color = s1->color;
 		else
@@ -506,7 +474,6 @@ static void AddServerEntities(const frame_t* frame)
 
 		ent->flags = renderfx;
 
-		// Interpolate angles.
 		for (int i = 0; i < 3; i++)
 		{
 			const float a1 = cent->current.angles[i];
@@ -518,7 +485,6 @@ static void AddServerEntities(const frame_t* frame)
 
 		ent->rootJoint = ((effects & EF_JOINTED) ? s1->rootJoint : NULL_ROOT_JOINT);
 
-		// Handle swap frame.
 		ent->swapFrame = NO_SWAP_FRAME;
 		ent->oldSwapFrame = NO_SWAP_FRAME;
 		if ((effects & EF_SWAPFRAME) && s1->swapFrame != s1->frame)
@@ -531,29 +497,23 @@ static void AddServerEntities(const frame_t* frame)
 
 		ent->referenceInfo = cent->referenceInfo;
 
-		// Drain per-entity client effects buffer so numEffects doesn't overflow.
-		// The real client effects DLL calls ParseEffects(cent) here; our stub's
-		// ParseClientEffects(owner) reads and discards the buffer then resets it.
 		if (cent->current.clientEffects.numEffects > 0)
 		{
 			*fxi.cl_effectpredict = 0;
 			ParseClientEffects(cent);
 		}
 
-		// Track players in view bitmask.
 		if (s1->number > 0 && s1->number <= maxclients)
 		{
 			fxi.cl->PIV |= 1 << (s1->number - 1);
 			VectorCopy(ent->origin, fxi.cl->clientinfo[s1->number - 1].origin);
 		}
 
-		// Set PlayerEntPtr for the local player.
 		if (s1->number == fxi.cl->playernum + 1)
 			*fxi.PlayerEntPtr = ent;
 
-		// Add entity to render list.
 		if (ent->model == NULL || *ent->model == NULL)
-			continue; // Model not set or failed to load - skip rather than drawing diamond placeholder.
+			continue;
 
 		if (ent->flags & RF_TRANS_ANY)
 		{
@@ -567,10 +527,6 @@ static void AddServerEntities(const frame_t* frame)
 		}
 	}
 }
-
-// ============================================================
-// GetfxAPI -- library entry point
-// ============================================================
 
 CLFX_DECLSPEC client_fx_export_t GetfxAPI(const client_fx_import_t import)
 {

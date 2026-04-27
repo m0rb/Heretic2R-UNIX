@@ -1,13 +1,17 @@
-/*
- * clfx_dll.h -- Client Effects DLL interface (Unix stub)
- */
+//
+// clfx_dll.h -- Client Effects library interface
+//
+// Copyright (C) 1998 Raven Software
+//
+// Heretic2R UNIX port by morb
+
+
 
 #ifndef _CLFX_DLL_H_
 #define _CLFX_DLL_H_
 
 #include "../../../qcommon/qcommon.h"
 
-/* Client effects API variables and functions */
 extern qboolean fxapi_initialized;
 void CLFX_LoadDll(void);
 

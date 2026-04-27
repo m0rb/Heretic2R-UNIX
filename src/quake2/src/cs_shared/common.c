@@ -629,7 +629,7 @@ void Qcommon_Init(const int argc, char** argv)
 	fixedtime = Cvar_Get("fixedtime", "0", 0);
 	logfile_active = Cvar_Get("logfile", "0", 0);
 	showtrace = Cvar_Get("showtrace", "0", 0);
-	// morb was here. dedicated server binary always runs as dedicated.
+	// dedicated server gets hardcoded cvar --morb
 #ifdef DEDICATED_ONLY
 	dedicated = Cvar_Get("dedicated", "1", CVAR_NOSET);
 #else

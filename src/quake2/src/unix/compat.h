@@ -1,7 +1,7 @@
-/*
- * compat.h -- Windows to Unix compatibility layer
- * Provides Unix-compatible versions of Microsoft-specific C11 functions
- */
+//
+// Windows to UNIX compatibility layer for MSVC-specific C11 functions
+//
+// No copyright claimed, use and modify freely.
 
 #ifndef _COMPAT_H_
 #define _COMPAT_H_
@@ -12,25 +12,18 @@
 #include <stdarg.h>
 #include <errno.h>
 
-/* errno_t typedef for Windows compatibility */
 typedef int errno_t;
 
-/* Define _inline for Unix */
 #define _inline static inline
 
-/* min/max macros - only for C, not C++ (which has std::min/std::max) */
 #ifndef __cplusplus
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
 
-/*
- * Microsoft's safe string functions (C11 Annex K)
- * These are not available on most Unix systems, so we provide compatible implementations
- */
+// Microsoft safe string functions (C11 Annex K) — MSVC-compat shims for POSIX builds.
 
-/* strcpy_s */
 static inline int strcpy_s(char *dest, size_t destsz, const char *src)
 {
     if (!dest || !src || destsz == 0)
@@ -44,7 +37,6 @@ static inline int strcpy_s(char *dest, size_t destsz, const char *src)
     return 0;
 }
 
-/* strcat_s */
 static inline int strcat_s(char *dest, size_t destsz, const char *src)
 {
     if (!dest || !src || destsz == 0)
@@ -60,7 +52,6 @@ static inline int strcat_s(char *dest, size_t destsz, const char *src)
     return 0;
 }
 
-/* strncpy_s */
 static inline int strncpy_s(char *dest, size_t destsz, const char *src, size_t count)
 {
     if (!dest || !src || destsz == 0)
@@ -77,7 +68,6 @@ static inline int strncpy_s(char *dest, size_t destsz, const char *src, size_t c
     return 0;
 }
 
-/* fopen_s */
 static inline int fopen_s(FILE **pFile, const char *filename, const char *mode)
 {
     if (!pFile || !filename || !mode)
@@ -90,7 +80,6 @@ static inline int fopen_s(FILE **pFile, const char *filename, const char *mode)
     return 0;
 }
 
-/* fread_s */
 static inline size_t fread_s(void *buffer, size_t bufferSize, size_t elementSize, size_t count, FILE *stream)
 {
     if (!buffer || !stream || bufferSize == 0)
@@ -103,7 +92,6 @@ static inline size_t fread_s(void *buffer, size_t bufferSize, size_t elementSize
     return fread(buffer, 1, bytes_to_read, stream);
 }
 
-/* vsprintf_s */
 static inline int vsprintf_s(char *buffer, size_t bufferCount, const char *format, va_list args)
 {
     if (!buffer || !format || bufferCount == 0)
@@ -112,7 +100,6 @@ static inline int vsprintf_s(char *buffer, size_t bufferCount, const char *forma
     return vsnprintf(buffer, bufferCount, format, args);
 }
 
-/* sprintf_s */
 static inline int sprintf_s(char *buffer, size_t bufferCount, const char *format, ...)
 {
     if (!buffer || !format || bufferCount == 0)
@@ -126,7 +113,6 @@ static inline int sprintf_s(char *buffer, size_t bufferCount, const char *format
     return result;
 }
 
-/* sscanf_s */
 static inline int sscanf_s(const char *buffer, const char *format, ...)
 {
     if (!buffer || !format)
@@ -140,7 +126,6 @@ static inline int sscanf_s(const char *buffer, const char *format, ...)
     return result;
 }
 
-/* memcpy_s */
 static inline int memcpy_s(void *dest, size_t destsz, const void *src, size_t count)
 {
     if (!dest || !src || destsz == 0)
@@ -153,7 +138,6 @@ static inline int memcpy_s(void *dest, size_t destsz, const void *src, size_t co
     return 0;
 }
 
-/* memmove_s */
 static inline int memmove_s(void *dest, size_t destsz, const void *src, size_t count)
 {
     if (!dest || !src || destsz == 0)
@@ -166,7 +150,6 @@ static inline int memmove_s(void *dest, size_t destsz, const void *src, size_t c
     return 0;
 }
 
-/* strtok_s */
 static inline char *strtok_s(char *str, const char *delimiters, char **context)
 {
     if (!delimiters || !context)
@@ -178,12 +161,10 @@ static inline char *strtok_s(char *str, const char *delimiters, char **context)
     if (str == NULL || *str == '\0')
         return NULL;
     
-    /* Skip leading delimiters */
     str += strspn(str, delimiters);
     if (*str == '\0')
         return NULL;
     
-    /* Find end of token */
     char *end = str + strcspn(str, delimiters);
     if (*end == '\0')
     {
@@ -198,7 +179,6 @@ static inline char *strtok_s(char *str, const char *delimiters, char **context)
     return str;
 }
 
-/* localtime_s - Unix equivalent */
 #include <time.h>
 static inline errno_t localtime_s(struct tm* const tmDest, const time_t* const sourceTime)
 {
@@ -209,7 +189,6 @@ static inline errno_t localtime_s(struct tm* const tmDest, const time_t* const s
     return 0;
 }
 
-/* strncat_s */
 static inline errno_t strncat_s(char* dest, size_t destsz, const char* src, size_t count)
 {
     if (dest == NULL || src == NULL || destsz == 0) return 22; /* EINVAL */

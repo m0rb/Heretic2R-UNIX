@@ -1,17 +1,15 @@
 //
-// snd_dll.h -- Sound DLL interface (Unix stub)
+// snd_dll.h -- Sound backend
 //
-// Copyright 1998 Raven Software
-// Unix port by morb
+// Copyright (C) 1997-2001 Id Software, Inc.
+// Copyright (C) 1998 Raven Software
 //
+// Heretic2R UNIX port by morb
 
 #ifndef _SND_DLL_H_
 #define _SND_DLL_H_
 
 #include "../../../qcommon/qcommon.h"
-
-// Unix sound interface stub
-// Sound is handled directly by snd_sdl3 on Unix
 
 extern void SND_Init(void);
 extern void SND_InitNull(void);

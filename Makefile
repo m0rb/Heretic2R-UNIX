@@ -87,12 +87,27 @@ ifeq ($(UNAME),FreeBSD)
   EXE_EXT :=
 endif
 
+ifeq ($(UNAME),OpenBSD)
+  CFLAGS += -DOPENBSD -I/usr/X11R6/include
+  LDFLAGS := -lm -lexecinfo -L/usr/X11R6/lib
+  SHARED_EXT := .so
+  EXE_EXT :=
+endif
+
 ifeq ($(UNAME),Darwin)
   CFLAGS += -DMACOS_X -arch $(ARCH)
   LDFLAGS := -arch $(ARCH)
   # Symbols referenced by plugins are resolved at dlopen time from the host exe.
   SHARED_LDFLAGS := -undefined dynamic_lookup
   SHARED_EXT := .dylib
+  EXE_EXT :=
+endif
+
+ifeq ($(UNAME),Haiku)
+  CFLAGS += -DHAIKU
+  # $ORIGIN rpath: binary looks for libSDL3.so.0 in its own directory first.
+  LDFLAGS := -lnetwork -lexecinfo -Wl,-rpath,$$ORIGIN
+  SHARED_EXT := .so
   EXE_EXT :=
 endif
 
@@ -109,13 +124,23 @@ else
 endif
 
 # Additional libraries
+# dl is part of libc on OpenBSD, Darwin, and Haiku; only needed explicitly on Linux/FreeBSD.
 ifeq ($(UNAME),Darwin)
+  DL_LIBS :=
+else ifeq ($(UNAME),OpenBSD)
+  DL_LIBS :=
+else ifeq ($(UNAME),Haiku)
   DL_LIBS :=
 else
   DL_LIBS := -ldl
 endif
 MATH_LIBS := -lm
-PTHREAD_LIBS := -lpthread
+# pthread is part of libroot on Haiku; -lpthread is not needed.
+ifeq ($(UNAME),Haiku)
+  PTHREAD_LIBS :=
+else
+  PTHREAD_LIBS := -lpthread
+endif
 
 # Combine flags
 CFLAGS += $(SDL3_CFLAGS) $(GL_CFLAGS)
@@ -317,6 +342,12 @@ ifeq ($(UNAME),Linux)
 endif
 ifeq ($(UNAME),FreeBSD)
   DED_LIBS += -lexecinfo
+endif
+ifeq ($(UNAME),OpenBSD)
+  DED_LIBS += -lexecinfo -L/usr/X11R6/lib
+endif
+ifeq ($(UNAME),Haiku)
+  DED_LIBS += -lnetwork -lexecinfo
 endif
 
 $(BUILD_DIR)/heretic2r-server$(EXE_EXT): $(DED_OBJS)

@@ -327,8 +327,7 @@ static void SVC_DirectConnect(void)
 
 		if (NET_CompareBaseAdr(adr, &client->netchan.remote_address) && (client->netchan.qport == qport || adr->port == client->netchan.remote_address.port))
 		{
-			// morb was here. Q2/YQ2 exempts loopback from the reconnect throttle; H2 dropped that guard.
-			// On slow hardware the client retries before sv_reconnect_limit expires → infinite loop.
+			// Q2/YQ2 exempts loopback from reconnect throttle; H2 dropped that guard. --morb
 			// if (svs.realtime - client->lastconnect < (int)(sv_reconnect_limit->value * 1000))
 			if (!NET_IsLocalAddress(adr) && svs.realtime - client->lastconnect < (int)(sv_reconnect_limit->value * 1000))
 			{
@@ -649,10 +648,8 @@ static void SV_RunGameFrame(void)
 	// Don't run if paused // H2: extra 'sv_freezeworldset' check.
 	if ((!(int)sv_paused->value && !(int)sv_freezeworldset->value) || maxclients->value > 1)
 	{
-		// morb was here. fixed for Unix port.
-		// H2: new loop logic. Cap at 1000 frames to prevent infinite loop if sv_jumpcinematic was
-		// persisted across sessions (it previously had CVAR_ARCHIVE) or if the cinematic script
-		// never reaches FEATURE_CINEMATICS disable.
+		// H2: new loop logic. 
+		// Cap at 1000 frames to prevent infinite loop --morb
 		//do
 		//{
 		//	ge->RunFrame();
@@ -819,7 +816,7 @@ void SV_Init(void)
 	Cvar_Get("fraglimit", "0", CVAR_SERVERINFO);
 	Cvar_Get("timelimit", "0", CVAR_SERVERINFO);
 	Cvar_Get("cheats", "0", CVAR_SERVERINFO | CVAR_LATCH);
-	// morb was here. removed CVAR_NOSET so the user can set protocol 51 to connect to original H2 servers.
+	// removed CVAR_NOSET so the user can set protocol 51 to connect to original H2 servers. --morb
 	sv_protocol = Cvar_Get("protocol", va("%i", H2R_PROTOCOL_VERSION), CVAR_ARCHIVE | CVAR_SERVERINFO);
 
 	//mxd. Make sure protocol is valid.
@@ -849,8 +846,8 @@ void SV_Init(void)
 	sv_pers_fx_send_cut_off = Cvar_Get("sv_pers_fx_send_cut_off", "300", 0);
 	sv_noclientfx = Cvar_Get("sv_noclientfx", "0", 0);
 	sv_cinematicfreeze = Cvar_Get("sv_cinematicfreeze", "0", 0);
-	// morb was here. fixed for Unix port.
-	//sv_jumpcinematic = Cvar_Get("sv_jumpcinematic", "0", CVAR_ARCHIVE); // CVAR_ARCHIVE caused persisted non-zero value to trigger infinite do-while on next session start.
+	// CVAR_ARCHIVE caused infinite do-while loop --morb
+	//sv_jumpcinematic = Cvar_Get("sv_jumpcinematic", "0", CVAR_ARCHIVE); 
 	sv_jumpcinematic = Cvar_Get("sv_jumpcinematic", "0", 0);
 	sv_cooptimeout = Cvar_Get("sv_cooptimeout", "0", 0);
 	sv_loopcoop = Cvar_Get("sv_loopcoop", "0", 0);
@@ -858,9 +855,7 @@ void SV_Init(void)
 	public_server = Cvar_Get("public", "0", 0);
 	sv_reconnect_limit = Cvar_Get("sv_reconnect_limit", "3", CVAR_ARCHIVE);
 
-	// morb was here. r_farclipdist is initialized by the renderer/CLFX DLL on the client,
-	// but on a dedicated server neither runs. Register it here so sv_effects.c doesn't
-	// crash dereferencing a NULL cvar pointer when sending effects to clients.
+	// dedicated server --morb
 	if (r_farclipdist == NULL)
 		r_farclipdist = Cvar_Get("r_farclipdist", "4096.0", 0);
 

@@ -35,6 +35,14 @@ extern cvar_t* scr_viewsize;
 extern cvar_t* scr_centertime; //mxd
 extern cvar_t* crosshair;
 
+// YQ2: user-adjustable scale cvars and getters.
+extern cvar_t* r_consolescale;
+extern cvar_t* r_hudscale;
+extern cvar_t* r_menuscale;
+extern int SCR_GetConsoleScale(void);
+extern int SCR_GetHUDScale(void);
+extern int SCR_GetMenuScale(void);
+
 extern vrect_t scr_vrect; // Position of render window.
 
 extern void SCR_Init(void);

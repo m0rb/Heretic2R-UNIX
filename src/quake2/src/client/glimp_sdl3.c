@@ -249,33 +249,55 @@ void GLimp_ShutdownGraphics(void)
 	ShutdownGraphics();
 }
 
+static qboolean s_current_grab = false;
+
+// Reset the cached grab state without touching SDL. Call this whenever the SDL window is
+// destroyed/recreated or focus is regained, so the next GLimp_GrabInput call re-applies
+// grab to the current window rather than short-circuiting on the stale cached value.
+void GLimp_ResetGrabState(void)
+{
+	s_current_grab = false;
+}
+
 // (Un)grab Input.
 void GLimp_GrabInput(const qboolean grab)
 {
-	static qboolean current_grab = false;
-
 	// Only change state when it differs — calling SDL_SetWindowRelativeMouseMode
 	// every frame while a mouse button is held can drop the BUTTON_UP event on
 	// some SDL3/X11 driver combinations.
-	if (grab == current_grab)
+	if (grab == s_current_grab)
 		return;
 
 	// On Linux, window creation is handled by vid_sdl3.c rather than GLimp_InitGraphics,
 	// so the local 'window' pointer may be NULL. Fall back to the active SDL window.
 	SDL_Window* w = (window != NULL) ? window : VID_GetSDLWindow();
-	if (w != NULL)
+	if (w == NULL)
+		return;
+
+	// Confine cursor to the window — best-effort, fails on X11 when the compositor
+	// refuses XGrabPointer (security policy, no focus yet, etc.).  Not fatal: relative
+	// mouse mode works independently via XInput2 raw events and is what game input needs.
+	if (!SDL_SetWindowMouseGrab(w, grab))
+		Com_DPrintf("Note: could not confine mouse to window: %s\n", SDL_GetError());
+
+	// Relative mouse mode gives us dx/dy deltas — required for game input.
+	// If this fails (e.g. window not focused yet) leave s_current_grab unchanged so we retry.
+	if (!SDL_SetWindowRelativeMouseMode(w, grab))
 	{
-		if (!SDL_SetWindowMouseGrab(w, grab))
-			Com_Printf("WARNING: failed to lock mouse to game window, reason: %s\n", SDL_GetError());
+		Com_Printf("WARNING: failed to set relative mouse mode: %s\n", SDL_GetError());
+		return;
+	}
 
-		if (!SDL_SetWindowRelativeMouseMode(w, grab))
-			Com_Printf("WARNING: failed to set relative mouse mode, reason: %s\n", SDL_GetError());
+	s_current_grab = grab;
 
-		current_grab = grab;
-
-		// Flush any accumulated/warp mouse events that SDL may deliver immediately
-		// after enabling relative mode (common on X11 when cursor was off-center).
-		if (grab)
-			SDL_FlushEvents(SDL_EVENT_MOUSE_MOTION, SDL_EVENT_MOUSE_MOTION);
+	// Flush any accumulated/warp mouse events that SDL may deliver immediately
+	// after enabling relative mode (common on X11 when cursor was off-center).
+	// Also flush key-down events: on X11/SDL3, SDL_SetWindowRelativeMouseMode
+	// can synthesize a KP_0 keydown (mapped to +klook), leaving in_klook stuck
+	// KS_DOWN. Flushing here discards the synthetic event before it is processed.
+	if (grab)
+	{
+		SDL_FlushEvents(SDL_EVENT_MOUSE_MOTION, SDL_EVENT_MOUSE_MOTION);
+		SDL_FlushEvents(SDL_EVENT_KEY_DOWN, SDL_EVENT_KEY_DOWN);
 	}
 }

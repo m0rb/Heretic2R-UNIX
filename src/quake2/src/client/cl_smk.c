@@ -90,6 +90,13 @@ static qboolean SMK_Open(const char* name)
 		return false;
 	}
 
+	if (re.DrawInitCinematic == NULL)
+	{
+		smk_close(spi.smk_obj);
+		spi.smk_obj = NULL;
+		return false;
+	}
+
 	re.DrawInitCinematic(spi.vid_width, spi.vid_height);
 
 	return true;
@@ -196,10 +203,7 @@ void SCR_PlayCinematic(const char* name)
 		return;
 	}
 
-	// morb was here. fixed for Unix port.
-	// original: reconstructed path using the passed-in name directly. On case-sensitive Linux filesystems
-	// this fails when the on-disk name differs in case (e.g. "Bumper.smk" vs "bumper.smk").
-	// Use Sys_FindFirst so the resolved on-disk filename is used instead.
+	// Use Sys_FindFirst so the resolved on-fs filename is used instead. --morb
 	//sprintf_s(smk_filepath, sizeof(smk_filepath), "%s/video/%s", path, name); //mxd. sprintf -> sprintf_s
 	{
 		char candidate[MAX_OSPATH];

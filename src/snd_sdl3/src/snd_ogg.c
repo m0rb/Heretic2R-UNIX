@@ -91,12 +91,12 @@ void OGG_PlayTrack(const int track, const uint track_pos, const qboolean looping
 	}
 
 	// Open ogg vorbis file.
-	// morb was here. try lowercase filename first (Linux), fall back to mixed-case (Windows).
-	// was: sprintf_s(track_path, sizeof(track_path), "%s/music/Track%02i.ogg", si.FS_Gamedir(), track);
+	//sprintf_s(track_path, sizeof(track_path), "%s/music/Track%02i.ogg", si.FS_Gamedir(), track);
+	// try lowercase filename first, then fall back to mixed-case  --morb
+	
 	char track_path[MAX_OSPATH];
 	sprintf_s(track_path, sizeof(track_path), "%s/music/track%02i.ogg", si.FS_Gamedir(), track);
 
-	// Fall back to mixed-case if lowercase doesn't exist.
 	{
 		FILE* test;
 		if (fopen_s(&test, track_path, "rb") == 0)
