@@ -1,0 +1,53 @@
+name: Build (OpenBSD)
+
+on:
+  push:
+    branches: [ main, unix ]
+  pull_request:
+    branches: [ main, unix ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+          - arch: arm64
+          - arch: riscv64
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build on OpenBSD (${{ matrix.arch }})
+        uses: vmactions/openbsd-vm@v1
+        with:
+          arch: ${{ matrix.arch == 'x86_64' && '' || matrix.arch }}
+          usesh: true
+          prepare: pkg_add sdl3 gmake pkgconf
+
+          run: |
+            gmake -j$(sysctl -n hw.ncpu)
+            gmake server -j$(sysctl -n hw.ncpu)
+            mkdir -p dist dist-ded
+            cp build/release/heretic2r dist/
+            cp -r build/release/base dist/
+            cp build/release/heretic2r-server dist-ded/
+            cp -r build/release/base dist-ded/
+            tar czf heretic2r-openbsd-${{ matrix.arch }}.tar.gz -C dist .
+            tar czf heretic2r-server-openbsd-${{ matrix.arch }}.tar.gz -C dist-ded .
+
+      - name: Upload client artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-openbsd-${{ matrix.arch }}
+          path: heretic2r-openbsd-${{ matrix.arch }}.tar.gz
+
+      - name: Upload dedicated server artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-server-openbsd-${{ matrix.arch }}
+          path: heretic2r-server-openbsd-${{ matrix.arch }}.tar.gz
