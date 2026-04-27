@@ -26,7 +26,7 @@ jobs:
         with:
           arch: ${{ matrix.arch == 'x86_64' && '' || matrix.arch }}
           usesh: true
-          prepare: pkg_add cmake ninja-build gmake pkg-config libexecinfo
+          prepare: pkg_add cmake ninja-build gmake pkg-config libexecinfo git
 
           run: |
             git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
