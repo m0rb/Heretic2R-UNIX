@@ -46,17 +46,17 @@ jobs:
             cp SDL3-src/LICENSE.txt dist/LICENSE.SDL3.txt
             cp build/release/heretic2r-server dist-ded/
             cp -r build/release/base dist-ded/
-            tar czf heretic2r-haiku.tar.gz -C dist .
-            tar czf heretic2r-server-haiku.tar.gz -C dist-ded .
+            tar czf heretic2r-haiku-$(uname -m).tar.gz -C dist .
+            tar czf heretic2r-server-haiku-$(uname -m).tar.gz -C dist-ded .
 
       - name: Upload client artifact
         uses: actions/upload-artifact@v4
         with:
           name: heretic2r-haiku
-          path: heretic2r-haiku.tar.gz
+          path: heretic2r-haiku-*.tar.gz
 
       - name: Upload dedicated server artifact
         uses: actions/upload-artifact@v4
         with:
           name: heretic2r-server-haiku
-          path: heretic2r-server-haiku.tar.gz
+          path: heretic2r-server-haiku-*.tar.gz
