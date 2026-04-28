@@ -34,8 +34,8 @@ jobs:
             cp -r build/release/base dist/
             cp build/release/heretic2r-server dist-ded/
             cp -r build/release/base dist-ded/
-            tar czf heretic2r-freebsd.tar.gz -C dist .
-            tar czf heretic2r-server-freebsd.tar.gz -C dist-ded .
+            tar czf heretic2r-freebsd-${{ matrix.arch }}.tar.gz -C dist .
+            tar czf heretic2r-server-freebsd-${{ matrix.arch }}.tar.gz -C dist-ded .
 
       - name: Upload client artifact
         uses: actions/upload-artifact@v4
