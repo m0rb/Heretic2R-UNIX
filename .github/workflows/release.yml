@@ -46,12 +46,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
+          name: "Heretic2R-UNIX - Cross-Platform binaries"
           fail_on_unmatched_files: false
           body: |
             Built from tag `${{ github.ref_name }}` @ `${{ github.sha }}`.
 
-          Heretic2R-UNIX - Cross-Platform binary tarballs
+          
           files: |
             heretic2r-linux-*.tar.gz
             heretic2r-macos-*.tar.gz
@@ -66,12 +66,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}-ded
-          name: "${{ github.ref_name }} dedicated server"
+          name: "Heretic2R-UNIX - Cross-Platform dedicated server binaries"
           fail_on_unmatched_files: false
           body: |
             Built from tag `${{ github.ref_name }}` @ `${{ github.sha }}`.
 
-            Heretic2R-UNIX - Cross-Platform dedicated server binaries
+            
           files: |
             heretic2r-server-linux-*.tar.gz
             heretic2r-server-macos-*.tar.gz
