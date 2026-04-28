@@ -51,16 +51,16 @@ jobs:
           body: |
             Built from tag `${{ github.ref_name }}` @ `${{ github.sha }}`.
 
-            
+          Heretic2R-UNIX - Cross-Platform binary tarballs
           files: |
             heretic2r-linux-*.tar.gz
-            heretic2r-macos.tar.gz
-            heretic2r-freebsd*.tar.gz
-            heretic2r-haiku.tar.gz
+            heretic2r-macos-*.tar.gz
+            heretic2r-freebsd-*.tar.gz
+            heretic2r-haiku-*.tar.gz
             heretic2r-openbsd-*.tar.gz
             heretic2r-netbsd-*.tar.gz
-            heretic2r-openindiana.tar.gz
-            heretic2r-solaris.tar.gz
+            heretic2r-openindiana-*.tar.gz
+            heretic2r-solaris-*.tar.gz
 
       - name: Create dedicated server release
         uses: softprops/action-gh-release@v2
@@ -71,13 +71,13 @@ jobs:
           body: |
             Built from tag `${{ github.ref_name }}` @ `${{ github.sha }}`.
 
-            Dedicated server binaries
+            Heretic2R-UNIX - Cross-Platform dedicated server binaries
           files: |
             heretic2r-server-linux-*.tar.gz
-            heretic2r-server-macos.tar.gz
-            heretic2r-server-freebsd*.tar.gz
-            heretic2r-server-haiku.tar.gz
+            heretic2r-server-macos-*.tar.gz
+            heretic2r-server-freebsd-*.tar.gz
+            heretic2r-server-haiku-*.tar.gz
             heretic2r-server-openbsd-*.tar.gz
             heretic2r-server-netbsd-*.tar.gz
-            heretic2r-server-openindiana.tar.gz
-            heretic2r-server-solaris.tar.gz
+            heretic2r-server-openindiana-*.tar.gz
+            heretic2r-server-solaris-*.tar.gz

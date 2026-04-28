@@ -31,17 +31,18 @@ jobs:
 
       - name: Create archives
         run: |
-          tar czf heretic2r-macos.tar.gz -C dist .
-          tar czf heretic2r-server-macos.tar.gz -C dist-ded .
+          ARCH=$(uname -m)
+          tar czf heretic2r-macos-${ARCH}.tar.gz -C dist .
+          tar czf heretic2r-server-macos-${ARCH}.tar.gz -C dist-ded .
 
       - name: Upload client artifact
         uses: actions/upload-artifact@v4
         with:
           name: heretic2r-macos
-          path: heretic2r-macos.tar.gz
+          path: heretic2r-macos-*.tar.gz
 
       - name: Upload dedicated server artifact
         uses: actions/upload-artifact@v4
         with:
           name: heretic2r-server-macos
-          path: heretic2r-server-macos.tar.gz
+          path: heretic2r-server-macos-*.tar.gz
