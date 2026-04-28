@@ -40,11 +40,11 @@ jobs:
       - name: Upload client artifact
         uses: actions/upload-artifact@v4
         with:
-          name: heretic2r-freebsd
-          path: heretic2r-freebsd.tar.gz
+          name: heretic2r-freebsd-${{ matrix.arch }}
+          path: heretic2r-freebsd-${{ matrix.arch }}.tar.gz
 
       - name: Upload dedicated server artifact
         uses: actions/upload-artifact@v4
         with:
-          name: heretic2r-server-freebsd
-          path: heretic2r-server-freebsd.tar.gz
+          name: heretic2r-server-freebsd-${{ matrix.arch }}
+          path: heretic2r-server-freebsd-${{ matrix.arch }}.tar.gz
