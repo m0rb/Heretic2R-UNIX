@@ -51,7 +51,7 @@ jobs:
           body: |
             Built from tag `${{ github.ref_name }}` @ `${{ github.sha }}`.
 
-            Requires Heretic II game data (base/) to run.
+            
           files: |
             heretic2r-linux-*.tar.gz
             heretic2r-macos.tar.gz
@@ -71,8 +71,7 @@ jobs:
           body: |
             Built from tag `${{ github.ref_name }}` @ `${{ github.sha }}`.
 
-            Standalone dedicated server binaries. No SDL3 or OpenGL required.
-            Include game data (base/) from a Heretic II installation to run.
+            Dedicated server binaries
           files: |
             heretic2r-server-linux-*.tar.gz
             heretic2r-server-macos.tar.gz
