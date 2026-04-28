@@ -1,11 +1,5 @@
 name: Sync upstream (m-x-d/Heretic2R)
 
-# Requires a Personal Access Token stored as SYNC_PAT secret.
-# GITHUB_TOKEN pushes do NOT re-trigger other workflows (GitHub loop prevention),
-# so the build/release workflows will only fire if you create a PAT with
-# repo scope and store it as SYNC_PAT.  Falls back to GITHUB_TOKEN if absent
-# (sync still works, but build/release won't auto-fire from the push).
-
 on:
   schedule:
     - cron: '0 */6 * * *'   # every 6 hours
@@ -73,7 +67,7 @@ jobs:
         run: |
           git checkout main
           git merge --ff-only upstream/main
-          git push origin main
+          git push origin HEAD:refs/heads/main
 
       - name: Rebase unix onto main
         if: steps.check.outputs.skip == 'false'
