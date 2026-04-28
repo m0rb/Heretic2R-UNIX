@@ -4,6 +4,7 @@
 // Copyright 1998 Raven Software
 //
 
+#include "g_Local.h"
 #include "g_func_Plat.h"
 #include "g_Combat.h"
 #include "g_Debris.h"

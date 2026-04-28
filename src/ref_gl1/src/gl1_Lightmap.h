@@ -23,6 +23,8 @@ typedef struct
 	int internal_format;
 	int current_lightmap_texture;
 
+	GLuint texture_names[MAX_LIGHTMAPS + 1]; // Driver-allocated names: [0]=dynamic LM, [1..MAX_LIGHTMAPS]=static LMs.
+
 	msurface_t* lightmap_surfaces[MAX_LIGHTMAPS];
 	msurface_t* tallwall_lightmap_surfaces[MAX_TALLWALL_LIGHTMAPS]; // H2
 	int tallwall_lightmaptexturenum; // H2

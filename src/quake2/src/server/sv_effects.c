@@ -9,6 +9,8 @@
 #include "FX.h"
 #include "Vector.h"
 
+extern cvar_t *r_farclipdist;
+
 qboolean send_fx_framenum;
 
 ResourceManager_t sv_FXBufMngr;
@@ -68,7 +70,7 @@ void SV_CreateEffect(entity_state_t* ent, const int fx_type, int flags, const ve
 	}
 	else
 	{
-		if (effects_buffer_index == MAX_EFFECT_BUFFERS) //mxd. Added sanity check.
+		if (effects_buffer_index == MAX_EFFECT_BUFFERS || clfx_buffer_offset >= (int)sizeof(clfx_buffer)) //mxd. Added sanity check.
 		{
 			Com_DPrintf("Warning: unable to create frame effect\n");
 			return;
@@ -177,7 +179,7 @@ void SV_CreateEffectEvent(const byte event_id, entity_state_t* ent, const int fx
 	}
 	else
 	{
-		if (effects_buffer_index == MAX_EFFECT_BUFFERS) //mxd. Added sanity check.
+		if (effects_buffer_index == MAX_EFFECT_BUFFERS || clfx_buffer_offset >= (int)sizeof(clfx_buffer)) //mxd. Added sanity check.
 		{
 			Com_DPrintf("Warning: unable to create frame effect event\n");
 			return;

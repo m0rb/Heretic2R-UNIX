@@ -8,8 +8,9 @@
 #include "p_anim_branch.h"
 #include "p_main.h"
 #include "p_weapon.h"
-#include "g_items.h"
+#include "g_Items.h"
 #include "cl_strings.h"
+#include "compat.h"
 
 // Make the specified weapon ready if the owner has enough ammo for it.
 // Assumes that the owner does actually have the weapon.
@@ -26,10 +27,10 @@ PLAYER_API void Weapon_Ready(playerinfo_t* info, gitem_t* weapon)
 	info->pers.lastweapon = info->pers.weapon;
 	info->pers.weapon = weapon;
 
-	if (info->pers.weapon != NULL && info->pers.weapon->ammo != NULL)
-		info->weap_ammo_index = GetItemIndex(FindItem(info->pers.weapon->ammo));
-	else
-		info->weap_ammo_index = 0;
+		if (info->pers.weapon != NULL && info->pers.weapon->ammo != NULL)
+			info->weap_ammo_index = GetItemIndex(FindItem(info->pers.weapon->ammo));
+		else
+			info->weap_ammo_index = 0;
 }
 
 PLAYER_API void Weapon_EquipSwordStaff(playerinfo_t* info, gitem_t* weapon)

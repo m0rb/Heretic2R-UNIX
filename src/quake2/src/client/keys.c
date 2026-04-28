@@ -7,6 +7,10 @@
 #include <ctype.h>
 #include "client.h"
 
+#ifndef _WIN32
+#include "../unix/compat.h"
+#endif
+
 // Key up events are sent even if in console mode.
 
 char key_lines[NUM_KEY_LINES][MAXCMDLINE];

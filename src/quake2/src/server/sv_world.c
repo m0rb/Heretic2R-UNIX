@@ -7,11 +7,12 @@
 #include "server.h"
 #include "cs_shared/cmodel.h"
 #include "Vector.h"
+#include "../unix/compat.h"
 
 #define AREA_DEPTH	4
 #define AREA_NODES	32
 
-#define STRUCT_FROM_LINK(l,t,m)		((t*)((byte*)(l) - (int)&(((t*)0)->m)))
+#define STRUCT_FROM_LINK(l,t,m)		((t *)((byte *)(l) - (int)&(((t *)0)->m)))
 #define EDICT_FROM_AREA(l)			STRUCT_FROM_LINK(l,edict_t,area)
 
 typedef struct areanode_s
@@ -200,18 +201,18 @@ void SV_LinkEdict(edict_t* ent)
 	if (ent->solid == SOLID_BSP && Vec3NotZero(ent->s.angles))
 	{
 		// Expand for rotation.
-		float max = 0.0f;
+		float max_size = 0.0f;
 
 		for (int i = 0; i < 3; i++)
 		{
-			max = max(fabsf(ent->mins[i]), max);
-			max = max(fabsf(ent->maxs[i]), max);
+			max_size = max(fabsf(ent->mins[i]), max_size);
+			max_size = max(fabsf(ent->maxs[i]), max_size);
 		}
 
 		for (int i = 0; i < 3; i++)
 		{
-			ent->absmin[i] = ent->s.origin[i] - max * 1.75f; // H2: extra 1.75 scaler.
-			ent->absmax[i] = ent->s.origin[i] + max * 1.75f; // H2: extra 1.75 scaler.
+			ent->absmin[i] = ent->s.origin[i] - max_size * 1.75f; // H2: extra 1.75 scaler.
+			ent->absmax[i] = ent->s.origin[i] + max_size * 1.75f; // H2: extra 1.75 scaler.
 		}
 	}
 	else

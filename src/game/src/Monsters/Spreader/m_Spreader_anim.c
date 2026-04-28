@@ -6,7 +6,7 @@
 
 #include "m_Spreader_anim.h"
 #include "m_Spreader_shared.h"
-#include "m_Spreadermist.h"
+#include "m_SpreaderMist.h"
 #include "Monsters/g_AI.h" //mxd
 #include "NavSys/mg_AI.h" //mxd
 #include "g_Local.h"

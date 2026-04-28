@@ -5,12 +5,13 @@
 //
 
 #include "g_Main.h" //mxd
+#include <string.h>
 #include "cl_strings.h"
 #include "Monsters/g_AI.h" //mxd
 #include "g_Combat.h" //mxd
 #include "Commands/g_ClientCommands.h" //mxd
 #include "Physics/g_Physics.h"
-#include "g_playstats.h"
+#include "g_PlayStats.h"
 #include "Saving/g_Save.h" //mxd
 #include "g_Skeletons.h"
 #include "g_SpawnFuncs.h" //mxd
@@ -20,13 +21,17 @@
 #include "Player/p_View.h" //mxd
 #include "Scripting/sc_Main.h" //mxd
 #include "FX.h"
-#include "g_items.h" //mxd
+#include "g_Items.h" //mxd
 #include "Random.h"
 #include "g_Utilities.h"
 #include "Vector.h"
 #include "g_Local.h"
 
+#ifdef _WIN32
 #define GAME_DECLSPEC	__declspec(dllexport)
+#else
+#define GAME_DECLSPEC	__attribute__((visibility("default")))
+#endif
 
 game_locals_t game;
 level_locals_t level;
@@ -105,7 +110,13 @@ static int LoadTextFile(char* name, char** addr)
 	const int length = gi.FS_LoadFile(name, (void**)&buffer);
 
 	if (length <= 0)
-		Sys_Error("LoadTextFile: unable to load '%s'", name);
+	{
+		//Non-fatal on dedicated servers / stripped installs. --morb
+		//Sys_Error("LoadTextFile: unable to load '%s'", name);
+		Com_Printf("WARNING: LoadTextFile: unable to load '%s' -- level messages disabled\n", name);
+		*addr = NULL;
+		return 0;
+	}
 
 	*addr = (char*)gi.TagMalloc(length + 1, 0);
 	memcpy(*addr, buffer, length);
@@ -118,6 +129,8 @@ static int LoadTextFile(char* name, char** addr)
 static void LoadStrings(void)
 {
 	const int length = LoadTextFile("levelmsg.txt", &message_buf);
+	if (length == 0)
+		return;
 
 	char* start_ptr = &message_buf[0];
 	char* p = NULL;
@@ -279,7 +292,8 @@ static void ShutdownGame(void)
 		game.entitiesSpawned = false;
 	}
 
-	gi.FS_FreeFile(message_buf); //mxd
+	if (message_buf != NULL)
+		gi.FS_FreeFile(message_buf); //mxd
 
 	gi.FreeTags(TAG_LEVEL);
 	gi.FreeTags(TAG_GAME);
@@ -364,7 +378,7 @@ static void EndDMLevel(void)
 	// See if it's in the map list.
 	if (sv_maplist->string[0] != 0)
 	{
-		char* maplist = _strdup(sv_maplist->string); //mxd. strdup -> _strdup
+		char* maplist = strdup(sv_maplist->string); //mxd. Use standard strdup on Unix
 		char* first = NULL;
 		char* ptr = NULL; //mxd
 		char* map = strtok_s(maplist, delimiters, &ptr); //mxd. strtok -> strtok_s

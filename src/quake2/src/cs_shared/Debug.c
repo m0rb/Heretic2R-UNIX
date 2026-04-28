@@ -7,9 +7,17 @@
 #include "Debug.h"
 #include "client/client.h"
 #include "Vector.h"
+#include "../client/ref.h" // For refexport_t definition
+#include "../client/client.h" // For DrawString
+#include "../client/screen.h" // For ui_char_size, ui_line_height
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
 
-#ifdef _DEBUG
-	#include <windows.h>
+#ifdef _WIN32
+	#ifdef _DEBUG
+		#include <windows.h>
+	#endif
 #endif
 
 // Debug colors.
@@ -22,7 +30,7 @@ Q2DLL_DECLSPEC paletteRGBA_t dc_orange =	{ .r = 255, .g = 128,	.b = 0,		.a = 255
 Q2DLL_DECLSPEC paletteRGBA_t dc_cyan =		{ .r = 0,	.g = 255,	.b = 255,	.a = 255 };
 Q2DLL_DECLSPEC paletteRGBA_t dc_purple =	{ .r = 255,	.g = 0,		.b = 255,	.a = 255 };
 
-// Print to Visual Studio console.
+// Print to debug console.
 Q2DLL_DECLSPEC void DBG_IDEPrint(const char* fmt, ...)
 {
 #ifdef _DEBUG
@@ -30,11 +38,16 @@ Q2DLL_DECLSPEC void DBG_IDEPrint(const char* fmt, ...)
 	char msg[1024];
 
 	va_start(argptr, fmt);
-	vsprintf_s(msg, sizeof(msg), fmt, argptr);
+	vsnprintf(msg, sizeof(msg), fmt, argptr);
 	va_end(argptr);
 
-	strcat_s(msg, sizeof(msg), "\n");
+	strcat(msg, "\n");
+	
+#ifdef _WIN32
 	OutputDebugString(msg);
+#else
+	fputs(msg, stderr);
+#endif
 #endif
 }
 
@@ -67,7 +80,8 @@ Q2DLL_DECLSPEC void DBG_HudPrint(const int slot, const char* label, const char* 
 	DebugHudMessage_t* msg = &dbg_messages[slot];
 
 	// Title
-	strcpy_s(msg->title, sizeof(msg->title), label);
+	strncpy(msg->title, label, sizeof(msg->title) - 1);
+	msg->title[sizeof(msg->title) - 1] = 0;
 
 	// Message
 	if (fmt != NULL)
@@ -75,7 +89,7 @@ Q2DLL_DECLSPEC void DBG_HudPrint(const int slot, const char* label, const char* 
 		va_list argptr;
 
 		va_start(argptr, fmt);
-		vsprintf_s(msg->message, sizeof(msg->message), fmt, argptr);
+		vsnprintf(msg->message, sizeof(msg->message), fmt, argptr);
 		va_end(argptr);
 	}
 	else
@@ -96,7 +110,9 @@ void DBG_DrawMessages(void)
 	for (int i = 0; i < NUM_DEBUG_MESSAGES; i++)
 	{
 		const DebugHudMessage_t* msg = &dbg_messages[i];
-		ox = max(ox, (int)strlen(msg->title));
+		const int title_len = (int)strlen(msg->title);
+		if (title_len > ox)
+			ox = title_len;
 	}
 
 	// Convert to char offset, add pad...
@@ -161,7 +177,7 @@ Q2DLL_DECLSPEC void DBG_AddLabel(const vec3_t origin, const paletteRGBA_t color,
 
 	va_start(argptr, fmt);
 	char label[DEBUG_LABEL_SIZE];
-	vsprintf_s(label, sizeof(label), fmt, argptr);
+	vsnprintf(label, sizeof(label), fmt, argptr);
 	va_end(argptr);
 
 	re.AddDebugLabel(origin, color, lifetime, label);
@@ -178,7 +194,7 @@ Q2DLL_DECLSPEC void DBG_AddEntityLabel(const edict_t* ent, const paletteRGBA_t c
 
 	va_start(argptr, fmt);
 	char label[64];
-	vsprintf_s(label, sizeof(label), fmt, argptr);
+	vsnprintf(label, sizeof(label), fmt, argptr);
 	va_end(argptr);
 
 	re.AddDebugEntityLabel(ent, color, label);

@@ -526,6 +526,7 @@ extern cvar_t* cl_noskins;
 extern cvar_t* cl_autoskins;
 
 extern cvar_t* cl_maxfps;
+extern cvar_t* cl_minfps; // T-Mod compatibility
 extern cvar_t* cl_frametime;
 
 extern cvar_t* cl_yawspeed;

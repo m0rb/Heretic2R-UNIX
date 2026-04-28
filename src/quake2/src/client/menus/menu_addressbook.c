@@ -6,6 +6,7 @@
 
 #include "menu_addressbook.h"
 #include "client/client.h"
+#include "../unix/compat.h"
 
 cvar_t* m_banner_address;
 

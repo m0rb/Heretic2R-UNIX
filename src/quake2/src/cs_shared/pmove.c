@@ -5,12 +5,16 @@
 //
 
 #include "client/client.h" //mxd
-#include "server/server.h" //mxd
 #include "qcommon.h"
 #include "Game.h"
+#include "g_Edict.h" // For full struct edict_s definition
 #include "q_Physics.h"
 #include "turbsin.h"
 #include "Vector.h"
+
+#ifndef _WIN32
+#include "../unix/compat.h"
+#endif
 
 // All of the locals will be zeroed before each pmove, just to make sure we don't have any differences when running on client or server.
 
@@ -971,9 +975,9 @@ static void PM_WaterMove(void) // H2
 		pml.velocity[2] = (pm->waterheight - pml.desired_water_height) / pml.frametime;
 
 		//mxd. Replicate R_EmitWaterPolys() logic, so player's vertical offset is synched with water polys movement...
-		const float time = (float)(pml.server ? sv.time : cl.time) * 0.001f;
-		const float bob_offset = (turbsin[TURBSIN_V0(pml.origin[0], pml.origin[1], time)] * 0.25f +
-								  turbsin[TURBSIN_V1(pml.origin[0], pml.origin[1], time)] * 0.125f);
+		//TODO: using cl.refdef.time here probably breaks client/server logic separation...
+		const float bob_offset = (turbsin[TURBSIN_V0(pml.origin[0], pml.origin[1], cl.refdef.time)] * 0.25f +
+								  turbsin[TURBSIN_V1(pml.origin[0], pml.origin[1], cl.refdef.time)] * 0.125f);
 
 		pml.velocity[2] += bob_offset * 12.0f;
 		pml.water_bob_offset = max(0.2f, fabsf(bob_offset) * 2.5f); //mxd. bob_offset effect on velocity is delayed, so use absolute value & some padding and scaling...

@@ -1,3 +1,4 @@
+#include "../../unix/compat.h"
 //
 // menu_playerconfig.c
 //

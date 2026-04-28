@@ -446,7 +446,7 @@ static void ReadField(FILE* f, const field_t* field, byte* base)
 			break;
 
 		case F_CLEAR: //mxd. Some fields should not be restored...
-			*(int*)p = 0;
+			memset(p, 0, sizeof(void*)); // Must clear pointer-width bytes, not just 4 (int) -- on 64-bit, pointer is 8 bytes.
 			break;
 
 		case F_LSTRING:
@@ -998,7 +998,7 @@ void ReadLevel(const char* filename)
 
 		InitPlayerinfo(cl);
 		SetupPlayerinfo(cl);
-		P_PlayerBasicAnimReset(&cl->client->playerinfo);
+		P_PlayerInit(&cl->client->playerinfo, false);
 	}
 
 	// Do any load-time things at this point.

@@ -52,6 +52,8 @@ static void CityMap_DefaultDraw(void) // H2
 	// Draw map title.
 	const int level_num = Q_atoi(cl.configstrings[CS_LEVEL_NUMBER]);
 	const level_map_info_t* map_infos = fxe.GetLMI();
+	if (map_infos == NULL)
+		return;
 	const char* message = CL_GetGameString(map_infos[level_num].message);
 	if (message != NULL)
 		Menu_DrawTextBlock(message, TB_MAX_LINE_LENGTH);

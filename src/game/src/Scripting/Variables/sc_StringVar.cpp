@@ -10,7 +10,7 @@
 
 StringVar::StringVar(const char* new_name, const char* new_value) : Variable(new_name, TYPE_STRING)
 {
-	strcpy_s(value, new_value); //mxd. strcpy -> strcpy_s.
+	strcpy_s(value, sizeof(value), new_value); //mxd. strcpy -> strcpy_s.
 }
 
 StringVar::StringVar(FILE* f, CScript* script) : Variable(f, script)
@@ -26,5 +26,5 @@ void StringVar::Write(FILE* f, CScript* script, RestoreListID_t id)
 
 void StringVar::ReadValue(CScript* script)
 {
-	strcpy_s(value, script->ReadString()); //mxd. strcpy -> strcpy_s.
+	strcpy_s(value, sizeof(value), script->ReadString()); //mxd. strcpy -> strcpy_s.
 }

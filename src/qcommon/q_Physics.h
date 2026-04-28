@@ -41,6 +41,6 @@ typedef struct FormMove_s
 	//INFO: mxd. 6 extra properties below in original logic. None are used, though...
 } FormMove_t;
 
-H2COMMON_API extern void BounceVelocity(const vec3_t in, const vec3_t normal, vec3_t out, float elasticity);
-H2COMMON_API extern void ReflectVelocity(const vec3_t in, const vec3_t normal, vec3_t out, float elasticity); //mxd
-H2COMMON_API extern qboolean BoundVelocity(float* vel);
+H2COMMON_API __attribute__((visibility("default"))) extern void BounceVelocity(const vec3_t in, const vec3_t normal, vec3_t out, float elasticity);
+H2COMMON_API __attribute__((visibility("default"))) extern void ReflectVelocity(const vec3_t in, const vec3_t normal, vec3_t out, float elasticity); //mxd
+H2COMMON_API __attribute__((visibility("default"))) extern qboolean BoundVelocity(float* vel);

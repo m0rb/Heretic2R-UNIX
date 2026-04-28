@@ -6,7 +6,9 @@
 
 #pragma once
 
+#include <cstdio>
 #include "sc_Variable.h"
+#include "sc_CScript.h"
 
 class StringVar : public Variable
 {

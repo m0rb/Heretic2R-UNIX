@@ -1,0 +1,105 @@
+name: Build (Linux)
+
+on:
+  push:
+    branches: [ main, unix ]
+  pull_request:
+    branches: [ main, unix ]
+  workflow_dispatch:
+  workflow_call:
+
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+          - runner: ubuntu-24.04-riscv
+            arch: riscv64
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            git \
+            make \
+            pkg-config \
+            cmake \
+            ninja-build \
+            gnome-desktop-testing \
+            libasound2-dev \
+            libpulse-dev \
+            libaudio-dev \
+            libfribidi-dev \
+            libjack-dev \
+            libsndio-dev \
+            libx11-dev \
+            libxext-dev \
+            libxrandr-dev \
+            libxcursor-dev \
+            libxfixes-dev \
+            libxi-dev \
+            libxss-dev \
+            libxtst-dev \
+            libxkbcommon-dev \
+            libdrm-dev \
+            libgbm-dev \
+            libgl1-mesa-dev \
+            libgles2-mesa-dev \
+            libegl1-mesa-dev \
+            libdbus-1-dev \
+            libibus-1.0-dev \
+            libudev-dev \
+            libthai-dev
+
+      - name: Build SDL3 from source
+        run: |
+          git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
+          cmake -S SDL3-src -B SDL3-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSDL_SHARED=ON \
+            -DSDL_STATIC=OFF \
+            -DSDL_TEST=OFF
+          cmake --build SDL3-build --parallel
+          sudo cmake --install SDL3-build
+
+      - name: Build
+        run: |
+          make -j$(nproc)
+          make server -j$(nproc)
+
+      - name: Stage release artifacts
+        run: |
+          mkdir -p dist dist-ded
+          cp build/release/heretic2r dist/
+          cp -r build/release/base dist/
+          cp build/release/heretic2r-server dist-ded/
+          cp -r build/release/base dist-ded/
+
+      - name: Create archives
+        run: |
+          tar czf heretic2r-linux-${{ matrix.arch }}.tar.gz -C dist .
+          tar czf heretic2r-server-linux-${{ matrix.arch }}.tar.gz -C dist-ded .
+
+      - name: Upload client artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-linux-${{ matrix.arch }}
+          path: heretic2r-linux-${{ matrix.arch }}.tar.gz
+
+      - name: Upload dedicated server artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-server-linux-${{ matrix.arch }}
+          path: heretic2r-server-linux-${{ matrix.arch }}.tar.gz

@@ -8,6 +8,10 @@
 #include "snd_main.h"
 #include "snd_sdl3.h"
 
+#ifndef _WIN32
+#include "compat.h"
+#endif
+
 static byte* data_p;
 static byte* iff_end;
 static byte* last_chunk;
