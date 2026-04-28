@@ -7,6 +7,7 @@
 #include "menu_loadgame.h"
 #include "client/client.h"
 #include "server/server.h"
+#include "../../unix/compat.h"
 
 cvar_t* m_banner_load;
 

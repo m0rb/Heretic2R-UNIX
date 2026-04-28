@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_DrawCinematic.c
 //
@@ -23,6 +24,8 @@ void Draw_InitCinematic(const int width, const int height) // H2
 	cin_frame->palette = malloc(sizeof(paletteRGB_t) * 256);
 	cin_frame->has_alpha = false;
 	cin_frame->texnum = TEXNUM_IMAGES + (cin_frame - gltextures);
+	// fresh context has no texture objects. black screen. --morb
+	glGenTextures(1, (GLuint*)&cin_frame->texnum);
 
 	cin_frame_data = malloc(width * height);
 }

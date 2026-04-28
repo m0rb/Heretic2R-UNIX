@@ -4,6 +4,7 @@
 // Copyright 1998 Raven Software
 //
 
+#include "g_Local.h"
 #include "g_Misc.h"
 #include "g_DefaultMessageHandler.h"
 #include "g_Items.h" //mxd

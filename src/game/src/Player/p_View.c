@@ -496,7 +496,7 @@ static void P_WorldEffects(edict_t* player) //mxd. +player arg.
 				player->client->next_drown_time = level.time + 1.0f;
 
 				// Take more damage the longer underwater.
-				player->dmg = min(15, player->dmg + 2);
+			player->dmg = fmin(15, player->dmg + 2);
 
 				// Play a gurp sound instead of a normal pain sound.
 				gi.sound(player, CHAN_VOICE, gi.soundindex(va("*drowning%i.wav", irand(1, 2))), 1.0f, ATTN_NORM, 0.0f);

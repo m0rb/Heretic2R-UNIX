@@ -6,6 +6,8 @@
 
 #include "client.h"
 #include "cl_effects.h"
+#include "../unix/clfx_dll_unix.h"
+#include "../unix/compat.h"
 #include "cl_messages.h"
 #include "cs_shared/cmodel.h"
 #include "cs_shared/tokens.h"
@@ -206,6 +208,18 @@ qboolean CL_CheckOrDownloadFile(const char* filename)
 		return true; // It exists, no need to download.
 
 	strcpy_s(cls.downloadname, sizeof(cls.downloadname), filename); //mxd. strcpy -> strcpy_s
+
+	// Normalize Windows-style backslashes to forward slashes so paths from Windows servers
+	// are valid on Unix filesystems. Also strip any leading slash so the path is relative
+	// (server stores files without a leading slash).
+	for (char* p = cls.downloadname; *p; p++)
+		if (*p == '\\') *p = '/';
+	{
+		char* p = cls.downloadname;
+		while (*p == '/') p++;
+		if (p != cls.downloadname)
+			memmove(cls.downloadname, p, strlen(p) + 1);
+	}
 
 	// Download to a temp name, and only rename when done, so if interrupted a runt file won't be left.
 	COM_StripExtension(cls.downloadname, cls.downloadtempname);
@@ -602,7 +616,8 @@ static void CL_ParseConfigString(void)
 	// Set lightstyle?
 	if (i >= CS_LIGHTS && i < CS_LIGHTS + MAX_LIGHTSTYLES)
 	{
-		fxe.SetLightstyle(i - CS_LIGHTS);
+		if (fxapi_initialized)
+			fxe.SetLightstyle(i - CS_LIGHTS);
 		return;
 	}
 
@@ -632,7 +647,7 @@ static void CL_ParseConfigString(void)
 		if (i == CS_MODELS + 1)
 		{
 			CL_InitClientEffects(cl_fx_dll->string);
-			strcpy_s(client_string, sizeof(client_string), fxe.client_string); //mxd. strcpy -> strcpy_s
+			strcpy_s(client_string, sizeof(client_string), fxapi_initialized ? fxe.client_string : ""); //mxd. strcpy -> strcpy_s
 			P_Load(player_dll->string);
 		}
 
@@ -929,7 +944,8 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_client_effect:
-				fxe.ParseClientEffects(NULL); // H2
+				if (fxapi_initialized)
+					fxe.ParseClientEffects(NULL); // H2
 				break;
 
 			case svc_nop:
@@ -1120,7 +1136,8 @@ void CL_ParseServerMessage(void)
 
 			case svc_special_client_effect: // H2
 				MSG_ReadShort(&net_message);
-				fxe.ParseClientEffects(NULL);
+				if (fxapi_initialized)
+					fxe.ParseClientEffects(NULL);
 				break;
 
 			case svc_gamemsgdual_centerprint: // H2

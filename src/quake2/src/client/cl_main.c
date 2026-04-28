@@ -6,6 +6,8 @@
 
 #include <setjmp.h>
 #include "client.h"
+#include "clfx_dll_unix.h"
+#include "../unix/compat.h"
 #include "cl_camera.h"
 #include "cl_effects.h"
 #include "cl_messages.h"
@@ -30,6 +32,7 @@ cvar_t* cl_autoskins;
 static cvar_t* cl_timeout;
 cvar_t* cl_predict; //mxd. Use CL_Predict() instead!
 cvar_t* cl_maxfps;
+cvar_t* cl_minfps; // T-Mod compatibility
 
 cvar_t* cl_add_particles;
 cvar_t* cl_add_lights;
@@ -544,16 +547,23 @@ static void CL_CheckForResend(void)
 // Q2 counterpart
 static void CL_Connect_f(void)
 {
-	if (Cmd_Argc() != 2)
+	const int argc = Cmd_Argc();
+	if (argc < 2 || argc > 3)
 	{
-		Com_Printf("Usage: connect <server>\n");
+		Com_Printf("Usage: connect <server>[:<port>]  or  connect <server> <port>\n");
 		return;
 	}
 
 	if (Com_ServerState())
 		SV_Shutdown("Server quit\n", false); // If running a local server, kill it and reissue.
 
-	const char* server = Cmd_Argv(1);
+	// Support both "connect ip:port" and "connect ip port" forms.
+	char server[MAX_OSPATH];
+	if (argc == 3)
+		Com_sprintf(server, sizeof(server), "%s:%s", Cmd_Argv(1), Cmd_Argv(2));
+	else
+		strncpy_s(server, sizeof(server), Cmd_Argv(1), sizeof(server) - 1);
+
 	NET_Config(true); // Allow remote.
 	CL_Disconnect();
 
@@ -584,6 +594,7 @@ static void CL_Reconnect_f(void)
 		if (cls.state >= ca_connected)
 		{
 			CL_Disconnect();
+			SCR_BeginLoadingPlaque(); // CL_Disconnect() cleared scr_draw_loading; re-set it for the transition screen.
 			cls.connect_time = (float)(cls.realtime - 1500);
 		}
 		else
@@ -1132,6 +1143,11 @@ void CL_ReadPackets(void)
 	}
 }
 
+// No-op handler for T-Mod's "autologin request <token>" stuffcmd.
+// Without this, the client echoes the command back to the server as a stringcmd, which
+// T-Mod interprets as a malformed auth response and freezes the player ~65s later.
+static void CL_AutoLogin_f(void) { /* intentionally empty — silently ignore T-Mod autologin challenges */ }
+
 static void CL_InitLocal(void)
 {
 	cls.state = ca_disconnected;
@@ -1157,7 +1173,20 @@ static void CL_InitLocal(void)
 	cl_predict = Cvar_Get("cl_predict", "1", 0); // H2: 0
 
 	cl_frametime = Cvar_Get("cl_frametime", "0.0", 0);
-	cl_yawspeed = Cvar_Get("cl_yawspeed", "70", CVAR_ARCHIVE);
+	cl_yawspeed = Cvar_Get("cl_yawspeed", "140", CVAR_ARCHIVE); // morb: T-Mod anti-cheat expects Q2 default of 140; H2 used 70 which triggers PM_FREEZE on frag-net.com
+
+	// T-Mod sends "cmd chkswim $swimmode" and "cmd clientversion $speechversion".
+	// These cvars must exist so $-expansion resolves them to values instead of literals.
+	// swimmode=1: H2's new swim/dive controls (required by T-Mod to identify H2 client).
+	// speechversion=0: no speech synthesis on Linux (Windows H2 had MS Speech SDK).
+	Cvar_Get("swimmode", "1", 0);
+	Cvar_Get("speechversion", "0", 0);
+
+	// T-Mod authentication cvars. When a T-Mod server sends "cmd register $user $pass",
+	// these cvars expand to empty strings, which T-Mod handles as "unregistered guest".
+	// Without them the literal "$user $pass" is forwarded, confusing T-Mod's registration handler.
+	Cvar_Get("user", "", 0);
+	Cvar_Get("pass", "", 0);
 	cl_pitchspeed = Cvar_Get("cl_pitchspeed", "150", 0);
 	cl_anglespeedkey = Cvar_Get("cl_anglespeedkey", "1.5", 0);
 
@@ -1292,6 +1321,12 @@ static void CL_InitLocal(void)
 	Cmd_AddCommand("give", NULL);
 	Cmd_AddCommand("powerup", NULL);
 	Cmd_AddCommand("killmonsters", NULL);
+
+	// T-Mod sends "autologin request <token>" as a stuffcmd. Without a handler, the client
+	// forwards the whole command back to the server, which T-Mod interprets as a bad auth
+	// response and freezes the player after ~65 seconds. Register a no-op so it's silently
+	// consumed. Registered players can override this by setting their credentials.
+	Cmd_AddCommand("autologin", CL_AutoLogin_f);
 }
 
 // Writes key bindings and archived cvars to config.cfg.

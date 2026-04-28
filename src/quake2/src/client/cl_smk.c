@@ -7,6 +7,10 @@
 #include <libsmacker/smacker.h>
 #include "client.h"
 
+#ifndef _WIN32
+#include "../unix/compat.h"
+#endif
+
 typedef struct SMKPlaybackInfo_s
 {
 	smk smk_obj;
@@ -53,7 +57,10 @@ static qboolean SMK_Open(const char* name)
 	spi.total_frames = (int)frame_count;
 	spi.fps = floorf(1000000.0f / (float)usf);
 
-	smk_info_video(spi.smk_obj, &spi.vid_width, &spi.vid_height, NULL);
+	ulong vid_width, vid_height;
+	smk_info_video(spi.smk_obj, &vid_width, &vid_height, NULL);
+	spi.vid_width = (int)vid_width;
+	spi.vid_height = (int)vid_height;
 
 	byte s_channels[7];
 	byte s_bitdepth[7];
@@ -80,6 +87,13 @@ static qboolean SMK_Open(const char* name)
 		Com_Printf("...Smacker file must but a multiple of 8 high and wide\n");
 		SMK_Shutdown();
 
+		return false;
+	}
+
+	if (re.DrawInitCinematic == NULL)
+	{
+		smk_close(spi.smk_obj);
+		spi.smk_obj = NULL;
 		return false;
 	}
 
@@ -189,7 +203,15 @@ void SCR_PlayCinematic(const char* name)
 		return;
 	}
 
-	sprintf_s(smk_filepath, sizeof(smk_filepath), "%s/video/%s", path, name); //mxd. sprintf -> sprintf_s
+	// Use Sys_FindFirst so the resolved on-fs filename is used instead. --morb
+	//sprintf_s(smk_filepath, sizeof(smk_filepath), "%s/video/%s", path, name); //mxd. sprintf -> sprintf_s
+	{
+		char candidate[MAX_OSPATH];
+		sprintf_s(candidate, sizeof(candidate), "%s/video/%s", path, name);
+		const char* found = Sys_FindFirst(candidate, 0, 0);
+		sprintf_s(smk_filepath, sizeof(smk_filepath), "%s", found != NULL ? found : candidate);
+		Sys_FindClose();
+	}
 	Com_Printf("Opening cinematic file: '%s'...\n", smk_filepath);
 
 	if (!SMK_Open(smk_filepath))

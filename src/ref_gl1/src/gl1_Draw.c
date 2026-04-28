@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_Draw.c
 //
@@ -74,7 +75,11 @@ void Draw_InitLocal(void)
 	r_notexture = NULL;
 	r_notexture = R_FindImage("textures/general/notex.m8", it_wall);
 	if (r_notexture == NULL)
-		ri.Sys_Error(ERR_DROP, "Draw_InitLocal: could not find textures/general/notex.m8"); //mxd. Sys_Error() -> ri.Sys_Error().
+	{
+		// Create a fallback texture if the file is not found (for demo assets)
+		ri.Con_Printf(PRINT_ALL, "Draw_InitLocal: could not find textures/general/notex.m8, creating fallback texture\n");
+		r_notexture = R_CreateFallbackTexture("*notex_fallback", it_wall);
+	}
 
 	draw_chars = Draw_FindPic("misc/conchars.m32");
 	r_particletexture = Draw_FindPicFilter("misc/particle.m32");

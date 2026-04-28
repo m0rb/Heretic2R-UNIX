@@ -16,6 +16,7 @@
 #include "Player/m_Player.h" // In game/src! --mxd.
 #include "Random.h"
 #include "Vector.h"
+#include "compat.h"
 
 PLAYER_API void P_Init(void) //mxd. Originally defined in main.c.
 {

@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_FlexModel.c -- Heretic 2 FlexModel loading.
 //
@@ -360,9 +361,12 @@ void Mod_RegisterFlexModel(model_t* mod)
 	const fmdl_t* fmdl = (fmdl_t*)mod->extradata;
 
 	// Precache skins... //TODO: also done in fmLoadSkin(). One of these isn't needed?
-	char* skin_name = fmdl->skin_names;
-	for (int i = 0; i < fmdl->header.num_skins; i++, skin_name += MAX_FRAMENAME)
-		mod->skins[i] = R_FindImage(skin_name, it_skin);
+	if (fmdl != NULL && fmdl->skin_names != NULL && fmdl->header.num_skins > 0)
+	{
+		char* skin_name = fmdl->skin_names;
+		for (int i = 0; i < fmdl->header.num_skins; i++, skin_name += MAX_FRAMENAME)
+			mod->skins[i] = R_FindImage(skin_name, it_skin);
+	}
 }
 
 #pragma endregion
@@ -596,7 +600,15 @@ static void R_DrawFlexFrameLerp(const fmdl_t* fmdl, entity_t* e, vec3_t shadelig
 			}
 		}
 
-		int* order = &fmdl->glcmds[fmdl->mesh_nodes[i].start_glcmds];
+		const int start_glcmds = fmdl->mesh_nodes[i].start_glcmds; // short -> int (sign-extend).
+		if (start_glcmds < 0 || start_glcmds >= fmdl->header.num_glcmds)
+		{
+			ri.Con_Printf(PRINT_ALL, "R_DrawFlexFrameLerp: mesh node %d has out-of-range start_glcmds %d (num_glcmds=%d)\n",
+				i, start_glcmds, fmdl->header.num_glcmds);
+			continue;
+		}
+
+		int* order = &fmdl->glcmds[start_glcmds];
 
 		while (true)
 		{
@@ -618,6 +630,12 @@ static void R_DrawFlexFrameLerp(const fmdl_t* fmdl, entity_t* e, vec3_t shadelig
 			for (int c = 0; c < num_verts; c++)
 			{
 				const int index_xyz = order[2];
+
+				if (index_xyz < 0 || index_xyz >= fmdl->header.num_xyz)
+				{
+					order += 3;
+					continue;
+				}
 
 				if (draw_reflection || use_reflect)
 				{
@@ -721,8 +739,8 @@ void R_DrawFlexModel(entity_t* e)
 	{
 		for (int i = 0; i < 3; i++)
 		{
-			const int ñ = (int)(shadelight[i] * 255.0f);
-			shadelight[i] = (float)minlight[min(255, ñ)] / 255.0f;
+			const int l = (int)(shadelight[i] * 255.0f);
+			shadelight[i] = (float)minlight[min(255, l)] / 255.0f;
 		}
 	}
 

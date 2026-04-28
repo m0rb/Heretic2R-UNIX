@@ -4,6 +4,7 @@
 // Copyright 1998 Raven Software
 //
 
+#include "g_Local.h"
 #include <float.h> //mxd
 #include "g_Obj.h" //mxd
 #include "g_Combat.h" //mxd

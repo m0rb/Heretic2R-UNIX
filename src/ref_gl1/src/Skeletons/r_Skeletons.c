@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // r_Skeletons.c
 //

@@ -11,6 +11,7 @@
 #include "Physics/g_Physics.h"
 #include "Vector.h"
 #include "g_Local.h"
+#include "compat.h" // For min/max macros
 
 #define FIREWALL_DOT_MIN		0.25f
 #define FIREWORM_LIFETIME		1.0f

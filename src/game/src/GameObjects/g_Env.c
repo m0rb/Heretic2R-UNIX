@@ -7,6 +7,7 @@
 #include "g_Env.h" //mxd
 #include "Vector.h"
 #include "g_Local.h"
+#include "compat.h" // For min/max macros
 
 #pragma region ========================== env_dust, env_muck ==========================
 

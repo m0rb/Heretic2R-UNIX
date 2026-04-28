@@ -10,7 +10,7 @@
 #include "ce_Particles.h"
 #include "ce_Utilities.h"
 #include "q_Sprite.h"
-#include "g_playstats.h"
+#include "g_PlayStats.h"
 //#include "Reference.h"
 #include "ResourceManager.h"
 #include "Skeletons.h"

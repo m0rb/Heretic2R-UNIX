@@ -16,6 +16,7 @@ extern void R_InitGammaTable(void);
 extern void R_InitImages(void);
 extern void R_ShutdownImages(void);
 extern image_t* R_FindImage(const char* name, imagetype_t type);
+extern image_t* R_CreateFallbackTexture(const char* name, imagetype_t type);
 extern image_t* R_GetFreeImage(void);
 extern void R_BindImage(const image_t* image);
 extern void R_MBind(GLenum target, int texnum);

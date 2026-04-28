@@ -21,8 +21,8 @@
 
 #define MAX_GLTEXTURES		2048 // Q2: 1024
 
-#define GL_TEX_SOLID_FORMAT 3 //mxd. gl_tex_solid_format var in Q2
-#define GL_TEX_ALPHA_FORMAT 4 //mxd. gl_tex_alpha_format var in Q2
+#define GL_TEX_SOLID_FORMAT GL_RGBA // Legacy integer format 3 (RGB) crashes on modern Mesa; use GL_RGBA to match upload format.
+#define GL_TEX_ALPHA_FORMAT GL_RGBA // Legacy integer format 4 (RGBA) deprecated; use explicit GL_RGBA.
 
 #pragma region ========================== CVARS ==========================
 

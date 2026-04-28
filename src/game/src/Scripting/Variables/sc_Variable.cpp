@@ -9,7 +9,7 @@
 
 Variable::Variable(const char* new_name, const VariableType new_type)
 {
-	strcpy_s(name, new_name); //mxd. strcpy -> strcpy_s.
+	strcpy_s(name, sizeof(name), new_name); //mxd. strcpy -> strcpy_s.
 	type = new_type;
 }
 

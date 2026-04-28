@@ -6,7 +6,8 @@
 
 #pragma once
 
-#include "q_shared.h"
+#ifdef _WIN32
+#include "q_Shared.h"
 
 #define MAX_REFLIBS	16 //mxd
 
@@ -42,3 +43,6 @@ extern qboolean vid_restart_required; // H2
 extern void VID_PreMenuInit(void); //mxd
 extern void VID_Printf(int print_level, const char* fmt, ...); //mxd
 H2R_NORETURN extern void VID_Error(int err_level, const char* fmt, ...); //mxd
+#else
+#include "../../unix/vid_dll.h"
+#endif // _WIN32

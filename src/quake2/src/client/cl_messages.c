@@ -116,11 +116,11 @@ char* CL_GetLevelWav(const int i)
 
 void CL_LoadStrings(void)
 {
-	const cvar_t* cv = Cvar_Get("file_gamemsg", "gamemsg.txt", CVAR_ARCHIVE);
+	const cvar_t* cv = Cvar_Get("file_gamemsg", "Gamemsg.txt", CVAR_ARCHIVE);
 	int len = LoadMessages(cv->string, &game_messages_text);
 	SplitMessages(game_messages_text, game_messages, len);
 
-	cv = Cvar_Get("file_levelmsg", "levelmsg.txt", CVAR_ARCHIVE);
+	cv = Cvar_Get("file_levelmsg", "Levelmsg.txt", CVAR_ARCHIVE);
 	len = LoadMessages(cv->string, &level_messages_text);
 	SplitMessages(level_messages_text, level_messages, len);
 }

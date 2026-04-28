@@ -8,6 +8,7 @@
 #include "Random.h"
 #include "Vector.h"
 #include "g_Local.h"
+#include "compat.h"
 
 #define SF_ONEWAY	8	// Don't back-link.
 #define SF_BROKEN	64	// A bad bad buoy.

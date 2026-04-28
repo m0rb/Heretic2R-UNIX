@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_Debug.c
 //
@@ -8,7 +9,8 @@
 #include "gl1_Draw.h"
 #include "gl1_Misc.h"
 #include "gl1_Local.h"
-#include "game.h"
+#include "g_Edict.h" // full struct edict_s definition
+#include "Game.h"
 #include "Vector.h"
 #include "client/vid.h"
 

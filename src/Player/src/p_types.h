@@ -21,7 +21,7 @@ typedef struct
 	float var3;
 	void (*actionfunc)(playerinfo_t* playerinfo, float var4);
 	float var4;
-	void (*thinkfunc)(playerinfo_t* playerinfo);
+	int (*thinkfunc)(playerinfo_t* playerinfo);
 } panimframe_t;
 
 #define PANIMMOVE(arr, endfunc)	{ ARRAY_SIZE(arr), arr, endfunc } //mxd. panimmove_t initializer macro. Added, so we don't have to type numframes manually.
@@ -30,7 +30,7 @@ typedef struct
 {
 	const int numframes;
 	const panimframe_t* frame;
-	void (*const endfunc)(playerinfo_t* playerinfo);
+	int (*const endfunc)(playerinfo_t* playerinfo);
 } panimmove_t;
 
 typedef struct // Initialized in PlayerSeqData[] and PlayerChickenData[].
@@ -175,11 +175,7 @@ typedef struct client_persistant_s
 	// User info.
 	char userinfo[MAX_INFO_STRING];
 	char netname[16];
-
-	//mxd. char sounddir[MAX_QPATH] (unused) in original logic. Hijack for extra props while maintaining vanilla compatibility...
-	float defensive_nomana_debounce;
-	byte unused[60];
-
+	char sounddir[MAX_QPATH]; //TODO: unused?
 	int autoweapon; //TODO: change type to qboolean.
 
 	// A loadgame will leave valid entities that just don't have a connection yet.
@@ -226,6 +222,7 @@ typedef struct client_persistant_s
 
 	// For calculating total unit score in co-op games.
 	int score;
+	float defensive_nomana_debounce;
 } client_persistant_t;
 
 // FL_XXX

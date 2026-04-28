@@ -7,6 +7,11 @@
 #pragma once
 
 #include "q_ClientServer.h"
+#include "g_Types.h" // For solid_t, damage_t, link_t, edict_t
+
+/* Forward declarations for structs used in function pointers */
+struct SinglyLinkedList_s;
+struct FormMove_s;
 
 #define GAME_API_VERSION	3
 
@@ -33,93 +38,12 @@
 #define SVF_ALLOW_AUTO_TARGET	0x00040000	// Used to allow player to autotarget non-monsters.
 #define SVF_ALERT_NO_SHADE		0x00080000	// Only used by alert_entity to make monsters check the alert as a sound alert.
 
-// edict->solid values.
-typedef enum
-{
-	SOLID_NOT,		// No interaction with other objects.
-	SOLID_TRIGGER,	// Only touch when inside, after moving.
-	SOLID_BBOX,		// Touch on edge.
-	SOLID_BSP		// BSP clip, touch on edge.
-} solid_t;
-
-// Only used for entity area links.
-typedef struct link_s
-{
-	struct link_s* prev;
-	struct link_s* next;
-} link_t;
+// solid_t, damage_t, and link_t are now defined in g_Types.h
 
 #define	MAX_ENT_CLUSTERS	16
 
 // Forward define these two as they are needed below.
 typedef struct gclient_s gclient_t;
-
-// Do not define the following short, server-visible 'gclient_t' and 'edict_t' structures because
-// when we are being #inclued in g_local.h.
-#ifndef GAME_INCLUDE
-
-// This structure is cleared on each PutClientInServer().
-typedef struct gclient_s
-{
-	// Following two fields are known to the server.
-	player_state_t ps; // Communicated by server to clients.
-	int ping;
-
-	// DO NOT MODIFY ANYTHING ABOVE THIS! THE SERVER EXPECTS THE FIELDS IN THAT ORDER!
-	// The game dll can add anything it wants after this point.
-} gclient_t;
-
-struct edict_s
-{
-	// This is sent to the server as part of each client frame.
-	entity_state_t s;
-
-	// NULL if not a player.
-	// The server expects the first part of a 'gclient_s' to be a 'player_state_t' but the rest of it is opaque.
-	struct gclient_s* client;
-
-	// House keeping information not used by the game logic.
-	qboolean inuse;
-	int just_deleted; // Used to delete stuff entities properly on the client.
-	int client_sent; // Used to delete stuff entities properly on the client.
-	int linkcount;
-
-	// FIXME: move these fields to a server private sv_entity_t.
-	link_t area; // Linked to a division node or leaf.
-	int num_clusters; // If -1, use headnode instead.
-	int clusternums[MAX_ENT_CLUSTERS];
-	int headnode; // Unused if num_clusters is -1.
-	int areanum;
-	int areanum2;
-
-	int svflags;
-
-	edict_t* groundentity;		// Entity serving as ground.
-	int groundentity_linkcount;	// If self and groundentity's don't match, groundentity should be cleared.
-	vec3_t groundNormal;		// Normal of the ground.
-
-	// If PF_RESIZE is set, then physics will attempt to change the ents bounding form to the new one indicated.
-	// If it was successfully resized, the PF_RESIZE is turned off, otherwise it will remain on.
-	vec3_t intentMins;
-	vec3_t intentMaxs;
-
-	solid_t solid;
-	int clipmask;
-	edict_t* owner;
-
-	vec3_t mins;
-	vec3_t maxs;
-	vec3_t absmin;
-	vec3_t absmax;
-	vec3_t size;
-
-	// Called when self is the collidee in a collision, resulting in the impediment or bouncing of trace->ent.
-	void (*isBlocking)(edict_t *self, struct trace_s *trace);
-
-	// The game dll can add anything it wants after this point in the edict_t in g_Edict.h.
-};
-
-#endif // GAME_INCLUDE
 
 // 'game_import_t'.
 // The game dll imports these functions which are provided by the main engine code.
@@ -240,8 +164,8 @@ typedef struct
 	char* (*FS_Userdir)(void);
 	void (*FS_CreatePath)(char* path);
 
-	void (*Sys_LoadGameDll)(const char* name, void* hinst, void* chkSum); //mxd. Changed from 'HINSTANCE* hinst, DWORD* chkSum' to avoid <windows.h>...
-	void (*Sys_UnloadGameDll)(const char* name, void* hinst); //mxd. Changed from 'HINSTANCE* hinst' to avoid <windows.h>...
+	qboolean (*Sys_LoadGameDll)(const char* name, void** library, DWORD* checksum); //mxd. Changed from 'HINSTANCE* hinst, DWORD* chkSum' to avoid <windows.h>...
+	void (*Sys_UnloadGameDll)(const char* name, void** library); //mxd. Changed from 'HINSTANCE* hinst' to avoid <windows.h>...
 
 	// Pointer to the server-side persistent effects array.
 	void (*ClearPersistantEffects)(void);

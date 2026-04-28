@@ -8,6 +8,14 @@
 
 #include "ce_Entities.h"
 
+// min/max are not standard C — define them if not already provided.
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef max
+#define max(a,b) ((a) > (b) ? (a) : (b))
+#endif
+
 #define MIN_UPDATE_TIME	17 //mxd
 
 extern const paletteRGBA_t color_white; //mxd

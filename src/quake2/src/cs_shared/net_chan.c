@@ -48,6 +48,7 @@ then a packet only needs to be delivered if there is something in the unacknowle
 #pragma endregion
 
 #include "qcommon.h"
+#include "compat.h"
 
 static cvar_t* showpackets;
 static cvar_t* showdrop;

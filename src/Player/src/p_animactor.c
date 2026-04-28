@@ -17,6 +17,7 @@
 #include "FX.h"
 #include "Random.h"
 #include "SurfaceProps.h"
+#include "compat.h"
 
 // H2_BUGFIX: mxd. Otherwise, in some cases targetjointangles calculated in CalcJointAngles() may overshoot joint destAngles read by MSG_ReadJoints()...
 static void SnapJointAnglesToNetworkPrecision(vec3_t angles)

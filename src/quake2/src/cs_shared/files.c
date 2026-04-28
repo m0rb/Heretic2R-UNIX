@@ -18,7 +18,104 @@
 // This is a precaution against having a malicious server instruct clients to write files over areas they shouldn't.
 
 #include "qcommon.h"
+#include "compat.h" // for UNIX port. --morb
 #include "qfiles.h"
+
+#ifndef _WIN32
+#include <dirent.h>
+#include <sys/stat.h>
+#include <string.h>
+
+// FS_FixCasePath and FS_FOpenFile are new — On most UNIX-likes,filesystems are case-sensitive;
+// this function does a component-wise case-insensitive directory scan to resolve the correct path.
+
+// Walk each component of 'path' doing case-insensitive directory lookups.
+// Modifies 'path' in place. Returns true if the full path was resolved to an existing file/dir.
+// Only called after a direct fopen/stat already failed, so the overhead only hits missing files.
+static qboolean FS_FixCasePath(char* path, const size_t maxlen)
+{
+	char work[MAX_OSPATH];
+	char resolved[MAX_OSPATH];
+
+	strcpy_s(work, sizeof(work), path);
+
+	// Handle leading '/' (absolute path).
+	char* tok = work;
+	if (tok[0] == '/')
+	{
+		resolved[0] = '/';
+		resolved[1] = '\0';
+		tok++;
+	}
+	else
+	{
+		resolved[0] = '\0';
+	}
+
+	while (*tok)
+	{
+		char* slash = strchr(tok, '/');
+		if (slash)
+			*slash = '\0';
+
+		// Build candidate path for this component.
+		char candidate[MAX_OSPATH];
+		const size_t rlen = strlen(resolved);
+		if (rlen > 0 && resolved[rlen - 1] == '/')
+			Com_sprintf(candidate, sizeof(candidate), "%s%s", resolved, tok);
+		else if (rlen > 0)
+			Com_sprintf(candidate, sizeof(candidate), "%s/%s", resolved, tok);
+		else
+			Com_sprintf(candidate, sizeof(candidate), "%s", tok);
+
+		struct stat st;
+		if (stat(candidate, &st) == 0)
+		{
+			// Exact match — use it.
+			strcpy_s(resolved, sizeof(resolved), candidate);
+		}
+		else
+		{
+			// Case-insensitive scan of the parent directory.
+			const char* scandir = (rlen > 0) ? resolved : ".";
+			DIR* d = opendir(scandir);
+			if (!d)
+				return false;
+
+			qboolean found = false;
+			struct dirent* ent;
+			while ((ent = readdir(d)) != NULL)
+			{
+				if (strcasecmp(ent->d_name, tok) == 0)
+				{
+					char tmp[MAX_OSPATH];
+					const size_t rlen2 = strlen(resolved);
+					if (rlen2 > 0 && resolved[rlen2 - 1] == '/')
+						Com_sprintf(tmp, sizeof(tmp), "%s%s", resolved, ent->d_name);
+					else if (rlen2 > 0)
+						Com_sprintf(tmp, sizeof(tmp), "%s/%s", resolved, ent->d_name);
+					else
+						Com_sprintf(tmp, sizeof(tmp), "%s", ent->d_name);
+					strcpy_s(resolved, sizeof(resolved), tmp);
+					found = true;
+					break;
+				}
+			}
+			closedir(d);
+
+			if (!found)
+				return false;
+		}
+
+		tok = slash ? (slash + 1) : (tok + strlen(tok));
+	}
+
+	if (resolved[0])
+		strcpy_s(path, maxlen, resolved);
+
+	return true;
+}
+#endif
 
 static char fs_gamedir[MAX_OSPATH];
 static cvar_t* fs_basedir;
@@ -139,9 +236,12 @@ int FS_FOpenFile(const char* filename, FILE** file)
 	// Check for links first
 	for (const filelink_t* link = fs_links; link != NULL; link = link->next)
 	{
-		if (!strncmp(filename, link->from, link->fromlength))
+		// use filepath for comparison and the tail so the netpath is clean on UNIX-likes --morb
+		//if (!strncmp(filename, link->from, link->fromlength))
+		if (!strncmp(filepath, link->from, link->fromlength))
 		{
-			Com_sprintf(netpath, sizeof(netpath), "%s%s", link->to, filename + link->fromlength);
+			// Com_sprintf(netpath, sizeof(netpath), "%s%s", link->to, filename + link->fromlength);
+			Com_sprintf(netpath, sizeof(netpath), "%s%s", link->to, filepath + link->fromlength);
 
 			if (fopen_s(file, netpath, "rb") == 0) //mxd. fopen -> fopen_s
 			{
@@ -173,42 +273,76 @@ int FS_FOpenFile(const char* filename, FILE** file)
 				continue;
 
 			// H2: do binary search instead of iteration, because pak filenames are sorted alphabetically.
-			int start = 0;
-			int end = pak->numfiles;
-
-			do
+			// Binary search assumes Q_stricmp ordering. Some third-party pak files use raw ASCII. 
+			//Fall back to a linear case-insensitive scan before giving up. --morb
+			int found_index = -1;
 			{
-				const int index = (start + end) / 2;
-				const int cmp = Q_stricmp(filepath, pak->files[index].name);
+				int start = 0;
+				int end = pak->numfiles;
 
-				if (cmp == 0)
+				do
 				{
-					// Found it!
-					file_from_pak = true;
-					Com_DDPrintf(2, "PackFile: %s : %s\n", pak->filename, filename); //mxd. Com_DPrintf() -> Com_DDPrintf(), to reduce console spam when developer 1.
+					const int index = (start + end) / 2;
+					const int cmp = Q_stricmp(filepath, pak->files[index].name);
 
-					// Open a new file on the pakfile
-					if (fopen_s(file, pak->filename, "rb") != 0) //mxd. fopen -> fopen_s
-						Com_Error(ERR_FATAL, "Couldn't reopen %s", pak->filename);
+					if (cmp == 0) { found_index = index; break; }
+					if (cmp > 0)  start = index + 1;
+					else          end   = index;
+				} while (start < end);
+			}
 
-					fseek(*file, pak->files[index].filepos, SEEK_SET);
-
-					return pak->files[index].filelen;
+			// Binary search missed — linear fallback for non-standard sort orders.
+			if (found_index < 0)
+			{
+				for (int i = 0; i < pak->numfiles; i++)
+				{
+					if (Q_stricmp(filepath, pak->files[i].name) == 0)
+					{
+						found_index = i;
+						break;
+					}
 				}
+			}
 
-				if (cmp > 0)
-					start = index + 1;
-				else // cmp < 0
-					end = index;
-			} while (start < end);
+			if (found_index >= 0)
+			{
+				// Found it!
+				file_from_pak = true;
+				Com_DDPrintf(2, "PackFile: %s : %s\n", pak->filename, filename); //mxd. Com_DPrintf() -> Com_DDPrintf(), to reduce console spam when developer 1.
+
+				// Open a new file on the pakfile
+				if (fopen_s(file, pak->filename, "rb") != 0) //mxd. fopen -> fopen_s
+					Com_Error(ERR_FATAL, "Couldn't reopen %s", pak->filename);
+
+				fseek(*file, pak->files[found_index].filepos, SEEK_SET);
+
+				return pak->files[found_index].filelen;
+			}
 		}
 		else
 		{
 			// Check a file in the directory tree
-			Com_sprintf(netpath, sizeof(netpath), "%s/%s", search->filename, filename);
+			// use filepath, not filename. --morb
+			//Com_sprintf(netpath, sizeof(netpath), "%s/%s", search->filename, filename);
+			Com_sprintf(netpath, sizeof(netpath), "%s/%s", search->filename, filepath);
 
+			//if (fopen_s(file, netpath, "rb") != 0) //mxd. fopen -> fopen_s
+			//continue; 
+			// Case mismatch silently fell through to pak file on Windows. --morb
 			if (fopen_s(file, netpath, "rb") != 0) //mxd. fopen -> fopen_s
+			{
+#ifndef _WIN32
+				// try a case-insensitive scan before giving up --morb
+				char fixedpath[MAX_OSPATH];
+				strcpy_s(fixedpath, sizeof(fixedpath), netpath);
+				if (FS_FixCasePath(fixedpath, sizeof(fixedpath)) && fopen_s(file, fixedpath, "rb") == 0)
+				{
+					Com_DDPrintf(2, "FindFile (case-fixed): %s\n", fixedpath);
+					return FS_FileLength(*file);
+				}
+#endif
 				continue;
+			}
 
 			Com_DDPrintf(2, "FindFile: %s\n", netpath); //mxd. Com_DPrintf() -> Com_DDPrintf(), to reduce console spam when developer 1.
 
@@ -560,19 +694,21 @@ static void FS_Path_f(void)
 // Allows enumerating all of the directories in the search path
 char* FS_NextPath(const char* prevpath)
 {
-	if (prevpath == NULL)
-		return fs_gamedir;
+	// Rewritten to iterate the searchpath list directly rather than use the fs_gamedir global. 
+	// The old code compared prevpath against the fs_gamedir ptr, but searchpath_t::filename 
+	// is a separate buffer. Pointer equality never matched and the iterator never reached base/. --morb
+	qboolean found = (prevpath == NULL);
 
-	const char* prev = fs_gamedir;
 	for (searchpath_t* s = fs_searchpaths; s != NULL; s = s->next)
 	{
 		if (s->pack != NULL)
 			continue;
 
-		if (prevpath == prev && Q_stricmp(fs_gamedir, s->filename) != 0) //mxd. Don't return fs_gamedir path twice. //TODO: remove fs_gamedir var, make sure fs_searchpaths[0] is always present and contains fs_gamedir value instead?
+		if (found)
 			return s->filename;
 
-		prev = s->filename;
+		if (prevpath == s->filename)
+			found = true;
 	}
 
 	return NULL;
@@ -665,9 +801,10 @@ void FS_InitFilesystem(void)
 		char userdir[MAX_OSPATH];
 
 		//mxd. Change userdir location from "c:/Games/Heretic2/user" to "c:\Users\[User]\Saved Games\Heretic2R/base".
+		// Sys_GetOSUserDir already returns ~/.Heretic2R; don't append /Heretic2R again. --morb
+		//strcat_s(buffer, sizeof(buffer), "/Heretic2R");
 		if (Sys_GetOSUserDir(buffer, sizeof(buffer)))
 		{
-			strcat_s(buffer, sizeof(buffer), "/Heretic2R");
 			use_modern_userdir = true;
 		}
 		else // Fall back to original logic...
@@ -682,20 +819,6 @@ void FS_InitFilesystem(void)
 		fs_userdir = Cvar_Get("userdir", userdir, 0); // "C:\Games\Heretic2/base"
 	}
 
-	//mxd. Copy configs from [gamedir]/config to Heretic2R\[user]\configs?
-	char vanilla_cfg_path[MAX_OSPATH];
-	sprintf_s(vanilla_cfg_path, sizeof(vanilla_cfg_path), "%s/config", FS_GetPath("config"));
-
-	if (use_modern_userdir)
-	{
-		char cfg_path[MAX_OSPATH];
-		sprintf_s(cfg_path, sizeof(cfg_path), "%s/configs", fs_userdir->string);
-
-		fs_configsdir = Cvar_Get("configsdir", cfg_path, CVAR_NOSET);
-		CopyConfigs(vanilla_cfg_path, cfg_path);
-	}
-	else
-	{
-		fs_configsdir = Cvar_Get("configsdir", vanilla_cfg_path, CVAR_NOSET);
-	}
+	// Simplified config dir — heretic2r.cfg lives directly in the userdir (base/). --morb
+	fs_configsdir = Cvar_Get("configsdir", fs_userdir->string, CVAR_NOSET);
 }

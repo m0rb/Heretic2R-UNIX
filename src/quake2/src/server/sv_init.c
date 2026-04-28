@@ -5,11 +5,13 @@
 //
 
 #include "server.h"
+#include "g_Local.h" // For full edict_t definition
 #include "sv_effects.h"
 #include "cs_shared/cmodel.h"
 #include "cs_shared/tokens.h"
 #include "client/screen.h"
 #include "Vector.h"
+#include "../unix/compat.h"
 
 server_static_t svs; // Persistent server info
 server_t sv; // Local server
@@ -338,8 +340,9 @@ static void SV_SpawnServer(const char* server, const char* spawnpoint, const ser
 	SV_CreateBaseline();
 
 	// Check for a savegame.
+	// H2: ConstructEntities must run AFTER ReadLevel so that ReadEdict's msgQ memset
+	// doesn't orphan the nodes ConstructEntities just allocated.
 	const qboolean revisiting = SV_CheckForSavegame();
-
 	ge->ConstructEntities(); // H2
 	ge->CheckCoopTimeout(revisiting); // H2
 
@@ -427,12 +430,15 @@ void SV_InitGame(void)
 	// Init game
 	SV_InitGameProgs();
 
-	for (int i = 0; i < (int)maxclients->value; i++)
+	if (ge != NULL) // ge may be NULL if game DLL failed to load. --morb
 	{
-		edict_t* ent = EDICT_NUM(i + 1);
-		ent->s.number = (short)(i + 1);
-		svs.clients[i].edict = ent;
-		memset(&svs.clients[i].lastcmd, 0, sizeof(svs.clients[i].lastcmd));
+		for (int i = 0; i < (int)maxclients->value; i++)
+		{
+			edict_t* ent = EDICT_NUM(i + 1);
+			ent->s.number = (short)(i + 1);
+			svs.clients[i].edict = ent;
+			memset(&svs.clients[i].lastcmd, 0, sizeof(svs.clients[i].lastcmd));
+		}
 	}
 }
 
@@ -540,7 +546,6 @@ void SV_Map(const qboolean attractloop, const char* levelstring, const qboolean 
 
 	// Spawn server.
 	SCR_BeginLoadingPlaque(); // For local system.
-	SV_BroadcastCommand("changing\n");
 
 	const char* ext = ((len <= 4) ? NULL : level + len - 4); //mxd
 

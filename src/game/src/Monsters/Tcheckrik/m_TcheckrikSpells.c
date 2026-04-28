@@ -1,3 +1,4 @@
+#include "g_Local.h"
 //
 // m_TcheckrikSpells.c
 //

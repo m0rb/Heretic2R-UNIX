@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_SDL.c
 //
@@ -94,6 +95,12 @@ qboolean RI_InitContext(void* win)
 		ri.Con_Printf(PRINT_ALL, "RI_InitContext(): unsupported OpenGL version. Expected 1.3, got %i.%i!\n", GLVersion.major, GLVersion.minor);
 		return false;
 	}
+
+	ri.Con_Printf(PRINT_ALL, "GL: vendor=%s renderer=%s version=%s\n",
+		glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION));
+	ri.Con_Printf(PRINT_ALL, "GL: glActiveTexture=%s glMultiTexCoord2f=%s\n",
+		glad_glActiveTexture ? "OK" : "NULL",
+		glad_glMultiTexCoord2f ? "OK" : "NULL");
 
 	R_SetVsync();
 	vid_gamma->modified = true; // Force R_UpdateGamma() call in R_BeginFrame().

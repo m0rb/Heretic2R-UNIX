@@ -13,9 +13,9 @@ extern PLAYER_API void PlayerAnimReset(playerinfo_t *info);
 extern PLAYER_API void PlayerAnimSetLowerSeq(playerinfo_t *info, int seq);
 extern PLAYER_API void PlayerAnimSetUpperSeq(playerinfo_t *info, int seq);
 extern PLAYER_API void PlayerAnimUpperIdle(playerinfo_t *info);
-extern PLAYER_API void PlayerAnimLowerIdle(playerinfo_t *info);
-extern PLAYER_API void PlayerAnimUpperUpdate(playerinfo_t *info);
-extern PLAYER_API void PlayerAnimLowerUpdate(playerinfo_t *info);
+extern PLAYER_API int PlayerAnimLowerIdle(playerinfo_t *info);
+extern PLAYER_API int PlayerAnimUpperUpdate(playerinfo_t *info);
+extern PLAYER_API int PlayerAnimLowerUpdate(playerinfo_t *info);
 extern PLAYER_API void PlayerAnimSetVault(playerinfo_t *info, int seq);
 extern PLAYER_API void PlayerPlayPain(const playerinfo_t *info, int type);
 

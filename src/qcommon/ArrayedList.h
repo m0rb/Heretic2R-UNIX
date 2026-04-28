@@ -18,7 +18,7 @@ typedef struct ArrayedListNode_s
 #define ARRAYEDLISTNODE_NULL (-1)
 
 //TODO: un-inline?
-_inline int GetFreeNode(ArrayedListNode_t* array, const int max)
+static inline int GetFreeNode(ArrayedListNode_t* array, const int max)
 {
 	for (int i = 0; i < max; i++)
 	{
@@ -33,7 +33,7 @@ _inline int GetFreeNode(ArrayedListNode_t* array, const int max)
 }
 
 //TODO: un-inline?
-_inline void FreeNode(ArrayedListNode_t* array, const int index)
+static inline void FreeNode(ArrayedListNode_t* array, const int index)
 {
 	array[index].in_use = false;
 }

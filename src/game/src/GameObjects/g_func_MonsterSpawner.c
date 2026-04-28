@@ -4,6 +4,7 @@
 // Copyright 1998 Raven Software
 //
 
+#include "g_Local.h"
 #include "g_func_MonsterSpawner.h"
 #include "g_ClassStatics.h"
 #include "Monsters/m_Stats.h"

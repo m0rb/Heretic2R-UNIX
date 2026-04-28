@@ -339,7 +339,7 @@ edict_t* FindNearestVisibleActorInFrustum(const edict_t* finder, const vec3_t fi
 
 		// Valid result.
 		best_yaw = cur_yaw; //mxd
-		best_dist = min(best_dist, cur_dist);
+		best_dist = fmin(best_dist, cur_dist);
 		best = e;
 	}
 

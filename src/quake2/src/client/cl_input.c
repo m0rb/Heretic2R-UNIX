@@ -8,14 +8,17 @@
 #include "EffectFlags.h"
 #include "Vector.h"
 
+#ifndef _WIN32
+#include "../unix/compat.h"
+#endif
+
 static cvar_t* cl_nodelta;
 
 static uint frame_msec;
 static uint old_sys_frame_time;
 static float quickturn_time; // H2
 
-int pred_pm_flags; // H2
-int pred_pm_w_flags; // H2
+// pred_pm_flags and pred_pm_w_flags are defined in cl_prediction.c
 
 qboolean command_down; // H2
 

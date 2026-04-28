@@ -4,8 +4,8 @@
 // Copyright 1998 Raven Software
 //
 
-#include "m_Plaguessithra_anim.h"
-#include "m_PlaguesSithra_shared.h"
+#include "m_PlagueSsithra_anim.h"
+#include "m_PlagueSsithra_shared.h"
 #include "NavSys/mg_AI.h" //mxd
 #include "Monsters/g_Monster.h"
 #include "g_Local.h"

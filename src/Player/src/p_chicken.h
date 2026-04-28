@@ -31,13 +31,13 @@ extern panimmove_t chickenp_move_runattack;
 extern panimmove_t chickenp_move_swim_idle;
 extern panimmove_t chickenp_move_swim;
 
-void PlayerChickenBite(playerinfo_t* info);
-void PlayerChickenJump(playerinfo_t* info); //mxd. Returned int in original version.
+int PlayerChickenBite(playerinfo_t* info);
+int PlayerChickenJump(playerinfo_t* info);
 
-void PlayerChickenFlap(playerinfo_t* info);
-void PlayerChickenCheckFlap(playerinfo_t* info);
+int PlayerChickenFlap(playerinfo_t* info);
+int PlayerChickenCheckFlap(playerinfo_t* info);
 
-void PlayerChickenAssert(playerinfo_t* info); //mxd. Named ChickenAssert in original version.
-void PlayerChickenCluck(const playerinfo_t* info, float force);
+int PlayerChickenAssert(playerinfo_t* info); //mxd. Named ChickenAssert in original version.
+void PlayerChickenCluck(playerinfo_t* info, float force);
 
-void PlayerChickenStepSound(const playerinfo_t* info, float value); //mxd. Named ChickenStepSound in original version.
+void PlayerChickenStepSound(playerinfo_t* info, float value); //mxd. Named ChickenStepSound in original version.

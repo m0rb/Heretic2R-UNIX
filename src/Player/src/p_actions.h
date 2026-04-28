@@ -20,13 +20,13 @@
 
 extern PLAYER_API void PlayerReleaseRope(playerinfo_t* info);
 extern PLAYER_API void KnockDownPlayer(playerinfo_t* info);
-extern PLAYER_API void PlayFly(const playerinfo_t* info, float dist);
-extern PLAYER_API void PlaySlap(const playerinfo_t* info, float dist);
-extern PLAYER_API void PlayScratch(const playerinfo_t* info, float dist);
-extern PLAYER_API void PlaySigh(const playerinfo_t* info, float dist);
+extern PLAYER_API void PlayFly(playerinfo_t* info, float dist);
+extern PLAYER_API void PlaySlap(playerinfo_t* info, float dist);
+extern PLAYER_API void PlayScratch(playerinfo_t* info, float dist);
+extern PLAYER_API void PlaySigh(playerinfo_t* info, float dist);
 extern PLAYER_API void SpawnDustPuff(playerinfo_t* info, float dist);
 
-extern PLAYER_API void PlayerInterruptAction(playerinfo_t* info);
+extern PLAYER_API void PlayerInterruptAction(const playerinfo_t* info);
 
 extern void PlayerActionHandFXStart(playerinfo_t* info, float value);
 extern void PlayerActionSphereTrailEnd(playerinfo_t* info, float value);
@@ -53,22 +53,22 @@ extern void PlayerActionStaffTrailStart(playerinfo_t* info, float value);
 extern void PlayerActionRedRainBowTrailStart(playerinfo_t* info, float value);
 extern void PlayerActionPhoenixBowTrailStart(playerinfo_t* info, float value);
 extern void PlayerActionBowTrailEnd(playerinfo_t* info, float value);
-extern void PlayerActionStartStaffGlow(const playerinfo_t* info, float value);
-extern void PlayerActionEndStaffGlow(const playerinfo_t* info, float value);
+extern void PlayerActionStartStaffGlow(playerinfo_t* info, float value);
+extern void PlayerActionEndStaffGlow(playerinfo_t* info, float value);
 
 extern qboolean PlayerActionCheckVault(playerinfo_t* info);
-extern void PlayerActionSwimIdleSound(const playerinfo_t* info, float value);
-extern void PlayerActionSwimSound(const playerinfo_t* info, float value);
-extern void PlayerActionClimbWallSound(const playerinfo_t* info, float value);
-extern void PlayerActionClimbFinishSound(const playerinfo_t* info, float value);
+extern void PlayerActionSwimIdleSound(playerinfo_t* info, float value);
+extern void PlayerActionSwimSound(playerinfo_t* info, float value);
+extern void PlayerActionClimbWallSound(playerinfo_t* info, float value);
+extern void PlayerActionClimbFinishSound(playerinfo_t* info, float value);
 
 extern void PlayerActionFootstep(playerinfo_t* info, float value);
 extern void PlayerActionCheckGrab(playerinfo_t* info, float value);
 extern void PlayerActionCheckFallingGrab(playerinfo_t* info, float value);
 extern void PlayerActionPushButton(playerinfo_t* info, float value);
 extern void PlayerActionPushLever(playerinfo_t* info, float value);
-extern void PlayerActionVaultSound(const playerinfo_t* info, float value);
-extern void PlayerActionBowReadySound(const playerinfo_t* info, float value);
+extern void PlayerActionVaultSound(playerinfo_t* info, float value);
+extern void PlayerActionBowReadySound(playerinfo_t* info, float value);
 extern void PlayerActionTakePuzzle(playerinfo_t* info, float value);
 
 extern qboolean PlayerActionCheckPuzzleGrab(playerinfo_t* info);
@@ -92,41 +92,41 @@ extern void PlayerActionJump(playerinfo_t* info, float value);
 extern void PlayerActionJumpBack(playerinfo_t* info, float value);
 extern void PlayerActionShrineEffect(playerinfo_t* info, float value);
 
-extern void PlayerActionCheckRunUnStrafe(playerinfo_t* info);
-extern void PlayerActionCheckDoubleJump(playerinfo_t* info);
-extern void PlayerMoveAdd(playerinfo_t* info);
+extern int PlayerActionCheckRunUnStrafe(playerinfo_t* info);
+extern int PlayerActionCheckDoubleJump(playerinfo_t* info);
+extern int PlayerMoveAdd(playerinfo_t* info);
 extern void PlayerActionFlip(playerinfo_t* info, float value);
-extern void PlayerActionTurn180(playerinfo_t* info);
+extern int PlayerActionTurn180(playerinfo_t* info);
 extern void PlayerActionSetQTEndTime(playerinfo_t* info, float QTEndTime);
-extern void PlayerActionCheckVaultKick(playerinfo_t* info);
-extern void PlayerActionDrownFloatUp(playerinfo_t* info);
-extern void PlayerActionPolevaultStaffFX(playerinfo_t* info); //mxd
+extern int PlayerActionCheckVaultKick(playerinfo_t* info);
+extern int PlayerActionDrownFloatUp(playerinfo_t* info);
+extern int PlayerActionPolevaultStaffFX(playerinfo_t* info); //mxd
 
-extern void PlayerActionCheckBowRefire(playerinfo_t* info);
+extern int PlayerActionCheckBowRefire(playerinfo_t* info);
 extern void PlayerActionCheckRopeMove(playerinfo_t* info, float foo);
 
-extern void PlayerActionSetCrouchHeight(playerinfo_t* info);
-extern void PlayerActionCheckUncrouchToFinishSeq(playerinfo_t* info);
-extern void PlayerActionCheckStrafe(playerinfo_t* info);
-extern void PlayerActionCheckBranchRunningStrafe(playerinfo_t* info);
+extern int PlayerActionSetCrouchHeight(playerinfo_t* info);
+extern int PlayerActionCheckUncrouchToFinishSeq(playerinfo_t* info);
+extern int PlayerActionCheckStrafe(playerinfo_t* info);
+extern int PlayerActionCheckBranchRunningStrafe(playerinfo_t* info);
 
 extern void PlayerSwimMoveFunc(playerinfo_t* info, float fwd, float right, float up);
 
-extern void PlayerActionClimbStartSound(const playerinfo_t* info, float value);
-extern void PlayerPlaySlide(const playerinfo_t* info);
+extern void PlayerActionClimbStartSound(playerinfo_t* info, float value);
+extern int PlayerPlaySlide(playerinfo_t* info);
 
-extern void PlayerActionCheckCreep(playerinfo_t* info);
-extern void PlayerActionCheckCreepUnStrafe(playerinfo_t* info);
+extern int PlayerActionCheckCreep(playerinfo_t* info);
+extern int PlayerActionCheckCreepUnStrafe(playerinfo_t* info);
 
-extern void PlayerActionCheckCreepBack(playerinfo_t* info);
-extern void PlayerActionCheckCreepBackUnStrafe(playerinfo_t* info);
+extern int PlayerActionCheckCreepBack(playerinfo_t* info);
+extern int PlayerActionCheckCreepBackUnStrafe(playerinfo_t* info);
 
-extern void PlayerActionCheckWalk(playerinfo_t* info);
-extern void PlayerActionCheckWalkUnStrafe(playerinfo_t* info);
+extern int PlayerActionCheckWalk(playerinfo_t* info);
+extern int PlayerActionCheckWalkUnStrafe(playerinfo_t* info);
 
-extern void PlayerActionCheckWalkBack(playerinfo_t* info);
-extern void PlayerActionCheckWalkBackUnStrafe(playerinfo_t* info);
+extern int PlayerActionCheckWalkBack(playerinfo_t* info);
+extern int PlayerActionCheckWalkBackUnStrafe(playerinfo_t* info);
 
-extern void PlayerActionCheckRun(playerinfo_t* info);
+extern int PlayerActionCheckRun(playerinfo_t* info);
 
-extern void PlayerActionSetDead(playerinfo_t* info); //mxd
+extern int PlayerActionSetDead(playerinfo_t* info); //mxd

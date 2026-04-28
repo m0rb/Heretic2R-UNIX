@@ -13,10 +13,15 @@
 // Define GAME_INCLUDE so that game.h does not define the short, server-visible 'gclient_t' and 'edict_t' structures
 // because we define the game versions in this file.
 #define GAME_INCLUDE
+//Makefile already passes -DGAME_DLL on the command line; redefining ittriggers a -Wmacro-redefined warning. --morb
+#ifndef GAME_DLL
+#define GAME_DLL // Expose game-internal function declarations (e.g. in g_Items.h).
+#endif
 
 #include "Game.h"
 #include "g_HitLocation.h" //mxd
 #include "Player/p_Items.h" //mxd
+#include "compat.h" //  min/max and safe string functions for UNIX port. --morb
 
 // The "gameversion" client command will print this plus compile date.
 #define GAMEVERSION		"Heretic2v16"
@@ -87,13 +92,7 @@
 #define TAG_GAME	765	// Clear when unloading the dll.
 #define TAG_LEVEL	766	// Clear when loading a savegame or a new level.
 
-typedef enum damage_s
-{
-	DAMAGE_NO,
-	DAMAGE_YES, // Will take damage if hit.
-	DAMAGE_AIM, // Auto targeting recognizes this.
-	DAMAGE_NO_RADIUS, // Will not take damage from radius blasts.
-} damage_t;
+// damage_t is now defined in game.h
 
 // Damage flags.
 #define DAMAGE_NORMAL				0x00000000	// No modifiers to damage.
@@ -324,37 +323,7 @@ typedef struct
 	char* parms[16];
 } spawn_temp_t;
 
-// This is used to hold information pertaining to an entity's movement.
-// NOTE: mxd. Can't change struct size, otherwise compatibility with original game dlls will break!
-typedef struct
-{
-	// Fixed data.
-	vec3_t start_origin;
-	vec3_t start_angles;
-	vec3_t end_origin;
-	vec3_t end_angles;
-
-	int sound_start;
-	int sound_middle;
-	int sound_end;
-
-	float accel;
-	float speed;
-	float decel;
-	float distance;
-
-	float wait;
-
-	// State data.
-	int state;
-	vec3_t dir;
-	float current_speed;
-	float move_speed;
-	float next_speed;
-	float remaining_distance;
-	float decel_distance;
-	void (*endfunc)(edict_t*);
-} moveinfo_t;
+// moveinfo_t is now defined in g_MonsterInfo.h
 
 // Monster AI flags.
 #define AI_STAND_GROUND			0x00000001
@@ -405,134 +374,11 @@ typedef struct
 #define SIGHT_VISIBLE_TARGET	1 // Saw this target. //TODO: set, but never used by sight processing message logic.
 #define SIGHT_ANNOUNCED_TARGET	2 // Target was announced by another monster. //TODO: unused.
 
-typedef struct
-{
-	const int framenum;
-	void (*const movefunc)(edict_t* self, float var1, float var2, float var3);
-	const float var1;
-	const float var2;
-	const float var3;
-	void (*const actionfunc)(edict_t* self, float var4);
-	const float var4;
-	void (*const thinkfunc)(edict_t* self);
-} animframe_t;
-
-#define ANIMMOVE(arr, endfunc)	{ ARRAY_SIZE(arr), arr, endfunc } //mxd. animmove_t initializer macro. Added, so we don't have to type numframes manually.
-
-typedef struct
-{
-	const int numframes;
-	const animframe_t* frame;
-	void (*const endfunc)(edict_t* self);
-} animmove_t;
-
-// NOTE: mxd. Can't change struct size, otherwise compatibility with original game dlls will break!
-typedef struct
-{
-	// Not used in new system.
-	char* otherenemyname; // ClassName of secondary enemy (other than player). E.g. a Rat's secondary enemy is a gib.
-
-	const animmove_t* currentmove;
-	int aiflags;
-	int aistate;		// Last order given to the monster (ORD_XXX).
-	int currframeindex;	// Index to current monster frame.
-	int nextframeindex;	// Used to force the next frameindex.
-	float thinkinc;		// Time between thinks for this entity.
-	float scale;
-
-	void (*idle)(edict_t* self); //TODO: used, but never assigned?
-	void (*search)(edict_t* self); //TODO: unused.
-	void (*dodge)(edict_t* self, edict_t* other, float eta); //TODO: unused.
-	int (*attack)(edict_t* self); //TODO: unused.
-	void (*sight)(edict_t* self, edict_t* other); //TODO: unused.
-	void (*dismember)(edict_t* self, int damage, HitLocation_t hl); //mxd. Changed 'hl' arg type from int.
-	qboolean (*alert)(edict_t* self, alertent_t* alerter, edict_t* enemy);
-	qboolean (*checkattack)(edict_t* self);
-
-	float pausetime;
-	float attack_finished;
-
-	union
-	{
-		float flee_finished; // When a monster is done fleeing.
-		qboolean morcalavin_quake_finished; //mxd
-		float rope_player_current_swing_speed; //mxd
-	};
-
-	union
-	{
-		float chase_finished;	// When the monster can look for secondary monsters.
-		float rope_player_initial_swing_speed; //mxd
-	};
-
-	union
-	{
-		vec3_t saved_goal;
-		vec3_t rope_player_swing_direction; //mxd
-	};
-
-	union
-	{
-		float search_time;
-		float priestess_attack_delay; //mxd
-		float rope_sound_debounce_time; //mxd
-	};
-	
-	float misc_debounce_time;
-	vec3_t last_sighting;
-	int attack_state;
-
-	union
-	{
-		int lefty;
-		int morcalavin_taunt_counter; //mxd
-	};
-	
-	float idle_time;
-	int linkcount;
-
-	int searchType;
-	vec3_t nav_goal;
-
-	union
-	{
-		float jump_time;
-		float morcalavin_teleport_attack_time; //mxd
-		float ogle_sing_time; //mxd
-		float rope_jump_debounce_time; // Delay after jumping from rope before trying to grab another rope -- mxd.
-	};
-
-	int morcalavin_battle_phase; //mxd. Named 'stepState' in original logic.
-	int ogleflags;			// Ogles have special spawnflags stored in here at spawntime.
-	int supporters;			// Number of supporting monsters (with common type) in the area when awoken.
-	float sound_finished;	// Amount of time until the monster will be finishing talking (used for voices).
-
-	union
-	{
-		float sound_start; // The amount of time to wait before playing the pending sound.
-		float morcalavin_taunt_time; //mxd
-	};
-	
-	int sound_pending;		// This monster is waiting to make a sound (used for voices) (0 if false, else sound ID).
-
-	// Cinematic fields.
-	int c_dist;		// Distance left to move.
-	int c_repeat;	// # of times to repeat the anim cycle.
-	void (*c_callback)(struct edict_s* self); // Callback function when action is done. Used only by script system --mxd.
-	int c_anim_flag;	// Shows if current cinematic anim supports moving, turning, or repeating.
-	qboolean c_mode;	// In cinematic mode or not?
-	edict_t* c_ent;		// Entity passed from a cinematic command.
-
-	qboolean awake;		// Has found an enemy AND gone after it.
-	qboolean roared;	// Gorgon has roared or been woken up by a roar.
-
-	float last_successful_enemy_tracking_time; // Last time successfully saw enemy or found a path to him.
-	float coop_check_debounce_time;
-} monsterinfo_t;
+// animframe_t, animmove_t, and monsterinfo_t are now defined in g_MonsterInfo.h
 
 // The structure for each monster class.
-#define FOFS(x)		((int)&(((edict_t*)0)->x))
-#define STOFS(x)	((int)&(((spawn_temp_t*)0)->x))
+#define FOFS(x)		((int)(intptr_t)&(((edict_t*)0)->x))
+#define STOFS(x)	((int)(intptr_t)&(((spawn_temp_t*)0)->x))
 #define LLOFS(x)	((int)&(((level_locals_t*)0)->x))
 #define CLOFS(x)	((int)&(((gclient_t*)0)->x))
 #define BYOFS(x)	((int)&(((buoy_t*)0)->x))

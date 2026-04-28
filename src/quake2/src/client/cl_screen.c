@@ -10,6 +10,11 @@
 #include "menus/menu_worldmap.h"
 #include "win32/dll_io/vid_dll.h"
 
+#ifndef _WIN32
+#include "../unix/compat.h"
+#include <limits.h>
+#endif
+
 float scr_con_current; // Approaches scr_conlines at scr_conspeed.
 
 static qboolean scr_initialized; // Ready to draw.
@@ -48,6 +53,11 @@ static cvar_t* scr_item_paused;
 static cvar_t* scr_item_loading;
 cvar_t* r_fog;
 cvar_t* r_fog_density;
+
+// YQ2: user-adjustable scale overrides (-1 = auto-compute from resolution).
+cvar_t* r_consolescale;
+cvar_t* r_hudscale;
+cvar_t* r_menuscale;
 
 typedef struct
 {
@@ -288,11 +298,12 @@ void SCR_BeginLoadingPlaque(void)
 
 	scr_draw_loading_plaque = true; // H2
 
+	// workaround for loading_plaque not drawing --morb
+	if (cl.cinematictime == 0)
+		scr_draw_loading = true;
+
 	if (!cls.disable_screen && !(int)developer->value && cls.key_dest != key_console)
 	{
-		if (cl.cinematictime == 0)
-			scr_draw_loading = true;
-
 		scr_progressbar_width = 0; // H2
 
 		SCR_UpdateScreen();
@@ -319,10 +330,58 @@ void SCR_UpdateProgressbar(int unused, const int section) // H2
 	SCR_UpdateScreen();
 }
 
+// YQ2: auto scale = floor(res / ref_res), clamped to [1, ...].
+static int SCR_GetDefaultScale(void)
+{
+	const int w = viddef.width / DEF_WIDTH;
+	const int h = viddef.height / DEF_HEIGHT;
+	return max(min(w, h), 1);
+}
+
+// YQ2: clamp a user-supplied float scale to a valid integer in [1, max_by_resolution].
+static int SCR_ClampScale(const float scale)
+{
+	const float max_w = (float)viddef.width / 320.0f;
+	const float max_h = (float)viddef.height / 240.0f;
+	return max(1, (int)min(scale, min(max_w, max_h)));
+}
+
+// YQ2: return the effective console/ui integer scale (respects r_consolescale cvar).
+int SCR_GetConsoleScale(void)
+{
+	if (!scr_initialized || r_consolescale == NULL)
+		return 1;
+	if (r_consolescale->value < 0)
+		return SCR_GetDefaultScale();
+	return SCR_ClampScale(r_consolescale->value);
+}
+
+// YQ2: return the effective HUD integer scale (respects r_hudscale cvar).
+int SCR_GetHUDScale(void)
+{
+	if (!scr_initialized || r_hudscale == NULL)
+		return 1;
+	if (r_hudscale->value < 0)
+		return SCR_GetDefaultScale();
+	if (r_hudscale->value == 0)
+		return 0; // allow 0 to hide the HUD
+	return SCR_ClampScale(r_hudscale->value);
+}
+
+// YQ2: return the effective menu-widget integer scale (respects r_menuscale cvar).
+int SCR_GetMenuScale(void)
+{
+	if (!scr_initialized || r_menuscale == NULL)
+		return 1;
+	if (r_menuscale->value < 0)
+		return SCR_GetDefaultScale();
+	return SCR_ClampScale(r_menuscale->value);
+}
+
 //mxd. Expected to be called when screen size changes.
 void SCR_UpdateUIScale(void)
 {
-	ui_scale = min((int)(roundf((float)viddef.width / DEF_WIDTH)), (int)(roundf((float)viddef.height / DEF_HEIGHT)));
+	ui_scale = SCR_GetConsoleScale(); // YQ2: was min(round(w/640), round(h/480))
 	ui_char_size = CONCHAR_SIZE * ui_scale;
 	ui_line_height = (int)((float)ui_char_size * 1.25f);
 
@@ -359,6 +418,11 @@ void SCR_Init(void)
 	r_fog = Cvar_Get("r_fog", "0", 0);
 	r_fog_density = Cvar_Get("r_fog_density", "0", 0);
 	//gl_lostfocus_broken = Cvar_Get("gl_lostfocus_broken", "0", 0); //mxd. Ignored
+
+	// YQ2: user-adjustable scale overrides; -1 means auto (derived from resolution).
+	r_consolescale = Cvar_Get("r_consolescale", "-1", CVAR_ARCHIVE);
+	r_hudscale     = Cvar_Get("r_hudscale",     "-1", CVAR_ARCHIVE);
+	r_menuscale    = Cvar_Get("r_menuscale",    "-1", CVAR_ARCHIVE);
 
 	// Register our commands
 	Cmd_AddCommand("timerefresh", SCR_TimeRefresh_f);
@@ -1094,9 +1158,18 @@ void SCR_UpdateScreen(void)
 	int numframes;
 	float separation[2] = { 0.0f, 0.0f };
 
-	// If the screen is disabled (loading plaque is up, or vid mode changing) or screen/console aren't initialized, do nothing at all.
-	if (cls.disable_screen || !scr_initialized || !con.initialized)
+	// If the screen is disabled (loading plaque is up, or vid mode changing), screen/console aren't initialized,
+	// or the renderer failed to initialize, do nothing at all.
+	if (cls.disable_screen || !scr_initialized || !con.initialized || re.BeginFrame == NULL)
 		return;
+
+	// YQ2: re-derive ui_scale if the console scale cvar was changed live (without a vid restart).
+	if (r_consolescale != NULL && r_consolescale->modified)
+	{
+		r_consolescale->modified = false;
+		SCR_UpdateUIScale();
+		Con_CheckResize();
+	}
 
 	// Range check cl_camera_separation so we don't inadvertently fry someone's brain.
 	if (cl_stereo_separation->value > 1.0f)

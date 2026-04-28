@@ -7,6 +7,7 @@
 #include "cl_camera.h"
 #include "cl_effects.h"
 #include "client.h"
+#include "compat.h"
 #include "EffectFlags.h"
 #include "menu.h"
 #include "Vector.h"
@@ -166,6 +167,9 @@ static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheigh
 {
 #define CAM_MODE_SWITCH_DURATION	500
 #define MASK_CAMERA					(CONTENTS_SOLID | CONTENTS_ILLUSIONARY | CONTENTS_CAMERABLOCK)
+
+	if (PlayerEntPtr == NULL)
+		return;
 
 	static const vec3_t mins = { -1.0f, -1.0f, -1.0f };
 	static const vec3_t maxs = {  1.0f,  1.0f,  1.0f };
@@ -362,9 +366,17 @@ static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheigh
 
 	if (!noclip_mode && trace.fraction != 1.0f)
 	{
+		// Bmodel entities (elevators, moving platforms) can cause frame-to-frame
+		// oscillation when the camera ray just barely crosses the entity surface.
+		// Blend rather than snap for those cases; world clips still snap as usual.
+		const qboolean hit_bmodel = interpolate && (trace.ent != (struct edict_s*)(-1));
+
 		if ((int)cl_camera_clipdamp->value)
 		{
-			VectorCopy(trace.endpos, end_2);
+			if (hit_bmodel)
+				VectorLerp(old_vieworg, 0.8f, trace.endpos, end_2);
+			else
+				VectorCopy(trace.endpos, end_2);
 		}
 		else
 		{
@@ -373,7 +385,12 @@ static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheigh
 			CL_Trace(end, mins, maxs, end_2, MASK_CAMERA, CTF_CLIP_TO_ALL, &trace);
 
 			if (trace.fraction != 1.0f)
-				VectorCopy(trace.endpos, end_2);
+			{
+				if (interpolate && trace.ent != (struct edict_s*)(-1))
+					VectorLerp(old_vieworg, 0.8f, trace.endpos, end_2);
+				else
+					VectorCopy(trace.endpos, end_2);
+			}
 		}
 	}
 
@@ -446,7 +463,7 @@ void CL_CalcViewValues(void)
 	player_state_t* ops = &oldframe->playerstate;
 
 	// Calculate the origin.
-	if (ps->remote_id == REMOTE_ID_NONE && ps->pmove.pm_type != PM_INTERMISSION) //mxd. Use REMOTE_ID_NONE define.
+	if (ps->remote_id == REMOTE_ID_NONE && ps->pmove.pm_type != PM_INTERMISSION && PlayerEntPtr != NULL) //mxd. Use REMOTE_ID_NONE define.
 	{
 		if (CL_Predict())
 		{

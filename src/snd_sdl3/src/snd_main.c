@@ -10,7 +10,12 @@
 #include "snd_wav.h"
 #include "Vector.h"
 
+#ifndef _WIN32
+#include "compat.h"
+#define SNDLIB_DECLSPEC
+#else
 #define SNDLIB_DECLSPEC __declspec(dllexport)
+#endif
 #define SNDLIB_NAME	"SDL3"
 
 snd_import_t si;
@@ -180,7 +185,7 @@ static void S_Init(void)
 	}
 	else
 	{
-		s_volume = si.Cvar_Get("s_volume", "0.5", CVAR_ARCHIVE);
+		s_volume = si.Cvar_Get("s_volume", "0.3", CVAR_ARCHIVE);
 		s_sounddir = si.Cvar_Get("s_sounddir", "sound", CVAR_ARCHIVE); // H2 //TODO: remove?
 		s_khz = si.Cvar_Get("s_khz", "44", CVAR_ARCHIVE);  // Q2: 11 // H2: 22 //TODO: remove? Always run at 44 Khz?
 		s_loadas8bit = si.Cvar_Get("s_loadas8bit", "0", CVAR_ARCHIVE); // Q2: 1 //TODO: remove?

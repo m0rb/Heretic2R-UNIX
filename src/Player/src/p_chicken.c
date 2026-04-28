@@ -14,24 +14,26 @@
 #include "Random.h"
 #include "Vector.h"
 
-void PlayerChickenStepSound(const playerinfo_t* info, float value)
+void PlayerChickenStepSound(playerinfo_t* info, float value)
 {
 	if (info->edictflags & FL_SUPER_CHICKEN)
 		P_Sound(info, SND_PRED_ID46, CHAN_WEAPON, va("monsters/tbeast/step%i.wav", irand(1, 2)), 1.0f); //mxd
 }
 
 // This should never be called, if it is, a sequence has been selected that cannot be addressed by the chicken.
-void PlayerChickenAssert(playerinfo_t* info)
+int PlayerChickenAssert(playerinfo_t* info)
 {
 	assert(0);
 	PlayerAnimSetLowerSeq(info, ASEQ_STAND);
 	PlayerAnimSetUpperSeq(info, ASEQ_NONE);
+	return 0;
 }
 
-void PlayerChickenBite(playerinfo_t* info)
+int PlayerChickenBite(playerinfo_t* info)
 {
 	if (!info->isclient)
 		info->G_PlayerActionChickenBite(info);
+	return 0;
 }
 
 //mxd
@@ -40,7 +42,7 @@ static char* GetChickenType(const playerinfo_t* info)
 	return ((info->edictflags & FL_SUPER_CHICKEN) ? "superchicken" : "chicken");
 }
 
-void PlayerChickenCluck(const playerinfo_t* info, const float force)
+void PlayerChickenCluck(playerinfo_t* info, const float force)
 {
 	assert(info);
 
@@ -48,7 +50,7 @@ void PlayerChickenCluck(const playerinfo_t* info, const float force)
 		P_Sound(info, SND_PRED_ID48, CHAN_WEAPON, va("monsters/%s/cluck%i.wav", GetChickenType(info), irand(1, 2)), 1.0f); //mxd
 }
 
-void PlayerChickenJump(playerinfo_t* info)
+int PlayerChickenJump(playerinfo_t* info)
 {
 	if (info->waterlevel < 2)
 	{
@@ -65,6 +67,7 @@ void PlayerChickenJump(playerinfo_t* info)
 	const int id = irand(1, 7);
 	if (id < 4)
 		P_Sound(info, SND_PRED_ID49, CHAN_WEAPON, va("monsters/%s/jump%i.wav", GetChickenType(info), id), 1.0f); //mxd
+	return 0;
 }
 
 //mxd. Added to reduce code repetition.
@@ -85,16 +88,18 @@ static void FlapSetup(playerinfo_t* info, const byte event_id)
 	P_CreateEffect(info, event_id, info->self, FX_CHICKEN_EXPLODE, CEF_OWNERS_ORIGIN | CEF_FLAG6, NULL, ""); //mxd
 }
 
-void PlayerChickenCheckFlap(playerinfo_t* info)
+int PlayerChickenCheckFlap(playerinfo_t* info)
 {
 	if (info->seqcmd[ACMDL_JUMP])
 	{
 		FlapSetup(info, EFFECT_PRED_ID13); //mxd
 		PlayerAnimSetLowerSeq(info, ASEQ_JUMPFWD);
 	}
+	return 0;
 }
 
-void PlayerChickenFlap(playerinfo_t* info)
+int PlayerChickenFlap(playerinfo_t* info)
 {
 	FlapSetup(info, EFFECT_PRED_ID14); //mxd
+	return 0;
 }

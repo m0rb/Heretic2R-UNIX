@@ -4,6 +4,7 @@
 // Copyright 1998 Raven Software
 //
 
+#include <limits.h> // for UNIX port. --morb
 #include "ce_Effects.h"
 #include "ce_Utilities.h"
 #include "Matrix.h"

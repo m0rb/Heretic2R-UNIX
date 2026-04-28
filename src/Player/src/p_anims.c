@@ -14,6 +14,7 @@
 #include "Vector.h"
 #include "EffectFlags.h"
 #include "p_utility.h" //mxd
+#include "compat.h"
 
 PLAYER_API void PlayerAnimSetUpperSeq(playerinfo_t* info, const int seq)
 {
@@ -184,7 +185,7 @@ PLAYER_API void PlayerAnimUpperIdle(playerinfo_t* info)
 	assert(info->uppermove);
 }
 
-PLAYER_API void PlayerAnimLowerIdle(playerinfo_t* info)
+PLAYER_API int PlayerAnimLowerIdle(playerinfo_t* info)
 {
 	if (info->flags & PLAYER_FLAG_SURFSWIM)
 	{
@@ -192,7 +193,7 @@ PLAYER_API void PlayerAnimLowerIdle(playerinfo_t* info)
 		if (ret != ASEQ_NONE)
 			PlayerAnimSetLowerSeq(info, ret);
 
-		return;
+		return 0;
 	}
 
 	if (info->flags & PLAYER_FLAG_UNDERWATER)
@@ -201,7 +202,7 @@ PLAYER_API void PlayerAnimLowerIdle(playerinfo_t* info)
 		if (ret != ASEQ_NONE)
 			PlayerAnimSetLowerSeq(info, ret);
 
-		return;
+		return 0;
 	}
 
 	if (info->flags & PLAYER_FLAG_ONROPE)
@@ -210,19 +211,19 @@ PLAYER_API void PlayerAnimLowerIdle(playerinfo_t* info)
 		if (ret != ASEQ_NONE)
 			PlayerAnimSetLowerSeq(info, ret);
 
-		return;
+		return 0;
 	}
 
 	const int ret = BranchLwrStanding(info);
 	if (ret != ASEQ_NONE)
 	{
 		PlayerAnimSetLowerSeq(info, ret);
-		return;
+		return 0;
 	}
 
 	// Not a time to be idling, yet.
 	if (info->leveltime - info->idletime < 15.0f)
-		return;
+		return 0;
 
 	if (info->lowerseq >= ASEQ_IDLE_READY_GO && info->lowerseq <= ASEQ_IDLE_LOOKR && info->lowerseq != ASEQ_IDLE_READY_END)
 	{
@@ -235,14 +236,14 @@ PLAYER_API void PlayerAnimLowerIdle(playerinfo_t* info)
 			default: PlayerAnimSetLowerSeq(info, ASEQ_IDLE_READY); break;
 		}
 
-		return;
+		return 0;
 	}
 
 	// If we are in a cinematic, always do this idle, since its silent.
 	if (info->sv_cinematicfreeze != 0.0f)
 	{
 		PlayerAnimSetLowerSeq(info, ASEQ_IDLE_LOOKBACK);
-		return;
+		return 0;
 	}
 
 	// Because the bow doesn't look right in some idles.
@@ -255,7 +256,7 @@ PLAYER_API void PlayerAnimLowerIdle(playerinfo_t* info)
 			default: PlayerAnimSetLowerSeq(info, ASEQ_IDLE_READY_GO); break;
 		}
 
-		return;
+		return 0;
 	}
 
 	// Because the staff doesn't look right in some idles.
@@ -269,7 +270,7 @@ PLAYER_API void PlayerAnimLowerIdle(playerinfo_t* info)
 			default: PlayerAnimSetLowerSeq(info, ASEQ_IDLE_READY_GO); break;
 		}
 
-		return;
+		return 0;
 	}
 
 	// Default idle animations.
@@ -282,9 +283,11 @@ PLAYER_API void PlayerAnimLowerIdle(playerinfo_t* info)
 		case 4:  PlayerAnimSetLowerSeq(info, ASEQ_IDLE_WIPE_BROW); break;
 		default: PlayerAnimSetLowerSeq(info, ASEQ_IDLE_READY_GO); break;
 	}
+	
+	return 0;
 }
 
-PLAYER_API void PlayerAnimUpperUpdate(playerinfo_t* info) // Exported function never called --mxd.
+PLAYER_API int PlayerAnimUpperUpdate(playerinfo_t* info) // Exported function never called --mxd.
 {
 	// Init some values.
 	info->upperidle = false;
@@ -318,9 +321,10 @@ PLAYER_API void PlayerAnimUpperUpdate(playerinfo_t* info) // Exported function n
 	}
 
 	PlayerAnimSetUpperSeq(info, newseq);
+	return newseq;
 }
 
-PLAYER_API void PlayerAnimLowerUpdate(playerinfo_t* info) // Exported function never called --mxd.
+PLAYER_API int PlayerAnimLowerUpdate(playerinfo_t* info) // Exported function never called --mxd.
 {
 	// Init some values.
 	info->loweridle = false;
@@ -343,6 +347,7 @@ PLAYER_API void PlayerAnimLowerUpdate(playerinfo_t* info) // Exported function n
 	}
 
 	PlayerAnimSetLowerSeq(info, newseq);
+	return newseq;
 }
 
 PLAYER_API void PlayerAnimSetVault(playerinfo_t* info, const int seq)

@@ -6,6 +6,7 @@
 
 #include "client.h"
 #include "qcommon.h"
+#include "compat.h"
 #include "EffectFlags.h"
 #include "Skeletons.h"
 

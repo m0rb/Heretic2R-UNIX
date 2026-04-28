@@ -8,6 +8,8 @@
 #include "cs_shared/cmodel.h"
 #include "cs_shared/tokens.h"
 #include "win32/dll_io/dll_io.h"
+#include "../unix/dll_io_unix.h"
+#include "../unix/compat.h"
 #include "ResourceManager.h"
 #include "client/screen.h"
 #include "sv_effects.h"
@@ -412,7 +414,7 @@ static void SV_DebugGraph(const float value, const byte r, const byte g, const b
 // Init the game subsystem for a new map.
 void SV_InitGameProgs(void)
 {
-#define FX_BUF_SIZE			16 //mxd. == sizeof(EffectsBuffer_t)
+#define FX_BUF_SIZE			sizeof(EffectsBuffer_t) //mxd. Was 16 (32-bit), now pointer-size-aware
 #define FX_BUF_BLOCK_SIZE	12 //mxd
 
 	game_import_t import;
@@ -512,11 +514,20 @@ void SV_InitGameProgs(void)
 
 	//TODO: this breaks Windows logic separation.
 	DWORD checksum;
-	Sys_LoadGameDll("gamex86", &game_library, &checksum);
+	if (!Sys_LoadGameDll("gamex86", &game_library, &checksum))
+	{
+		// Failed to load game DLL - continue without it
+		Com_Printf("WARNING: Could not load gamex86.so - game logic disabled\n");
+		return;
+	}
 
-	const GetGameAPI_t GetGameAPI = (GetGameAPI_t)GetProcAddress(game_library, "GetGameAPI");
+	const GetGameAPI_t GetGameAPI = (GetGameAPI_t)dlsym(game_library, "GetGameAPI");
 	if (GetGameAPI == NULL) // H2
-		Com_Error(ERR_DROP, "Failed to obtain 'Gamex86' API"); //mxd. Sys_Error() in original logic.
+	{
+		Sys_UnloadGameDll("gamex86", &game_library);
+		Com_Printf("WARNING: Failed to obtain 'Gamex86' API - game logic disabled\n");
+		return;
+	}
 
 	ge = (*GetGameAPI)(&import);
 

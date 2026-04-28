@@ -46,6 +46,13 @@ static void Main_MenuInit(void)
 
 	s_main_menu.nitems = 0;
 
+	// Safety check: ensure renderer is initialized before using re functions
+	if (re.BF_Strlen == NULL)
+	{
+		Com_Printf("WARNING: Main_MenuInit() called before renderer initialization\n");
+		return;
+	}
+
 	Com_sprintf(name_game, sizeof(name_game), "\x02%s", m_banner_game->string);
 	s_game_action.generic.type = MTYPE_ACTION;
 	s_game_action.generic.flags = (QMF_LEFT_JUSTIFY | QMF_SELECT_SOUND);

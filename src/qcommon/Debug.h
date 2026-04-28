@@ -17,6 +17,9 @@
 
 #define DEBUG_LABEL_SIZE	64 //mxd
 
+// Forward declaration of refexport_t to avoid including client.h
+typedef struct refexport_s refexport_t;
+
 // Debug colors.
 Q2DLL_DECLSPEC extern paletteRGBA_t dc_white;
 Q2DLL_DECLSPEC extern paletteRGBA_t dc_red;
@@ -26,6 +29,9 @@ Q2DLL_DECLSPEC extern paletteRGBA_t dc_yellow;
 Q2DLL_DECLSPEC extern paletteRGBA_t dc_orange;
 Q2DLL_DECLSPEC extern paletteRGBA_t dc_cyan;
 Q2DLL_DECLSPEC extern paletteRGBA_t dc_purple;
+
+// Renderer interface for debug drawing
+extern refexport_t re;
 
 #ifdef __cplusplus //mxd. Needed, so code in game/ds.cpp could build...
 extern "C"

@@ -8,6 +8,7 @@
 #include "sv_effects.h"
 #include "client/client.h"
 #include "cl_strings.h"
+#include "../unix/compat.h"
 
 edict_t* sv_player;
 
@@ -29,11 +30,9 @@ static void SV_BeginDemoserver(void)
 // This will be sent on the initial connection and upon each server load.
 static void SV_New_f(void)
 {
-	Com_DPrintf("New() from %s\n", sv_client->name);
-
 	if (sv_client->state != cs_connected)
 	{
-		Com_Printf("New not valid -- already spawned\n");
+		Com_Printf("New not valid -- already spawned (state=%d)\n", sv_client->state);
 		return;
 	}
 
@@ -229,6 +228,11 @@ static void SV_Begin_f(void)
 
 	sv_client->state = cs_spawned;
 	ge->ClientBegin(sv_player); // Call the game begin function.
+
+	// Transmit the pending message (serverdata, etc.) now that client is spawned.
+	if (sv_client->netchan.message.cursize > 0)
+		Netchan_Transmit(&sv_client->netchan, sv_client->netchan.message.cursize, sv_client->netchan.message.data);
+	SZ_Clear(&sv_client->netchan.message);
 
 	Cbuf_InsertFromDefer();
 }

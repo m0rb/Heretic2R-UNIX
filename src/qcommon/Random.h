@@ -9,5 +9,5 @@
 #include "H2Common.h"
 
 // Required protos for random functions.
-H2COMMON_API extern float flrand(float min, float max);
-H2COMMON_API extern int irand(int min, int max);
+H2COMMON_API __attribute__((visibility("default"))) extern float flrand(float min, float max);
+H2COMMON_API __attribute__((visibility("default"))) extern int irand(int min, int max);

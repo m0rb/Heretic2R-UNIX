@@ -8,11 +8,11 @@
 #include "g_AI.h" //mxd
 #include "g_AI_local.h" //mxd
 #include "g_Utilities.h"
-#include "m_move.h" //mxd
+#include "m_Move.h" //mxd
 #include "NavSys/mg_AI.h" //mxd
 #include "NavSys/mg_Guide.h"
-#include "Ogle/m_ogle.h" //mxd
-#include "m_stats.h"
+#include "Ogle/m_Ogle.h" //mxd
+#include "m_Stats.h"
 #include "p_anims.h"
 #include "Random.h"
 #include "Vector.h"
@@ -1054,7 +1054,7 @@ void ExtrapolateFireDirection(const edict_t* self, const vec3_t origin, const fl
 	if (targ_dist < 128.0f)
 		offset *= targ_dist / 128.0f;
 
-	offset = max(0.0f, offset);
+		offset = fmax(0.0f, offset);
 
 	// Modify by player's light level?
 	if (SKILL < SKILL_HARD && !(self->monsterinfo.aiflags & AI_NIGHTVISION) && target->client != NULL)

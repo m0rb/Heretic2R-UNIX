@@ -4,9 +4,14 @@
 // Copyright 1998 Raven Software
 //
 
-#pragma once
+#ifndef Q_SHARED_H
+#define Q_SHARED_H
 
-#include <direct.h>
+#ifdef _WIN32
+	#include <direct.h>
+#else
+	#include <strings.h>
+#endif
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -20,9 +25,21 @@
 #include "q_Typedef.h"
 #include "Debug.h" //mxd
 
-#define H2R_NORETURN	__declspec(noreturn) //mxd
+#ifdef _WIN32
+	#define H2R_NORETURN	__declspec(noreturn) //mxd
+#else
+	#define H2R_NORETURN	__attribute__((noreturn))
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define ARRAY_SIZE(a)	(sizeof((a))/sizeof((a)[0])) //mxd. Because it's strange to depend on windows header for this.
+
+#ifdef __cplusplus
+}
+#endif
 
 //mxd. Player/monster step size. Used by pmove.c, m_move.c and mg_ai.c...
 #define STEP_SIZE			18.0f
@@ -65,23 +82,25 @@
 #define COLOUR_COPY(src, dst)			((dst).r=(src).r, (dst).g=(src).g, (dst).b=(src).b)
 #define COLOUR_COPYA(src, dst)			((dst).r=(src).r, (dst).g=(src).g, (dst).b=(src).b, (dst).a=(src).a)
 
-H2COMMON_API extern int Q_log2(int val);
-H2COMMON_API extern int Q_sign(int val); //mxd
-H2COMMON_API extern float Q_signf(float val); //mxd
-
-H2COMMON_API extern void ClearBounds(vec3_t mins, vec3_t maxs);
-H2COMMON_API extern void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs);
-
-H2COMMON_API extern float anglemod(float a);
-H2COMMON_API extern float anglemod_old(float a);
-H2COMMON_API extern float LerpAngle(float a1, float a2, float frac);
-H2COMMON_API extern void LerpAngles(const vec3_t angle_a, float frac, const vec3_t angle_b, vec3_t out); //mxd
-H2COMMON_API extern float LerpFloat(float f1, float f2, float frac); //mxd
-
-#ifdef __cplusplus //mxd. Needed, so the Script system code could build...
+#ifdef __cplusplus
 extern "C" {
 #endif
-	H2COMMON_API extern float SnapAngleToNetworkPrecision(float a); //mxd
+
+H2COMMON_API int Q_log2(int val);
+H2COMMON_API int Q_sign(int val); //mxd
+H2COMMON_API float Q_signf(float val); //mxd
+
+H2COMMON_API void ClearBounds(vec3_t mins, vec3_t maxs);
+H2COMMON_API void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs);
+
+H2COMMON_API float anglemod(float a);
+H2COMMON_API float anglemod_old(float a);
+H2COMMON_API float LerpAngle(float a1, float a2, float frac);
+H2COMMON_API void LerpAngles(const vec3_t angle_a, float frac, const vec3_t angle_b, vec3_t out); //mxd
+H2COMMON_API float LerpFloat(float f1, float f2, float frac); //mxd
+
+H2COMMON_API float SnapAngleToNetworkPrecision(float a); //mxd
+
 #ifdef __cplusplus
 }
 #endif
@@ -129,74 +148,78 @@ typedef enum
 	P_MAX_COLORS //mxd
 } PalIdx_t;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern H2COMMON_API paletteRGBA_t TextPalette[P_MAX_COLORS];
 
-H2COMMON_API extern char* COM_SkipPath(char* pathname);
-H2COMMON_API extern const char* COM_FileExtension(const char* in); //mxd
-H2COMMON_API extern void COM_StripExtension(const char* in, char* out);
-H2COMMON_API extern void COM_FileBase(const char* in, char* out);
-H2COMMON_API extern void COM_FilePath(const char* in, char* out);
-H2COMMON_API extern void COM_DefaultExtension(char* path, const char* extension);
+H2COMMON_API char* COM_SkipPath(char* pathname);
+H2COMMON_API void COM_StripExtension(const char* in, char* out);
+H2COMMON_API void COM_FileBase(const char* in, char* out);
+H2COMMON_API void COM_FilePath(const char* in, char* out);
+H2COMMON_API void COM_DefaultExtension(char* path, const char* extension);
 
-H2COMMON_API extern char* COM_Parse(char** data_p);
-H2COMMON_API extern void Com_sprintf(char* dest, int size, const char* fmt, ...);
-H2COMMON_API extern void Com_PageInMemory(const byte *buffer, int size); //TODO: unused. Remove?
+H2COMMON_API __attribute__((visibility("default"))) char* COM_Parse(char** data_p);
+H2COMMON_API __attribute__((visibility("default"))) void Com_sprintf(char* dest, int size, const char* fmt, ...);
+H2COMMON_API void Com_PageInMemory(const byte *buffer, int size); //TODO: unused. Remove?
 
 
-H2COMMON_API extern short BigShort(short l);
-H2COMMON_API extern int BigLong(int l);
-H2COMMON_API extern float BigFloat(float f);
+H2COMMON_API short BigShort(short l);
+H2COMMON_API int BigLong(int l);
+H2COMMON_API float BigFloat(float f);
 
 #define LittleShort(x)	(x)
 #define LittleLong(x)	(x)
 #define LittleFloat(x)	(x)
 
-H2COMMON_API extern float Clamp(float src, float min, float max);
-H2COMMON_API extern int ClampI(int src, int min, int max);
-H2COMMON_API extern float Approach(float curr, float dest, float rate);
-H2COMMON_API extern char* va(const char* format, ...);
+H2COMMON_API float Clamp(float src, float min, float max);
+H2COMMON_API int ClampI(int src, int min, int max);
+H2COMMON_API float Approach(float curr, float dest, float rate);
+H2COMMON_API char* va(const char* format, ...);
 
 #define pb(v)	((v) ? "TRUE " : "FALSE") //mxd. Print bool.
-H2COMMON_API extern char* pv(const vec3_t v); //mxd. vtos() from g_utils.c, basically...
-H2COMMON_API extern char* psv(const short* v); //mxd
+H2COMMON_API __attribute__((visibility("default"))) char* pv(const vec3_t v); //mxd. vtos() from g_utils.c, basically...
+H2COMMON_API char* psv(const short* v); //mxd
 
 // Key / value info strings.
 #define MAX_INFO_KEY		64
 #define MAX_INFO_VALUE		64
 #define MAX_INFO_STRING		512
 
-H2COMMON_API extern char* Info_ValueForKey(const char* s, const char* key);
-H2COMMON_API extern void Info_RemoveKey(char* s, const char* key);
-H2COMMON_API extern void Info_SetValueForKey(char* s, const char* key, const char* value);
-H2COMMON_API extern qboolean Info_Validate(const char* s);
-H2COMMON_API extern void Set_Com_Printf(void (*toSet)(const char* fmt, ...));
+H2COMMON_API __attribute__((visibility("default"))) char* Info_ValueForKey(const char* s, const char* key);
+H2COMMON_API void Info_RemoveKey(char* s, const char* key);
+H2COMMON_API void Info_SetValueForKey(char* s, const char* key, const char* value);
+H2COMMON_API __attribute__((visibility("default"))) qboolean Info_Validate(const char* s);
+H2COMMON_API void Set_Com_Printf(void (*toSet)(const char* fmt, ...));
+
+#ifdef __cplusplus
+}
+#endif
 
 #pragma region ========================== SYSTEM SPECIFIC ==========================
 
 struct cplane_s;
 
-#ifdef __cplusplus //mxd. Needed, so code in game/ds.cpp could build...
-extern "C"
-{
-#endif
-H2COMMON_API extern const vec3_t vec3_origin;
-H2COMMON_API extern const vec3_t vec3_left; //mxd
-H2COMMON_API extern const vec3_t vec3_right; //mxd
-H2COMMON_API extern const vec3_t vec3_up;
-H2COMMON_API extern const vec3_t vec3_down; //mxd
 #ifdef __cplusplus
-}
+extern "C" {
 #endif
+
+extern vec3_t vec3_origin;
+extern vec3_t vec3_left; //mxd
+extern vec3_t vec3_right; //mxd
+extern vec3_t vec3_up;
+extern vec3_t vec3_down; //mxd
 
 extern int curtime; // Time returned by last Sys_Milliseconds() call.
 
-extern long long Sys_Microseconds(void); // YQ2
-extern void Sys_Nanosleep(int nanosec); // YQ2
-extern void Sys_Mkdir(const char* path);
-extern qboolean Sys_IsDir(const char* path); // YQ2
-extern qboolean Sys_IsFile(const char* path); // YQ2
-extern qboolean Sys_GetWorkingDir(char* buffer, size_t len); // YQ2
-extern qboolean Sys_GetOSUserDir(char* buffer, size_t len); //mxd
+long long Sys_Microseconds(void); // YQ2
+void Sys_Nanosleep(int nanosec); // YQ2
+void Sys_Mkdir(const char* path);
+qboolean Sys_IsDir(const char* path); // YQ2
+qboolean Sys_IsFile(const char* path); // YQ2
+qboolean Sys_GetWorkingDir(char* buffer, size_t len); // YQ2
+qboolean Sys_GetOSUserDir(char* buffer, size_t len); //mxd
 
 // Directory searching.
 #define SFF_ARCH	0x01
@@ -206,22 +229,19 @@ extern qboolean Sys_GetOSUserDir(char* buffer, size_t len); //mxd
 #define SFF_SYSTEM	0x10
 
 // Pass in an attribute mask of things you wish to REJECT.
-extern char* Sys_FindFirst(const char* path, uint musthave, uint canthave);
-extern char* Sys_FindNext(uint musthave, uint canthave);
-extern void Sys_FindClose(void);
+char* Sys_FindFirst(const char* path, uint musthave, uint canthave);
+char* Sys_FindNext(uint musthave, uint canthave);
+void Sys_FindClose(void);
 
-H2R_NORETURN Q2DLL_DECLSPEC extern void Sys_Error(const char* error, ...);
+H2R_NORETURN Q2DLL_DECLSPEC void Sys_Error(const char* error, ...);
 
-#ifdef __cplusplus //mxd. Needed, so code in game/ds.cpp could build...
-extern "C"
-{
-#endif
-Q2DLL_DECLSPEC extern void Com_Printf(const char* fmt, ...);
+Q2DLL_DECLSPEC void Com_Printf(const char* fmt, ...);
+
+Q2DLL_DECLSPEC void Com_ColourPrintf(PalIdx_t colour, const char* fmt, ...);
+
 #ifdef __cplusplus
 }
 #endif
-
-Q2DLL_DECLSPEC extern void Com_ColourPrintf(PalIdx_t colour, const char* fmt, ...);
 
 #pragma endregion
 
@@ -907,26 +927,30 @@ extern int BoxOnPlaneSide(const vec3_t emins, const vec3_t emaxs, const cplane_t
 #pragma region ========================== Inlines ==========================
 
 //mxd
-_inline int Q_atoi(const char* s)
+static inline int Q_atoi(const char* s)
 {
 	return strtol(s, NULL, 10);
 }
 
-_inline int Q_stricmp(const char* s1, const char* s2)
+static inline int Q_stricmp(const char* s1, const char* s2)
 {
-#ifdef WIN32
+#ifdef _WIN32
 	return _stricmp(s1, s2);
 #else
 	return strcasecmp(s1, s2);
 #endif
 }
 
-_inline int Q_strncasecmp(const char* s1, const char* s2, const int n)
+static inline int Q_strncasecmp(const char* s1, const char* s2, const int n)
 {
+#ifdef _WIN32
 	return _strnicmp(s1, s2, n);
+#else
+	return strncasecmp(s1, s2, n);
+#endif
 }
 
-_inline int Q_strcasecmp(const char* s1, const char* s2) //mxd. Unused.
+static inline int Q_strcasecmp(const char* s1, const char* s2) //mxd. Unused.
 {
 	return Q_stricmp(s1, s2);
 }
@@ -1077,3 +1101,5 @@ enum
 #define SKIN_MAX		(SKIN_REFLECTION + 1)
 
 #pragma endregion
+
+#endif // Q_SHARED_H

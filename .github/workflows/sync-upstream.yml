@@ -1,0 +1,184 @@
+name: Sync upstream (m-x-d/Heretic2R)
+
+# Requires a Personal Access Token stored as SYNC_PAT secret.
+# GITHUB_TOKEN pushes do NOT re-trigger other workflows (GitHub loop prevention),
+# so the build/release workflows will only fire if you create a PAT with
+# repo scope and store it as SYNC_PAT.  Falls back to GITHUB_TOKEN if absent
+# (sync still works, but build/release won't auto-fire from the push).
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # every 6 hours
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Use PAT so downstream workflows fire on the resulting push.
+          token: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config rerere.enabled true
+          git config rerere.autoupdate true
+
+      # Persist rerere resolutions across runs so recurring conflict patterns
+      # (same upstream change vs same unix patch) auto-resolve without manual intervention.
+      - name: Restore rerere cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .git/rr-cache
+          key: rerere-${{ github.run_id }}
+          restore-keys: rerere-
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/m-x-d/Heretic2R.git
+          git fetch upstream --tags
+          git fetch origin unix
+
+      - name: Check for new upstream commits
+        id: check
+        run: |
+          LOCAL=$(git rev-parse origin/main)
+          UPSTREAM=$(git rev-parse upstream/main)
+          if [ "$LOCAL" = "$UPSTREAM" ]; then
+            echo "Already up to date with upstream."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            COUNT=$(git rev-list --count "$LOCAL..$UPSTREAM")
+            echo "Found $COUNT new upstream commit(s)."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            {
+              echo 'log<<EOF'
+              git log --oneline "$LOCAL..$UPSTREAM"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fast-forward main to upstream
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          git checkout main
+          git merge --ff-only upstream/main
+          git push origin main
+
+      - name: Rebase unix onto main
+        if: steps.check.outputs.skip == 'false'
+        id: rebase
+        run: |
+          git checkout unix
+          if git rebase main; then
+            echo "success=true" >> "$GITHUB_OUTPUT"
+          else
+            git diff --name-only --diff-filter=U > /tmp/conflicts.txt || true
+            git rebase --abort
+            {
+              echo 'conflicts<<EOF'
+              cat /tmp/conflicts.txt
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+            echo "success=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push rebased unix
+        if: steps.check.outputs.skip == 'false' && steps.rebase.outputs.success == 'true'
+        run: git push origin unix --force-with-lease
+
+      # Mirror upstream release tags: R5 → R5-unix (points to unix HEAD at
+      # time of integration, i.e. the unix port that includes all R5 changes).
+      - name: Mirror upstream release tags
+        if: steps.check.outputs.skip == 'false' && steps.rebase.outputs.success == 'true'
+        run: |
+          UNIX_HEAD=$(git rev-parse unix)
+          git tag -l | while read -r tag; do
+            case "$tag" in *-unix) continue ;; esac   # skip already-mirrored tags
+            unix_tag="${tag}-unix"
+            # Only mirror tags that are now ancestors of main (i.e. incorporated).
+            if git merge-base --is-ancestor "$tag" main 2>/dev/null && \
+               ! git rev-parse "refs/tags/$unix_tag" >/dev/null 2>&1; then
+              git tag "$unix_tag" "$UNIX_HEAD"
+              git push origin "$unix_tag"
+              echo "Created tag $unix_tag at $UNIX_HEAD"
+            fi
+          done
+
+      # Always save rerere cache so resolutions accumulate across runs.
+      - name: Save rerere cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: .git/rr-cache
+          key: rerere-${{ github.run_id }}
+
+      # On conflict: open (or find existing open) issue rather than silently failing.
+      - name: Open issue on rebase conflict
+        if: steps.check.outputs.skip == 'false' && steps.rebase.outputs.success == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const log       = `${{ steps.check.outputs.log }}`;
+            const conflicts = `${{ steps.rebase.outputs.conflicts }}`;
+
+            // Avoid duplicate issues — check for an existing open sync-conflict issue.
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              state: 'open',
+              labels: 'upstream-sync-conflict',
+            });
+
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner:      context.repo.owner,
+                repo:       context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `**New sync failure** (run [#${context.runNumber}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}))\n\n**New upstream commits**\n\`\`\`\n${log}\n\`\`\`\n\n**Conflicted files**\n\`\`\`\n${conflicts}\n\`\`\``,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner:  context.repo.owner,
+                repo:   context.repo.repo,
+                title:  '⚠️ Upstream sync — rebase conflict requires manual resolution',
+                labels: ['upstream-sync-conflict'],
+                body: [
+                  '## Upstream sync failed',
+                  '',
+                  'The automated rebase of `unix` onto new upstream `main` hit a conflict.',
+                  'This issue will receive a comment on each subsequent failure until resolved.',
+                  '',
+                  '### New upstream commits',
+                  '```',
+                  log,
+                  '```',
+                  '',
+                  '### Conflicted files',
+                  '```',
+                  conflicts,
+                  '```',
+                  '',
+                  '### To resolve locally',
+                  '```sh',
+                  'git fetch origin main',
+                  'git checkout unix',
+                  'git rebase origin/main',
+                  '# resolve conflicts, then:',
+                  'git push origin unix --force-with-lease',
+                  '```',
+                  '',
+                  '_Close this issue once the conflict is resolved and pushed._',
+                ].join('\n'),
+              });
+            }

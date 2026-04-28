@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // Motion.c
 //

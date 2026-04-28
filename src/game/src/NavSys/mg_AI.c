@@ -12,7 +12,7 @@
 #include "Monsters/g_Monster.h"
 #include "Monsters/m_Stats.h"
 #include "Monsters/TrialBeast/m_TrialBeast.h" //mxd
-#include "Monsters/PlaguesSithra/m_PlaguesSithra.h" //mxd
+#include "Monsters/PlagueSsithra/m_PlagueSsithra.h" //mxd
 #include "Random.h"
 #include "Vector.h"
 #include "g_Local.h"

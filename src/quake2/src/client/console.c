@@ -6,6 +6,10 @@
 
 #include "client.h"
 
+#ifndef _WIN32
+#include "../unix/compat.h"
+#endif
+
 console_t con;
 
 static cvar_t* con_notifytime;

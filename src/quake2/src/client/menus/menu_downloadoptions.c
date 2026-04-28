@@ -24,7 +24,7 @@ static menulist_t s_allow_download_models_box;
 static menulist_t s_allow_download_sounds_box;
 
 // Q2 counterpart
-static void DownloadCallback(const void* self)
+static void DownloadCallback(void* self)
 {
 	const menulist_t* f = self;
 
