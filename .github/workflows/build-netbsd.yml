@@ -1,0 +1,68 @@
+name: Build (NetBSD)
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+          - arch: arm64
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build on NetBSD (${{ matrix.arch }})
+        uses: vmactions/netbsd-vm@v1
+        with:
+          arch: ${{ matrix.arch == 'x86_64' && '' || matrix.arch }}
+          usesh: true
+          prepare: pkg_add cmake ninja-build gmake pkg-config libexecinfo SDL3
+
+          run: |
+            # Install the X11 development set for this arch from the NetBSD CDN.
+            NBVER=$(uname -r)
+            case "$(uname -m)" in
+              x86_64)  NBARCH=amd64 ;;
+              aarch64|evbarm) NBARCH=evbarm-aarch64 ;;
+              *)       NBARCH=$(uname -m) ;;
+            esac
+            echo "Fetching NetBSD ${NBVER} ${NBARCH} xcomp set from CDN..."
+            ftp -o xcomp.tar.xz "https://cdn.netbsd.org/pub/NetBSD/NetBSD-${NBVER}/${NBARCH}/binary/sets/xcomp.tar.xz"
+            ftp -o xbase.tar.xz "https://cdn.netbsd.org/pub/NetBSD/NetBSD-${NBVER}/${NBARCH}/binary/sets/xbase.tar.xz"
+            tar xJf xcomp.tar.xz -C /
+            tar xJf xbase.tar.xz -C /
+
+            export PKG_CONFIG_PATH=/usr/pkg/lib/pkgconfig
+
+            NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
+            gmake -j$NCPU
+            gmake server -j$NCPU
+
+            mkdir -p dist dist-ded
+            cp build/release/heretic2r dist/
+            cp -r build/release/base dist/
+            #cp /usr/pkg/lib/libSDL3.so.0 dist/
+            #cp SDL3-src/LICENSE.txt dist/LICENSE.SDL3.txt
+            cp build/release/heretic2r-server dist-ded/
+            cp -r build/release/base dist-ded/
+            tar czf heretic2r-netbsd-${{ matrix.arch }}.tar.gz -C dist .
+            tar czf heretic2r-server-netbsd-${{ matrix.arch }}.tar.gz -C dist-ded .
+
+      - name: Upload client artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-netbsd-${{ matrix.arch }}
+          path: heretic2r-netbsd-${{ matrix.arch }}.tar.gz
+
+      - name: Upload dedicated server artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: heretic2r-server-netbsd-${{ matrix.arch }}
+          path: heretic2r-server-netbsd-${{ matrix.arch }}.tar.gz

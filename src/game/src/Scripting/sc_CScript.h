@@ -6,12 +6,15 @@
 
 #pragma once
 
+// Include C++ headers BEFORE any headers that might open extern "C" blocks
 #include <list>
 #include "Events/sc_Event.h"
 #include "Variables/sc_StringVar.h"
 #include "sc_FieldDef.h"
 #include "sc_Signaler.h"
 #include "g_Local.h"
+
+class StringVar;
 
 #define MAX_INDEX	100
 

@@ -8,6 +8,10 @@
 #include "snd_local.h"
 #include "snd_main.h"
 
+#ifndef _WIN32
+#include "compat.h"
+#endif
+
 #define STB_VORBIS_NO_PUSHDATA_API
 #include <stb/stb_vorbis.h>
 
@@ -87,8 +91,19 @@ void OGG_PlayTrack(const int track, const uint track_pos, const qboolean looping
 	}
 
 	// Open ogg vorbis file.
+	//sprintf_s(track_path, sizeof(track_path), "%s/music/Track%02i.ogg", si.FS_Gamedir(), track);
+	// try lowercase filename first, then fall back to mixed-case  --morb
+	
 	char track_path[MAX_OSPATH];
-	sprintf_s(track_path, sizeof(track_path), "%s/music/Track%02i.ogg", si.FS_Gamedir(), track);
+	sprintf_s(track_path, sizeof(track_path), "%s/music/track%02i.ogg", si.FS_Gamedir(), track);
+
+	{
+		FILE* test;
+		if (fopen_s(&test, track_path, "rb") == 0)
+			fclose(test);
+		else
+			sprintf_s(track_path, sizeof(track_path), "%s/music/Track%02i.ogg", si.FS_Gamedir(), track);
+	}
 
 	int vorbis_error = VORBIS__no_error;
 	ogg_file = stb_vorbis_open_filename(track_path, &vorbis_error, NULL);

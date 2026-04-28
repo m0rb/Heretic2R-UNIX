@@ -8,4 +8,4 @@
 
 #include "gl1_Local.h"
 
-extern int RI_FindSurface(const vec3_t start, const vec3_t end, struct Surface_s* surface);
+// RI_FindSurface removed - unused function with incomplete struct Surface_s type

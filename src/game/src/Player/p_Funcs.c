@@ -4,7 +4,7 @@
 // Copyright 1998 Raven Software
 //
 
-#include "p_funcs.h"
+#include "p_Funcs.h"
 #include "p_anims.h"
 #include "p_Client.h" //mxd
 #include "p_main.h"

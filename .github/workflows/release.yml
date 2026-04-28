@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    uses: ./.github/workflows/build-linux.yml
+
+  build-macos:
+    uses: ./.github/workflows/build-macos.yml
+
+  build-freebsd:
+    uses: ./.github/workflows/build-freebsd.yml
+
+  build-haiku:
+    uses: ./.github/workflows/build-haiku.yml
+
+  build-openbsd:
+    uses: ./.github/workflows/build-openbsd.yml
+
+  build-netbsd:
+    uses: ./.github/workflows/build-netbsd.yml
+
+  build-openindiana:
+    uses: ./.github/workflows/build-openindiana.yml
+
+  build-solaris:
+    uses: ./.github/workflows/build-solaris.yml
+
+  release:
+    needs: [ build-linux, build-macos, build-freebsd, build-haiku, build-openbsd, build-netbsd, build-openindiana, build-solaris ]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Create client release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          fail_on_unmatched_files: false
+          body: |
+            Built from tag `${{ github.ref_name }}` @ `${{ github.sha }}`.
+
+            Requires Heretic II game data (base/) to run.
+          files: |
+            heretic2r-linux-*.tar.gz
+            heretic2r-macos.tar.gz
+            heretic2r-freebsd*.tar.gz
+            heretic2r-haiku.tar.gz
+            heretic2r-openbsd-*.tar.gz
+            heretic2r-netbsd-*.tar.gz
+            heretic2r-openindiana.tar.gz
+            heretic2r-solaris.tar.gz
+
+      - name: Create dedicated server release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}-ded
+          name: "${{ github.ref_name }} dedicated server"
+          fail_on_unmatched_files: false
+          body: |
+            Built from tag `${{ github.ref_name }}` @ `${{ github.sha }}`.
+
+            Standalone dedicated server binaries. No SDL3 or OpenGL required.
+            Include game data (base/) from a Heretic II installation to run.
+          files: |
+            heretic2r-server-linux-*.tar.gz
+            heretic2r-server-macos.tar.gz
+            heretic2r-server-freebsd*.tar.gz
+            heretic2r-server-haiku.tar.gz
+            heretic2r-server-openbsd-*.tar.gz
+            heretic2r-server-netbsd-*.tar.gz
+            heretic2r-server-openindiana.tar.gz
+            heretic2r-server-solaris.tar.gz

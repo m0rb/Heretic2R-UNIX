@@ -18,11 +18,12 @@
 #include "g_HitLocation.h"
 #include "g_Items.h" //mxd
 #include "g_ItemStats.h"
-#include "g_playstats.h"
+#include "g_PlayStats.h"
 #include "g_Utilities.h" //mxd
 #include "p_main.h"
 #include "Random.h"
 #include "Vector.h"
+#include "compat.h" // for UNIX port. --morb
 
 gitem_armor_t silver_armor_info	= { MAX_SILVER_ARMOR, SILVER_HIT_MULT, SILVER_SPELL_MULT };
 gitem_armor_t gold_armor_info	= { MAX_GOLD_ARMOR, GOLD_HIT_MULT, GOLD_SPELL_MULT };

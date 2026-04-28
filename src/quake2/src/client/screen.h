@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "q_shared.h" //mxd
+#include "q_Shared.h" //mxd
 #include "vid.h" //mxd
 
 typedef struct GameMessageDisplayInfo_s //mxd
@@ -34,6 +34,14 @@ extern int ui_screen_offset_x;
 extern cvar_t* scr_viewsize;
 extern cvar_t* scr_centertime; //mxd
 extern cvar_t* crosshair;
+
+// YQ2: user-adjustable scale cvars and getters.
+extern cvar_t* r_consolescale;
+extern cvar_t* r_hudscale;
+extern cvar_t* r_menuscale;
+extern int SCR_GetConsoleScale(void);
+extern int SCR_GetHUDScale(void);
+extern int SCR_GetMenuScale(void);
 
 extern vrect_t scr_vrect; // Position of render window.
 

@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_FindSurface.c
 //
@@ -147,8 +148,4 @@ static int FindSurfaceR(const mnode_t* node, const vec3_t start, const vec3_t en
 	return FindSurfaceR(node->children[front >= 0.0f], mid, end, surface, index + 1);
 }
 
-//TODO: seems unused. Untested...
-int RI_FindSurface(const vec3_t start, const vec3_t end, struct Surface_s* surface)
-{
-	return FindSurfaceR(NULL, start, end, surface, 0);
-}
+//TODO: seems unused. Untested... Removed due to incomplete struct Surface_s type.

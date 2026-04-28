@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_Light.c
 //
@@ -201,12 +202,20 @@ void R_ResetBmodelTransforms(void) //mxd
 
 static int R_RecursiveLightPoint(const mnode_t* node, const vec3_t start, const vec3_t end)
 {
+	// Guard against NULL or sentinel-value node pointers (can occur with corrupt BSP data or
+	// entities positioned outside the world).
+	if (node == NULL || (uintptr_t)node == (uintptr_t)-1)
+		return -1;
+
 	// Didn't hit anything.
 	if (node->contents != -1)
 		return -1;
 
 	// Calculate mid point.
 	const cplane_t* plane = node->plane;
+	if (plane == NULL || (uintptr_t)plane == (uintptr_t)-1)
+		return -1;
+
 	const float front = DotProduct(start, plane->normal) - plane->dist;
 	const float back = DotProduct(end, plane->normal) - plane->dist;
 	const int side = (front < 0.0f);

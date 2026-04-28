@@ -10,7 +10,12 @@
 #include "snd_ogg.h"
 #include "snd_wav.h"
 #include "Vector.h"
-#include "g_local.h"
+#include "g_Local.h"
+
+#ifndef _WIN32
+#include "compat.h"
+#endif
+
 #include <SDL3/SDL.h> //mxd. Needs to be included below engine stuff: includes stdbool.h, which messes up qboolean define...
 
 #define SDL_PAINTBUFFER_SIZE 2048
@@ -481,7 +486,9 @@ static void SNDSDL3_UpdateScaletable(void) // Q2: S_InitScaletable().
 		const int scale = (int)((float)i * 8.0f * 256.0f * s_volume->value);
 
 		for (int j = 0; j < 256; j++)
-			snd_scaletable[i][j] = (char)j * scale;
+			//snd_scaletable[i][j] = (char)j * scale;
+			// ARM64: 'char' defaults to unsigned. Explicit (signed char) required. --morb
+			snd_scaletable[i][j] = (signed char)j * scale;
 	}
 }
 
@@ -531,7 +538,9 @@ qboolean SNDSDL3_Cache(sfx_t* sfx, const wavinfo_t* info, byte* data)
 		if (sc->width == 2)
 			((short*)sc->data)[i] = (short)sample;
 		else
-			((char*)sc->data)[i] = (char)(sample >> 8);
+			//()(char*)sc->data)[i] = (char)(sample >> 8);
+			// explicit (signed char) — must match the sign interpretation in snd_scaletable. --morb
+			((signed char*)sc->data)[i] = (signed char)(sample >> 8);
 	}
 
 	return true;
@@ -734,6 +743,11 @@ static void SNDSDL3_AudioStreamCallback(void* userdata, SDL_AudioStream* sdl_str
 	if (additional_amount < 1)
 		return;
 
+	// Guard against shutdown race: PipeWire may fire one last callback after
+	// SDL_PauseAudioDevice / SDL_DestroyAudioStream has freed sound.buffer.
+	if (sound.buffer == NULL || samplesize == 0)
+		return;
+
 	byte* data = SDL_stack_alloc(byte, additional_amount);
 
 	if (data != NULL)
@@ -815,11 +829,18 @@ qboolean SNDSDL3_BackendInit(void)
 // Shuts the SDL backend down.
 void SNDSDL3_BackendShutdown(void)
 {
+	if (stream == NULL)
+		return;
+
 	si.Com_Printf("Closing SDL audio device...\n");
 
 	SDL_PauseAudioDevice(SDL_GetAudioStreamDevice(stream));
+	// SDL_DestroyAudioStream also closes the device when created via SDL_OpenAudioDeviceStream.
+	// Do NOT call SDL_QuitSubSystem(SDL_INIT_AUDIO) after this — SDL3 internally frees the device
+	// struct during DestroyAudioStream, and QuitSubSystem would then try to iterate/lock the
+	// already-freed device list, causing a SIGSEGV in pthread_mutex_lock.
 	SDL_DestroyAudioStream(stream);
-	SDL_QuitSubSystem(SDL_INIT_AUDIO);
+	stream = NULL;
 
 	free(sound.buffer);
 	sound.buffer = NULL;

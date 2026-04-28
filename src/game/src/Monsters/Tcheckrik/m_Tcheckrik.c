@@ -16,7 +16,7 @@
 #include "Monsters/m_Stats.h"
 #include "Monsters/g_Monster.h"
 #include "NavSys/mg_AI.h" //mxd
-#include "NavSys/mg_guide.h" //mxd
+#include "NavSys/mg_Guide.h" //mxd
 #include "Random.h"
 #include "Vector.h"
 

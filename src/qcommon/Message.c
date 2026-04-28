@@ -6,13 +6,13 @@
 
 #include "Message.h"
 
-void MSG_Queue(MsgQueue_t* self, void* msg) //mxd. Named 'QueueMessage' in original logic.
+void __attribute__((visibility("default"))) MSG_Queue(MsgQueue_t* self, void* msg) //mxd. Named 'QueueMessage' in original logic.
 {
 	const GenericUnion4_t temp = { .t_void_p = msg };
 	SLList_Push(&self->msgs, temp);
 }
 
-size_t MSG_SetParms(SinglyLinkedList_t* parms, const char* format, va_list marker) //mxd. Named 'SetParms' in original logic.
+__attribute__((visibility("default"))) size_t MSG_SetParms(SinglyLinkedList_t* parms, const char* format, va_list marker) //mxd. Named 'SetParms' in original logic.
 {
 	qboolean append = false;
 	int count = 0;
@@ -27,12 +27,12 @@ size_t MSG_SetParms(SinglyLinkedList_t* parms, const char* format, va_list marke
 		switch (format[count])
 		{
 			case 'b':
-				parm.t_byte = va_arg(marker, byte);
+				parm.t_byte = (byte)va_arg(marker, unsigned int); // byte is promoted to unsigned int in varargs
 				bytesParsed += sizeof(parm.t_byte);
 				break;
 
 			case 's':
-				parm.t_short = va_arg(marker, short);
+				parm.t_short = (short)va_arg(marker, int); // short is promoted to int in varargs
 				bytesParsed += sizeof(parm.t_short);
 				break;
 
@@ -84,7 +84,7 @@ size_t MSG_SetParms(SinglyLinkedList_t* parms, const char* format, va_list marke
 	return bytesParsed;
 }
 
-int MSG_GetParms(SinglyLinkedList_t* parms, const char* format, va_list marker) //mxd. Named 'GetParms' in original logic.
+int __attribute__((visibility("default"))) MSG_GetParms(SinglyLinkedList_t* parms, const char* format, va_list marker) //mxd. Named 'GetParms' in original logic.
 {
 	int count = 0;
 

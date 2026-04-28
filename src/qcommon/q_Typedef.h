@@ -15,7 +15,11 @@ typedef unsigned long ulong;	//mxd. Way shorter than "unsigned long"...
 typedef unsigned char byte;
 
 #ifndef __cplusplus //mxd. Needed, so code in game/ds.cpp could build...
-	typedef enum { false, true } qboolean;
+	#ifndef false
+		typedef enum { false, true } qboolean;
+	#else
+		typedef int qboolean;
+	#endif
 #else
 	typedef int qboolean;
 #endif

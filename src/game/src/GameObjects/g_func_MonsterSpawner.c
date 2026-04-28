@@ -1,3 +1,4 @@
+#include "g_Local.h"
 //
 // g_func_MonsterSpawner.c -- Originally part of g_func.c
 //

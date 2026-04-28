@@ -4,8 +4,9 @@
 // Copyright 1998 Raven Software
 //
 
-#include "q_shared.h"
+#include "q_Shared.h"
 #include "Console.h"
+#include "compat.h"
 
 // Q2 counterpart
 H2COMMON_API char* COM_SkipPath(char* pathname)

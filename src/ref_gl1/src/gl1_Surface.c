@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_Surface.c
 //
@@ -348,7 +349,7 @@ static void R_BlendLightmaps(model_t* mdl) //mxd. Original logic uses 'currentmo
 		if (mdl == r_worldmodel)
 			c_visible_lightmaps++;
 
-		R_Bind(gl_state.lightmap_textures + i);
+		R_Bind((int)gl_lms.texture_names[i]);
 
 		for (surf = gl_lms.lightmap_surfaces[i]; surf != NULL; surf = surf->lightmapchain)
 			if (surf->polys != NULL)
@@ -359,7 +360,7 @@ static void R_BlendLightmaps(model_t* mdl) //mxd. Original logic uses 'currentmo
 	if ((int)gl_dynamic->value)
 	{
 		LM_InitBlock();
-		R_Bind(gl_state.lightmap_textures);
+		R_Bind((int)gl_lms.texture_names[0]);
 
 		if (mdl == r_worldmodel)
 			c_visible_lightmaps++;
@@ -535,7 +536,7 @@ static void R_RenderBrushPoly(const entity_t* ent, msurface_t* fa) //mxd. Added 
 
 				R_BuildLightMap(fa, (byte*)temp, smax * 4);
 				R_SetCacheState(fa);
-				R_Bind(gl_state.lightmap_textures + fa->lightmaptexturenum);
+				R_Bind((int)gl_lms.texture_names[fa->lightmaptexturenum]);
 
 				glTexSubImage2D(GL_TEXTURE_2D, 0, fa->light_s, fa->light_t, smax, tmax, GL_LIGHTMAP_FORMAT, GL_UNSIGNED_BYTE, temp);
 
@@ -617,7 +618,7 @@ static void R_RenderFlatShadedBrushPoly(const entity_t* ent, msurface_t* fa) // 
 
 				R_BuildLightMap(fa, (byte*)temp, smax * 4);
 				R_SetCacheState(fa);
-				R_Bind(gl_state.lightmap_textures + fa->lightmaptexturenum);
+				R_Bind((int)gl_lms.texture_names[fa->lightmaptexturenum]);
 
 				glTexSubImage2D(GL_TEXTURE_2D, 0, fa->light_s, fa->light_t, smax, tmax, GL_LIGHTMAP_FORMAT, GL_UNSIGNED_BYTE, temp);
 
@@ -674,12 +675,12 @@ static void R_RenderLightmappedPoly(const entity_t* ent, msurface_t* surf) //mxd
 		if ((surf->styles[map] >= 32 || surf->styles[map] == 0) && surf->dlightframe != r_framecount)
 		{
 			R_SetCacheState(surf);
-			R_MBind(GL_TEXTURE1, surf->lightmaptexturenum + gl_state.lightmap_textures);
+			R_MBind(GL_TEXTURE1, (int)gl_lms.texture_names[surf->lightmaptexturenum]);
 			lmtex = surf->lightmaptexturenum;
 		}
 		else
 		{
-			R_MBind(GL_TEXTURE1, gl_state.lightmap_textures);
+			R_MBind(GL_TEXTURE1, (int)gl_lms.texture_names[0]);
 			lmtex = 0;
 		}
 
@@ -689,7 +690,7 @@ static void R_RenderLightmappedPoly(const entity_t* ent, msurface_t* surf) //mxd
 	c_brush_polys++;
 
 	R_MBindImage(GL_TEXTURE0, R_TextureAnimation(ent, surf->texinfo)); // H2: GL_MBind -> GL_MBindImage
-	R_MBind(GL_TEXTURE1, gl_state.lightmap_textures + lmtex);
+	R_MBind(GL_TEXTURE1, (int)gl_lms.texture_names[lmtex]);
 
 	// Missing: SURF_FLOWING logic.
 	for (glpoly_t* p = surf->polys; p != NULL; p = p->chain)

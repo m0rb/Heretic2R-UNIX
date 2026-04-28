@@ -1,3 +1,4 @@
+#include "compat.h"
 //
 // gl1_Warp.c -- warped surfaces rendering
 //
