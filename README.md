@@ -1,8 +1,9 @@
-# Heretic2R
+# Heretic2R-UNIX
 
-Heretic2R is Heretic II (1998, Raven Software) reverse-engineered source port.
+This is a fork of [Heretic2R by m-x-d](https://github.com/m-x-d/Heretic2R), a Heretic II (1998, Raven Software) reverse-engineered source port,
+targeting UNIX-like operating systems such as GNU/Linux, *BSD, macOS, and Haiku.
 
-## Features
+## Heretic2R Features
 
 * Widescreen support (with automatic HUD scaling).
 * Rendering framerate decoupled from network packets sending rate (with theoretical maximum of 1000 FPS).
