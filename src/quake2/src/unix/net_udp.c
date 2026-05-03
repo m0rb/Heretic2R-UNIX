@@ -17,7 +17,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/param.h>
-#ifdef defined (__sun || __SVR4))
+#if defined (__sun  ) || defined ( __SVR4)
 #include <sys/filio.h>
 #endif
 #include <sys/ioctl.h>
