@@ -17,6 +17,9 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/param.h>
+#ifdef (__sun || __SVR4))
+#include <sys/filio.h>
+#endif
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <string.h>
