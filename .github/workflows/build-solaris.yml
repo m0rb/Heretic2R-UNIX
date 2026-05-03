@@ -14,8 +14,6 @@ jobs:
       - name: Build on Solaris
         uses: vmactions/solaris-vm@v1
         with:
-          debug-on-error: true
-          vnc-password: ${{ secrets.VNC_PASSWORD }}
           usesh: true
           prepare: |
             pkg install -q --accept developer/versioning/git developer/gcc developer/build/cmake developer/build/gnu-make developer/build/pkg-config x11/library/mesa
@@ -38,8 +36,8 @@ jobs:
             export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/64/pkgconfig
 
             NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
-            CC=gcc CXX=g++ gmake -j$NCPU
-            CC=gcc CXX=g++ gmake server -j$NCPU
+            gmake -j$NCPU
+            gmake server -j$NCPU
 
             mkdir -p dist dist-ded
             cp build/release/heretic2r dist/
