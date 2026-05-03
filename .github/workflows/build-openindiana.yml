@@ -14,6 +14,8 @@ jobs:
       - name: Build on OpenIndiana
         uses: vmactions/openindiana-vm@v1
         with:
+          debug-on-error: true
+          vnc-password: ${{ secrets.VNC_PASSWORD }}
           usesh: true
           prepare: |
             pkg install -q --accept developer/versioning/git developer/gcc-14 developer/build/cmake developer/build/gnu-make developer/build/pkg-config x11/library/mesa
