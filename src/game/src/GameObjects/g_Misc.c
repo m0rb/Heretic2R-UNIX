@@ -570,54 +570,54 @@ void MiscTeleporterStaticsInit(void)
 
 // Variables:
 // style - Number of destinations this pad has.
-void SP_misc_teleporter(edict_t* ent)
+void SP_misc_teleporter(edict_t* self)
 {
-	if (ent->target == NULL && (!(ent->spawnflags & SF_DEATHMATCH_RANDOM) || !DEATHMATCH)) //BUGFIX: '!ent->spawnflags & DEATHMATCH_RANDOM' in original logic.
+	if (self->target == NULL && (!(self->spawnflags & SF_DEATHMATCH_RANDOM) || !DEATHMATCH)) //BUGFIX: '!ent->spawnflags & DEATHMATCH_RANDOM' in original logic.
 	{
 		gi.dprintf("teleporter without a target.\n");
-		G_FreeEdict(ent);
+		G_FreeEdict(self);
 
 		return;
 	}
 
-	ent->msgHandler = DefaultMsgHandler;
+	self->msgHandler = DefaultMsgHandler;
 
-	ent->movetype = PHYSICSTYPE_NONE;
-	ent->svflags |= SVF_NOCLIENT;
-	ent->solid = SOLID_TRIGGER;
+	self->movetype = PHYSICSTYPE_NONE;
+	self->svflags |= SVF_NOCLIENT;
+	self->solid = SOLID_TRIGGER;
 
-	gi.setmodel(ent, ent->model);
-	gi.linkentity(ent);
+	gi.setmodel(self, self->model);
+	gi.linkentity(self);
 
 	// If we don't have multiple destinations - probably redundant.
-	if (!(ent->spawnflags & SF_MULT_DEST))
-		ent->style = 0;
+	if (!(self->spawnflags & SF_MULT_DEST))
+		self->style = 0;
 
 	// If we want an effect on spawn, create it.
-	if (!(ent->spawnflags & SF_START_OFF))
+	if (!(self->spawnflags & SF_START_OFF))
 	{
-		ent->touch = PlayerTeleporterTouch;
-		MiscTeleporterCreateEffect(ent); //mxd
+		self->touch = PlayerTeleporterTouch;
+		MiscTeleporterCreateEffect(self); //mxd
 	}
 }
 
 // QUAKED misc_teleporter_dest (1 0 0) (-32 -32 -24) (32 32 -16)
 // Point teleporters at these.
-void SP_misc_teleporter_dest(edict_t* ent)
+void SP_misc_teleporter_dest(edict_t* self)
 {
-	ent->s.skinnum = 0; //TODO: not needed?
-	ent->solid = SOLID_NOT;
-	VectorSet(ent->mins, -32.0f, -32.0f, -24.0f);
-	VectorSet(ent->maxs,  32.0f,  32.0f, -16.0f);
+	self->s.skinnum = 0; //TODO: not needed?
+	self->solid = SOLID_NOT;
+	VectorSet(self->mins, -32.0f, -32.0f, -24.0f);
+	VectorSet(self->maxs,  32.0f,  32.0f, -16.0f);
 
-	gi.linkentity(ent);
+	gi.linkentity(self);
 
 	trace_t tr;
-	const vec3_t end_pos = VEC3_INITA(ent->s.origin, 0.0f, 0.0f, -500.0f);
-	gi.trace(ent->s.origin, vec3_origin, vec3_origin, end_pos, NULL, CONTENTS_WORLD_ONLY | MASK_PLAYERSOLID, &tr);
+	const vec3_t end_pos = VEC3_INITA(self->s.origin, 0.0f, 0.0f, -500.0f);
+	gi.trace(self->s.origin, vec3_origin, vec3_origin, end_pos, NULL, CONTENTS_WORLD_ONLY | MASK_PLAYERSOLID, &tr);
 
-	VectorCopy(tr.endpos, ent->last_org);
-	ent->last_org[2] -= player_mins[2];
+	VectorCopy(tr.endpos, self->last_org);
+	self->last_org[2] -= player_mins[2];
 }
 
 #pragma endregion
