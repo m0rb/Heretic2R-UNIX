@@ -953,7 +953,7 @@ ClientEffect_t clientEffectSpawners[NUM_FX] =
 		.SpawnCFX = FXBarrelExplode,
 		.PrecacheCFX = PreCacheBarrelExplode,
 		.PrecacheSFX = PreCacheBarrelExplodeSFX, //mxd
-		.formatString = NULL,
+		.formatString = NULL
 	},
 
 	{ // FX_CWATCHER
