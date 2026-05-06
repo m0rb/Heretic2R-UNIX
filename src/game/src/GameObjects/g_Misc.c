@@ -129,7 +129,8 @@ void PointCombatTouch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t
 	if (self->target != NULL)
 	{
 		other->target = self->target;
-		other->goalentity = other->movetarget = G_PickTarget(other->target);
+		other->goalentity = G_PickTarget(other->target);
+		other->movetarget = other->goalentity;
 
 		if (other->goalentity == NULL)
 		{
