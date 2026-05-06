@@ -8,7 +8,7 @@
 
 #include "g_Edict.h"
 
-extern void SP_func_button(edict_t* ent);
+extern void SP_func_button(edict_t* self);
 extern void FuncButtonStaticsInit(void);
 
 //mxd. Required by save system...

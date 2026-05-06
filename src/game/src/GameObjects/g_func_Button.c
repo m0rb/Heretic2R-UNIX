@@ -101,64 +101,64 @@ static void FuncButtonSetSounds(edict_t* self) //mxd. Named 'button_sounds' in o
 //		1) Basic Button.
 //		2) Clanky Button.
 //		3) Steam Button.
-void SP_func_button(edict_t* ent)
+void SP_func_button(edict_t* self)
 {
-	G_SetMovedir(ent->s.angles, ent->movedir);
-	ent->movetype = PHYSICSTYPE_STOP;
-	ent->solid = SOLID_BSP;
-	ent->takedamage = DAMAGE_NO;
+	G_SetMovedir(self->s.angles, self->movedir);
+	self->movetype = PHYSICSTYPE_STOP;
+	self->solid = SOLID_BSP;
+	self->takedamage = DAMAGE_NO;
 
-	gi.setmodel(ent, ent->model);
-	gi.linkentity(ent);
+	gi.setmodel(self, self->model);
+	gi.linkentity(self);
 
-	FuncButtonSetSounds(ent);
+	FuncButtonSetSounds(self);
 
-	if (ent->speed == 0.0f)
-		ent->speed = 40.0f;
+	if (self->speed == 0.0f)
+		self->speed = 40.0f;
 
-	if (ent->accel == 0.0f)
-		ent->accel = ent->speed;
+	if (self->accel == 0.0f)
+		self->accel = self->speed;
 
-	if (ent->decel == 0.0f)
-		ent->decel = ent->speed;
+	if (self->decel == 0.0f)
+		self->decel = self->speed;
 
-	if (ent->wait == 0.0f)
-		ent->wait = 3.0f;
+	if (self->wait == 0.0f)
+		self->wait = 3.0f;
 
 	if (st.lip == 0)
 		st.lip = 4;
 
-	VectorCopy(ent->s.origin, ent->pos1);
+	VectorCopy(self->s.origin, self->pos1);
 
 	vec3_t abs_movedir;
-	VectorAbs(ent->movedir, abs_movedir);
+	VectorAbs(self->movedir, abs_movedir);
 
-	const float dist = DotProduct(abs_movedir, ent->size) - (float)st.lip;
-	VectorMA(ent->pos1, dist, ent->movedir, ent->pos2);
+	const float dist = DotProduct(abs_movedir, self->size) - (float)st.lip;
+	VectorMA(self->pos1, dist, self->movedir, self->pos2);
 
-	ent->use = FuncButtonUse;
+	self->use = FuncButtonUse;
 
-	if (ent->health > 0)
+	if (self->health > 0)
 	{
-		ent->max_health = ent->health;
-		ent->takedamage = DAMAGE_YES;
+		self->max_health = self->health;
+		self->takedamage = DAMAGE_YES;
 	}
 
-	if (ent->targetname == NULL || (ent->spawnflags & SF_TOUCH))
-		ent->isBlocking = FuncButtonTouch;
+	if (self->targetname == NULL || (self->spawnflags & SF_TOUCH))
+		self->isBlocking = FuncButtonTouch;
 
-	ent->moveinfo.state = STATE_BOTTOM;
-	ent->moveinfo.speed = ent->speed;
-	ent->moveinfo.accel = ent->accel;
-	ent->moveinfo.decel = ent->decel;
-	ent->moveinfo.wait = ent->wait;
+	self->moveinfo.state = STATE_BOTTOM;
+	self->moveinfo.speed = self->speed;
+	self->moveinfo.accel = self->accel;
+	self->moveinfo.decel = self->decel;
+	self->moveinfo.wait = self->wait;
 
-	VectorCopy(ent->pos1, ent->moveinfo.start_origin);
-	VectorCopy(ent->s.angles, ent->moveinfo.start_angles);
-	VectorCopy(ent->pos2, ent->moveinfo.end_origin);
-	VectorCopy(ent->s.angles, ent->moveinfo.end_angles);
+	VectorCopy(self->pos1, self->moveinfo.start_origin);
+	VectorCopy(self->s.angles, self->moveinfo.start_angles);
+	VectorCopy(self->pos2, self->moveinfo.end_origin);
+	VectorCopy(self->s.angles, self->moveinfo.end_angles);
 
-	ent->msgHandler = DefaultMsgHandler;
+	self->msgHandler = DefaultMsgHandler;
 }
 
 #pragma endregion
