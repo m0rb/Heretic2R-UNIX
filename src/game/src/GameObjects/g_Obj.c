@@ -2352,6 +2352,7 @@ void SP_obj_andwallhanging(edict_t* self)
 	VectorSet(self->maxs, 4.0f, 19.0f, 24.0f);
 
 	self->s.modelindex = (byte)gi.modelindex("models/objects/andwallhang/tris.fm");
+	self->spawnflags |= SF_OBJ_NOPUSH; //mxd
 
 	ObjectInit(self, 75, 100, MAT_WOOD, SOLID_BBOX);
 }
