@@ -96,45 +96,45 @@ void BreakableBrushUse(edict_t* target, edict_t* inflictor, edict_t* attacker) /
 }
 
 // QUAKED breakable_brush (1 .5 0) ? KILLALL NOLINK x x INVULNERABLE INVULNERABLE PUSHABLE NOPLAYERDAMAGE
-// A brush that explodes.
+// A brush that breaks when damaged.
 
 // Spawnflags:
 // KILLALL			- kills any brushes touching this one.
 // NOLINK			- can touch a KILLALL brush and not be linked to it.
 // INVULNERABLE		- if set, it can't be hurt.
-// PUSHABLE			- can be pushed by player.
+// PUSHABLE			- can be pushed by player. //TODO: can't be pushed by player!
 // NOPLAYERDAMAGE	- can't be damaged by player.
 
 // Variables:
 // health - amount of damage the brush can take before exploding.
 // materialtype:	0 = STONE; 1 = GREYSTONE (default); 2 = CLOTH; 3 = METAL; 4 = FLESH; 5 = POTTERY;
 //					6 = GLASS; 7 = LEAF; 8 = WOOD; 9 = BROWNSTONE; 10 = NONE - just makes smoke.
-void SP_breakable_brush(edict_t* ent)
+void SP_breakable_brush(edict_t* self)
 {
-	ent->msgHandler = DefaultMsgHandler;
+	self->msgHandler = DefaultMsgHandler;
 
-	if (ent->materialtype == 0) //TODO: it's impossible to set STONE (0) materialtype! Can't be fixed without either adjusting vanilla maps or adding vanilla map-fixing logic similar to Q2...
-		ent->materialtype = MAT_GREYSTONE;
+	if (self->materialtype == 0) //TODO: it's impossible to set STONE (0) materialtype! Can't be fixed without either adjusting vanilla maps or adding vanilla map-fixing logic similar to Q2...
+		self->materialtype = MAT_GREYSTONE;
 
-	if (ent->health == 0)
-		ent->health = 1;
+	if (self->health == 0)
+		self->health = 1;
 
-	if (ent->spawnflags & SF_NOPLAYERDAMAGE)
-		ent->svflags |= SVF_NO_PLAYER_DAMAGE;
+	if (self->spawnflags & SF_NOPLAYERDAMAGE)
+		self->svflags |= SVF_NO_PLAYER_DAMAGE;
 
-	ent->takedamage = ((ent->spawnflags & (SF_INVULNERABLE | SF_INVULNERABLE2)) ? DAMAGE_NO : DAMAGE_YES); //mxd. Preserve original logic... //TODO: are both of these spawnflags used in vanilla maps?
-	ent->movetype = ((ent->spawnflags & SF_PUSHABLE) ? PHYSICSTYPE_PUSH : PHYSICSTYPE_NONE);
-	ent->solid = SOLID_BSP;
+	self->takedamage = ((self->spawnflags & (SF_INVULNERABLE | SF_INVULNERABLE2)) ? DAMAGE_NO : DAMAGE_YES); //mxd. Preserve original logic... //TODO: are both of these spawnflags used in vanilla maps?
+	self->movetype = ((self->spawnflags & SF_PUSHABLE) ? PHYSICSTYPE_PUSH : PHYSICSTYPE_NONE);
+	self->solid = SOLID_BSP;
 
-	gi.setmodel(ent, ent->model);
-	gi.linkentity(ent);
+	gi.setmodel(self, self->model);
+	gi.linkentity(self);
 
 	// Use size to calculate mass.
 	vec3_t space;
-	VectorSubtract(ent->maxs, ent->mins, space);
-	ent->mass = (int)((space[0] * space[1] * space[2]) / 64.0f);
+	VectorSubtract(self->maxs, self->mins, space);
+	self->mass = (int)((space[0] * space[1] * space[2]) / 64.0f);
 
-	ent->use = BreakableBrushUse;
-	ent->think = LinkBreakableBrushesThink;
-	ent->nextthink = level.time + FRAMETIME;
+	self->use = BreakableBrushUse;
+	self->think = LinkBreakableBrushesThink;
+	self->nextthink = level.time + FRAMETIME;
 }
