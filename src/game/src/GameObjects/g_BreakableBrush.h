@@ -10,7 +10,7 @@
 
 extern void BBrushStaticsInit(void);
 extern void KillBrush(edict_t* target, edict_t* inflictor, edict_t* attacker, int damage);
-extern void SP_breakable_brush(edict_t* ent);
+extern void SP_breakable_brush(edict_t* self);
 
 //mxd. Required by save system...
 extern void BreakableBrushUse(edict_t* target, edict_t* inflictor, edict_t* attacker);
