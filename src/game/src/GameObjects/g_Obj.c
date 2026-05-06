@@ -500,7 +500,7 @@ static void ObjCorpseInit(edict_t* self) //mxd. Named 'SpawnCorpse' in original 
 	VectorSet(self->mins, -30.0f, -12.0f, -2.0f);
 	VectorSet(self->maxs, 30.0f, 12.0f, 2.0f);
 
-	self->spawnflags |= SF_OBJ_NOPUSH;	// Can't be pushed
+	self->spawnflags |= SF_OBJ_NOPUSH;	// Can't be pushed.
 	self->svflags |= SVF_DEADMONSTER; // Doesn't block walking.
 
 	ObjectInit(self, 40, 60, MAT_FLESH, SOLID_BBOX);
