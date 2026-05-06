@@ -35,7 +35,7 @@ void FuncButtonWait(edict_t* self) //mxd. Named 'button_wait' in original logic.
 	G_UseTargets(self, self->activator);
 	self->s.frame = 1;
 
-	if (self->moveinfo.wait >= 0)
+	if (self->moveinfo.wait >= 0.0f)
 	{
 		self->nextthink = level.time + self->moveinfo.wait;
 		self->think = FuncButtonReturn;
