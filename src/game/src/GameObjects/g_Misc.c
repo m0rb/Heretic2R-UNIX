@@ -36,6 +36,8 @@ void SP_func_areaportal(edict_t* ent)
 
 #pragma region ========================== path_corner ==========================
 
+#define SF_TELEPORT	1 //mxd
+
 void PathCornerTouch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t* surf) //mxd. Named 'path_corner_touch' in original logic.
 {
 	if (other->movetarget != self || other->enemy != NULL)
@@ -51,7 +53,7 @@ void PathCornerTouch(edict_t* self, edict_t* other, cplane_t* plane, csurface_t*
 
 	edict_t* next = ((self->target != NULL) ? G_PickTarget(self->target) : NULL);
 
-	if (next != NULL && (next->spawnflags & MSF_AMBUSH))
+	if (next != NULL && (next->spawnflags & SF_TELEPORT))
 	{
 		const vec3_t v = VEC3_INITA(next->s.origin, 0.0f, 0.0f, next->mins[2] - other->mins[2]);
 		VectorCopy(v, other->s.origin);
