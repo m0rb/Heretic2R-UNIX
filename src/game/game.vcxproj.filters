@@ -136,14 +136,14 @@
     <Filter Include="src\Cinematics\Siernan2">
       <UniqueIdentifier>{7e8b368d-045e-405e-96cf-0c6703794767}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\Cinematics\SithraVictim">
-      <UniqueIdentifier>{82ecc20a-6d70-45df-96e6-dfb9054dd1f6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\Cinematics\SsithraScout">
       <UniqueIdentifier>{086a15f8-edd9-4c5f-936d-b6960764b960}</UniqueIdentifier>
     </Filter>
     <Filter Include="src\Cinematics\Tome">
       <UniqueIdentifier>{be51f64d-2493-4520-8bc4-97d795c5ecfa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Cinematics\SsithraVictim">
+      <UniqueIdentifier>{82ecc20a-6d70-45df-96e6-dfb9054dd1f6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -289,10 +289,10 @@
       <Filter>src\Cinematics\Siernan2</Filter>
     </ClCompile>
     <ClCompile Include="src\Cinematics\SsithraVictim\c_SsithraVictim.c">
-      <Filter>src\Cinematics\SithraVictim</Filter>
+      <Filter>src\Cinematics\SsithraVictim</Filter>
     </ClCompile>
     <ClCompile Include="src\Cinematics\SsithraVictim\c_SsithraVictim_anim.c">
-      <Filter>src\Cinematics\SithraVictim</Filter>
+      <Filter>src\Cinematics\SsithraVictim</Filter>
     </ClCompile>
     <ClCompile Include="src\Cinematics\SsithraScout\c_SsithraScout.c">
       <Filter>src\Cinematics\SsithraScout</Filter>
@@ -903,13 +903,13 @@
       <Filter>src\Cinematics\Siernan2</Filter>
     </ClInclude>
     <ClInclude Include="src\Cinematics\SsithraVictim\c_SsithraVictim.h">
-      <Filter>src\Cinematics\SithraVictim</Filter>
+      <Filter>src\Cinematics\SsithraVictim</Filter>
     </ClInclude>
     <ClInclude Include="src\Cinematics\SsithraVictim\c_SsithraVictim_anim.h">
-      <Filter>src\Cinematics\SithraVictim</Filter>
+      <Filter>src\Cinematics\SsithraVictim</Filter>
     </ClInclude>
     <ClInclude Include="src\Cinematics\SsithraVictim\c_SsithraVictim_moves.h">
-      <Filter>src\Cinematics\SithraVictim</Filter>
+      <Filter>src\Cinematics\SsithraVictim</Filter>
     </ClInclude>
     <ClInclude Include="src\Cinematics\SsithraScout\c_SsithraScout.h">
       <Filter>src\Cinematics\SsithraScout</Filter>
