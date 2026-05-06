@@ -592,24 +592,26 @@ void ItemDropToFloor(edict_t* ent) //mxd. Named 'itemsdroptofloor' in original v
 
 	if (!(ent->spawnflags & ITEM_NO_DROP))
 	{
-		vec3_t dest = { 0.0f, 0.0f, -128.0f };
-		Vec3AddAssign(ent->s.origin, dest);
-
 		gi.linkentity(ent);
+		ent->s.origin[2] += 1.0f; //mxd. Start 1 unit higher to avoid tr.startsolid when item sits on the floor surface... M_DropToFloor() does the same thing, btw.
 
-		trace_t tr;
-		gi.trace(ent->s.origin, ent->mins, ent->maxs, dest, ent, MASK_SOLID, &tr);
+		trace_t trace;
+		const vec3_t end = VEC3_INITA(ent->s.origin, 0.0f, 0.0f, -128.0f);
+		gi.trace(ent->s.origin, ent->mins, ent->maxs, end, ent, MASK_SOLID, &trace);
 
-		if (tr.startsolid)
+		if (trace.startsolid)
 		{
-			gi.dprintf("droptofloor: %s startsolid at %s (inhibited)\n", ent->classname, vtos(ent->s.origin));
+			gi.dprintf("ItemDropToFloor: %s at %s started in solid (inhibited)\n", ent->classname, vtos(ent->s.origin));
 			G_FreeEdict(ent);
 
 			return;
 		}
 
-		tr.endpos[2] += 24.0f;
-		VectorCopy(tr.endpos, ent->s.origin);
+		if (trace.fraction == 1.0f) //mxd
+			gi.dprintf("ItemDropToFloor: %s at %s more than 128 off ground, waiting to fall\n", ent->classname, vtos(ent->s.origin));
+
+		trace.endpos[2] += 24.0f;
+		VectorCopy(trace.endpos, ent->s.origin);
 	}
 
 	gi.linkentity(ent);
