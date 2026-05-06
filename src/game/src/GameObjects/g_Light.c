@@ -561,9 +561,7 @@ void SP_light_buglight(edict_t* self)
 	VectorSet(self->mins, -7.0f, -7.0f, -7.0f);
 	VectorSet(self->maxs, 7.0f, 7.0f, 25.0f);
 
-	LightInit(self);
-
-	self->s.frame = 1;
+	LightInit(self); //mxd. Original logic also sets s.frame:1 (the model has single frame).
 
 	if (!(self->spawnflags & SF_TORCH_NOHALO))
 		self->PersistantCFX = gi.CreatePersistantEffect(NULL, FX_HALO, 0, self->s.origin, "");
