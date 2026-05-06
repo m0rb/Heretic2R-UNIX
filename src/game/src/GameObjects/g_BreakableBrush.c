@@ -79,10 +79,7 @@ void LinkBreakableBrushesThink(edict_t* self) //mxd. Named 'LinkBreakables' in o
 			return;
 		}
 
-		if (ent->spawnflags & SF_NOLINK)
-			continue;
-
-		if (EntitiesTouching(self, t))
+		if (!(ent->spawnflags & SF_NOLINK) && EntitiesTouching(self, t))
 		{
 			if (t->enemy != NULL)
 				return;
