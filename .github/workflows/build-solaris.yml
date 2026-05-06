@@ -36,8 +36,8 @@ jobs:
             export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/64/pkgconfig
 
             NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
-            gmake -j$NCPU
-            gmake server -j$NCPU
+            CC=gcc CXX=g++ gmake -j$NCPU
+            CC=gcc CXX=g++ gmake server -j$NCPU
 
             mkdir -p dist dist-ded
             cp build/release/heretic2r dist/
