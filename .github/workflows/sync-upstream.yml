@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: origin/main
           # Use PAT so downstream workflows fire on the resulting push.
           token: ${{ secrets.SYNC_PAT || secrets.GITHUB_TOKEN }}
 
