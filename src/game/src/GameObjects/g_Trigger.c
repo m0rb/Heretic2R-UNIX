@@ -323,7 +323,7 @@ void SP_trigger_puzzle(edict_t* self)
 {
 	if (st.item == NULL)
 	{
-		gi.dprintf("no key item for trigger_key at %s\n", vtos(self->s.origin));
+		gi.dprintf("No puzzle item for %s at %s\n", self->classname, vtos(self->s.origin));
 		return;
 	}
 
@@ -331,7 +331,7 @@ void SP_trigger_puzzle(edict_t* self)
 
 	if (self->item == NULL)
 	{
-		gi.dprintf("item %s not found for trigger_key at %s\n", st.item, vtos(self->s.origin));
+		gi.dprintf("Item '%s' not found for %s at %s\n", st.item, self->classname, vtos(self->s.origin));
 		return;
 	}
 
