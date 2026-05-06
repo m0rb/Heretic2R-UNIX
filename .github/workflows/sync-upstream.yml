@@ -77,8 +77,8 @@ jobs:
         if: steps.check.outputs.skip == 'false'
         id: rebase
         run: |
-          git checkout unix
-          if git rebase main; then
+          git switch unix
+          if git rebase refs/heads/main; then
             echo "success=true" >> "$GITHUB_OUTPUT"
           else
             git diff --name-only --diff-filter=U > /tmp/conflicts.txt || true
@@ -93,7 +93,7 @@ jobs:
 
       - name: Push rebased unix
         if: steps.check.outputs.skip == 'false' && steps.rebase.outputs.success == 'true'
-        run: git push origin unix --force-with-lease
+        run: git push origin HEAD:refs/heads/unix --force-with-lease
 
       # Mirror upstream release tags: R5 → R5-unix (points to unix HEAD at
       # time of integration, i.e. the unix port that includes all R5 changes).
