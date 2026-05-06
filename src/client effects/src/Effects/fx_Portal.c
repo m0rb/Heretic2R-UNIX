@@ -176,7 +176,7 @@ static qboolean MagicPortalUpdate(client_entity_t* self, centity_t* owner) //mxd
 void FXMagicPortal(centity_t* owner, const int type, const int flags, vec3_t origin)
 {
 	vec3_t dir;
-	byte color;
+	byte color; //TODO: unimplemented (0: blue, 1: red, 2: green).
 	byte duration;
 	fxi.GetEffect(owner, flags, clientEffectSpawners[FX_MAGIC_PORTAL].formatString, dir, &color, &duration);
 
