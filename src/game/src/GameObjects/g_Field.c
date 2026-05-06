@@ -248,7 +248,7 @@ void SP_trigger_gravity(edict_t* self)
 	else
 	{
 		InitField(self);
-		self->gravity = (float)(Q_atoi(st.gravity));
+		self->gravity = (float)(Q_atoi(st.gravity)); //TODO: parse as float?
 		self->touch = TriggerGravityTouch;
 	}
 }
