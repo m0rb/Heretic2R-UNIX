@@ -21,7 +21,7 @@
 int MonsterHealth(int health)
 {
 	if (SKILL > SKILL_MEDIUM)
-		health += (int)((float)health * (skill->value - 1.0f) / 2.0f); // 150% on Armageddon (skill 3).
+		health += (int)((float)health * (skill->value - 1.0f) / 2.0f); // 150% on Hard (skill 2), 200% on Too Hard (skill 3).
 
 	return health + (int)((float)health * ((float)(game.maxclients - 1) * 0.25f)); // 175% with 4 players.
 }
@@ -749,7 +749,7 @@ void M_WalkmonsterStartGo(edict_t* self) //mxd. Named 'walkmonster_start_go' in 
 		self->yaw_speed = 20.0f;
 
 	//mxd. Original logic invariantly sets viewheight to 25 instead.
-	assert(self->viewheight > 0 && self->viewheight < (int)(self->maxs[2] * self->s.scale) - 1);
+	assert(self->viewheight > 0 && self->viewheight < (int)(self->maxs[2] * self->s.scale));
 
 	//H2_BUGFIX: mxd. Original logic calls M_MonsterStartGo() regardless of MSF_ASLEEP flag, which results in M_BBoxAndOriginAdjustForScale() called twice for triggered monsters, resulting in incorrect bbox size.
 	if (self->spawnflags & MSF_ASLEEP)
