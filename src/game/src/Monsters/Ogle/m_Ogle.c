@@ -123,8 +123,9 @@ void SP_obj_corpse_ogle(edict_t* self)
 {
 	self->s.origin[2] += 22.0f;
 
-	VectorSet(self->mins, -30.0f, -30.0f, -2.0f);
-	VectorSet(self->maxs, 30.0f, 30.0f, 8.0f);
+	//mxd. (-30 -30 -2) (30 30 8) in original logic. Adjusted to match model dimensions...
+	VectorSet(self->mins, -30.0f, -30.0f, -24.0f);
+	VectorSet(self->maxs, 30.0f, 30.0f, -8.0f);
 
 	self->s.modelindex = (byte)gi.modelindex("models/monsters/ogle/tris.fm");
 	self->s.frame = FRAME_deatha14;	// Ths is the reason the function can't be put in g_obj.c.
