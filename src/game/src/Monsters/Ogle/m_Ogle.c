@@ -113,6 +113,11 @@ static int sounds[NUM_SOUNDS];
 
 #pragma region ========================== obj_corpse_ogle ==========================
 
+//mxd
+#define SF_OGLE_CORPSE_PICK		16
+#define SF_OGLE_CORPSE_CHISEL	32
+#define SF_OGLE_CORPSE_HAMMER	64
+
 // QUAKED obj_corpse_ogle (1 .5 0) (-30 -12 -2) (30 12 2) OF_PUSHING OF_PICK_UP OF_PICK_DOWN x x OF_HAMMER_UP OF_HAMMER_DOWN
 // A dead ogle.
 // Variables:
@@ -133,31 +138,27 @@ void SP_obj_corpse_ogle(edict_t* self)
 	self->style = ((self->style == 0) ? 1 : 0); // Set the skinnum correctly.
 	self->svflags |= SVF_DEADMONSTER; // Doesn't block walking.
 
-	if (self->monsterinfo.ogleflags & OF_PUSHING)
-	{
-		self->s.fmnodeinfo[MESH__NAIL].flags |= FMNI_NO_DRAW;
-		self->s.fmnodeinfo[MESH__HAMMER].flags |= FMNI_NO_DRAW;
-		self->s.fmnodeinfo[MESH__PICK].flags |= FMNI_NO_DRAW;
-	}
-	else if (self->monsterinfo.ogleflags & OF_PICK_UP)
+	//mxd. Original logic checks monsterinfo.ogleflags (never set).
+	if (self->spawnflags & SF_OGLE_CORPSE_PICK)
 	{
 		self->s.fmnodeinfo[MESH__NAIL].flags |= FMNI_NO_DRAW;
 		self->s.fmnodeinfo[MESH__HAMMER].flags |= FMNI_NO_DRAW;
 	}
-	else if (self->monsterinfo.ogleflags & OF_PICK_DOWN)
+	else if (self->spawnflags & SF_OGLE_CORPSE_CHISEL)
 	{
-		SetAnim(self, ANIM_WORK5);
+		self->s.fmnodeinfo[MESH__PICK].flags |= FMNI_NO_DRAW;
+	}
+	else if (self->spawnflags & SF_OGLE_CORPSE_HAMMER)
+	{
+		self->s.fmnodeinfo[MESH__NAIL].flags |= FMNI_NO_DRAW;
+		self->s.fmnodeinfo[MESH__PICK].flags |= FMNI_NO_DRAW;
+	}
+	else
+	{
 		self->s.fmnodeinfo[MESH__NAIL].flags |= FMNI_NO_DRAW;
 		self->s.fmnodeinfo[MESH__HAMMER].flags |= FMNI_NO_DRAW;
-	}
-	else if (self->monsterinfo.ogleflags & (OF_HAMMER_UP | OF_HAMMER_DOWN))
-	{
-		self->s.fmnodeinfo[MESH__NAIL].flags |= FMNI_NO_DRAW;
 		self->s.fmnodeinfo[MESH__PICK].flags |= FMNI_NO_DRAW;
-	}
-	else // OF_CHISEL_UP, OF_CHISEL_DOWN, default.
-	{
-		self->s.fmnodeinfo[MESH__PICK].flags |= FMNI_NO_DRAW;
+		self->s.fmnodeinfo[MESH__HANDLE].flags |= FMNI_NO_DRAW;
 	}
 
 	ObjectInit(self, 40, 80, MAT_FLESH, SOLID_BBOX);
