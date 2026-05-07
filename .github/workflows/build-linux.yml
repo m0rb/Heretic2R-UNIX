@@ -10,7 +10,15 @@ on:
 
 
 jobs:
+  check-include-case:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify #include case matches filesystem
+        run: python3 scripts/check-include-case.py
+
   build:
+    needs: check-include-case
     strategy:
       fail-fast: false
       matrix:
