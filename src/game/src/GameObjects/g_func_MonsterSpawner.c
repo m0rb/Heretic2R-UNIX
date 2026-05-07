@@ -107,7 +107,7 @@ static int cid_for_spawner_style[] =
 	CID_MSSITHRA,
 	CID_HARPY,
 	CID_FISH,
-	CID_CHICKEN,
+	CID_CHICKEN, //TODO: non-functional: chicken will despawn after a short delay.
 	CID_SSITHRA,
 	CID_GKROKON,
 	CID_RAT,
