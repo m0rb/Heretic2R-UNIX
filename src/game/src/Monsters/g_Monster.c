@@ -235,7 +235,8 @@ void M_DropToFloor(edict_t* ent) //mxd. Named 'M_droptofloor' in original logic.
 
 	trace_t trace;
 	const vec3_t end = VEC3_INITA(ent->s.origin, 0.0f, 0.0f, -256.0f);
-	gi.trace(ent->s.origin, ent->mins, ent->maxs, end, ent, MASK_MONSTERSOLID, &trace);
+	const int mask = ((ent->svflags & SVF_DEADMONSTER) ? MASK_DEADSOLID : MASK_MONSTERSOLID); //mxd. Allow initially dead monsters (like obj_corpse_ogle, obj_corpse_ssithra etc.) to fall through regular monsters instead of getting stuck in them.
+	gi.trace(ent->s.origin, ent->mins, ent->maxs, end, ent, mask, &trace);
 
 	if (trace.allsolid || trace.startsolid)
 	{
