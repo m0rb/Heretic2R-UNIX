@@ -154,17 +154,19 @@ static void FuncPlatSpawnInsideTrigger(edict_t* ent) //mxd. Named 'plat_spawn_in
 	gi.linkentity(trigger);
 }
 
-// QUAKED func_plat (0 .5 .8) ? PLAT_LOW_TRIGGER
+// QUAKED func_plat (0 .5 .8) ? PLAT_LOW_TRIGGER x PLAT_CRUSHER
 // Plats are always drawn in the extended position, so they will light correctly.
 // If the plat is the target of another trigger or button, it will start out disabled in the extended position until it is triggered,
 // when it will lower and become a normal plat.
 
 // Spawnflags:
 // PLAT_LOW_TRIGGER - When set, platform trigger height is 8.
+// PLAT_CRUSHER - Crush blocking entities rather than returning.
 
 // Variables:
 // speed	- overrides default 200.
-// accel	- overrides default 500.
+// accel	- overrides default 50.
+// decel	- overrides default 50.
 // lip		- overrides default 8 pixel lip.
 // height	- is set, that will determine the amount the plat moves, instead of being implicitly determined by the model's height.
 // sounds:
@@ -243,7 +245,7 @@ void SP_func_plat(edict_t* ent)
 	ent->moveinfo.speed = ent->speed;
 	ent->moveinfo.accel = ent->accel;
 	ent->moveinfo.decel = ent->decel;
-	ent->moveinfo.wait = ent->wait;
+	ent->moveinfo.wait = ent->wait; //TODO: never used. Use in FuncPlatHitTop()?
 
 	VectorCopy(ent->pos1, ent->moveinfo.start_origin);
 	VectorCopy(ent->s.angles, ent->moveinfo.start_angles);
