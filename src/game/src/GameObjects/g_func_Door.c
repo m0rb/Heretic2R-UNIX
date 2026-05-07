@@ -489,7 +489,6 @@ void SP_func_door(edict_t* self)
 // Variables:
 // distance		- How many degrees the door will be rotated.
 // message		- Is printed when the door is touched if it is a trigger door and it hasn't been fired yet.
-// angle		- Determines the opening direction.
 // targetname	- If set, no touch field will be spawned and a remote button or trigger field activates the door.
 // health		- If set, door must be shot open.
 // speed		- Movement speed (default 100).
@@ -631,7 +630,7 @@ void SP_func_door_rotating(edict_t* ent)
 // speed	- Movement speed (default 25).
 // wait		- Wait before returning (default -1, -1 = TOGGLE).
 // lip		- Lip remaining at end of move (default 0).
-// sounds: (yes, these need to be changed)
+// sounds: (yes, these need to be changed) //TODO: not implemented
 //		0)	No sound.
 //		1)	Water.
 //		2)	Lava.
