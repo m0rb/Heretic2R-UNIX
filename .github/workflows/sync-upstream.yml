@@ -28,6 +28,9 @@ jobs:
           git config rerere.enabled true
           git config rerere.autoupdate true
           git config checkout.defaultRemote origin
+          # .gitattributes normalizes line endings; tell merge/rebase to honor it
+          # so upstream CRLF doesn't conflict with unix LF on identical content.
+          git config merge.renormalize true
 
       # Persist rerere resolutions across runs so recurring conflict patterns
       # (same upstream change vs same unix patch) auto-resolve without manual intervention.
