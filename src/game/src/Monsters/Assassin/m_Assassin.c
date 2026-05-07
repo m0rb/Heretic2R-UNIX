@@ -2206,6 +2206,8 @@ void SP_monster_assassin(edict_t* self)
 	if (self->health == 0)
 		self->health = ASSASSIN_HEALTH * (SKILL + 1) / 3;
 
+	self->max_health = self->health; //mxd
+
 	self->mass = ASSASSIN_MASS;
 	self->yaw_speed = 20.0f;
 

@@ -113,6 +113,8 @@ void SP_monster_tcheckrik_mothers(edict_t* self)
 	if (self->health == 0)
 		self->health = PLAGUEELF_HEALTH; //TODO: Add separate define? //TODO: Also call MonsterHealth()?
 
+	self->max_health = self->health; //mxd
+
 	self->mass = 2000;
 	self->yaw_speed = 20.0f;
 
