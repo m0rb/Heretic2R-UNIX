@@ -52,16 +52,23 @@ jobs:
         run: |
           LOCAL=$(git rev-parse origin/main)
           UPSTREAM=$(git rev-parse upstream/main)
-          if [ "$LOCAL" = "$UPSTREAM" ]; then
-            echo "Already up to date with upstream."
+          UNIX_BASE=$(git merge-base origin/unix "$UPSTREAM")
+          # Skip only if main is at upstream AND unix is already rebased on it.
+          # A failed rebase used to strand unix behind once main caught up.
+          if [ "$LOCAL" = "$UPSTREAM" ] && [ "$UNIX_BASE" = "$UPSTREAM" ]; then
+            echo "main and unix both up to date with upstream."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            COUNT=$(git rev-list --count "$LOCAL..$UPSTREAM")
-            echo "Found $COUNT new upstream commit(s)."
             echo "skip=false" >> "$GITHUB_OUTPUT"
+            if [ "$LOCAL" != "$UPSTREAM" ]; then
+              echo "Found $(git rev-list --count "$LOCAL..$UPSTREAM") new upstream commit(s)."
+            fi
+            if [ "$UNIX_BASE" != "$UPSTREAM" ]; then
+              echo "unix needs rebase across $(git rev-list --count "$UNIX_BASE..$UPSTREAM") commit(s)."
+            fi
             {
               echo 'log<<EOF'
-              git log --oneline "$LOCAL..$UPSTREAM"
+              git log --oneline "$UNIX_BASE..$UPSTREAM"
               echo 'EOF'
             } >> "$GITHUB_OUTPUT"
           fi
@@ -69,12 +76,16 @@ jobs:
       - name: Fast-forward main to upstream
         if: steps.check.outputs.skip == 'false'
         run: |
+          # Idempotent: if main is already at upstream, --ff-only is a no-op
+          # and the push is "Everything up-to-date".
           git checkout main
           git merge --ff-only upstream/main
           # Strip any upstream workflow changes — GITHUB_TOKEN can't push them,
           # and the unix branch manages its own workflows anyway.
           git checkout origin/main -- .github/workflows/ 2>/dev/null || true
-          git push origin HEAD:refs/heads/main
+          if ! git diff --quiet origin/main HEAD; then
+            git push origin HEAD:refs/heads/main
+          fi
 
       - name: Rebase unix onto main
         if: steps.check.outputs.skip == 'false'
