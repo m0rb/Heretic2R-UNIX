@@ -1499,6 +1499,17 @@ static char smk_render_audio(struct smk_audio_t * s, unsigned char * p, unsigned
 			((unsigned int) p[2] << 16) |
 			((unsigned int) p[1] << 8) |
 			((unsigned int) p[0]);
+
+		// Ensure internal buffer is large enough before decompressing --morb
+		if (s->buffer_size > (unsigned long)s->max_buffer) {
+			void * newbuf = realloc(s->buffer, s->buffer_size);
+			if (newbuf == NULL) {
+				perror("libsmacker::smk_render_audio() - ERROR: realloc failed");
+				goto error;
+			}
+			s->buffer = newbuf;
+			s->max_buffer = (long)s->buffer_size;
+		}
 		p += 4;
 		size -= 4;
 		/* Compressed audio: must unpack here */

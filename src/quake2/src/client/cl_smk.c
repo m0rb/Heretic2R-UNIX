@@ -147,8 +147,17 @@ static void SCR_DoVideoFrame(void)
 	}
 
 	// Store audio frame in auxiliary buffer.
-	if (smk_audio_frame_size > 0)
+	if (smk_audio_frame_size > 0 && spi.audio_buffer != NULL)
 	{
+		// realloc to prevent buffer overflow --morb
+		const int needed = spi.audio_buffer_end + smk_audio_frame_size;
+		if (needed > spi.audio_buffer_size)
+		{
+			spi.audio_buffer_size = needed + (int)((float)(spi.snd_rate * spi.snd_width * spi.snd_channels) / spi.fps);
+			byte* new_buf = realloc(spi.audio_buffer, spi.audio_buffer_size);
+			if (new_buf != NULL)
+				spi.audio_buffer = new_buf;
+		}
 		memcpy(spi.audio_buffer + spi.audio_buffer_end, smk_get_audio(spi.smk_obj, 0), smk_audio_frame_size);
 		spi.audio_buffer_end += smk_audio_frame_size;
 	}
