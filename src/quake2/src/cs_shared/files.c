@@ -524,6 +524,29 @@ static void FS_AddGameDirectory(char* dir)
 		Com_sprintf(pakfile, sizeof(pakfile), "%s/Htic2-%i.pak", dir, i);
 
 		pack_t* pak = FS_LoadPackFile(pakfile);
+
+		// try lowercase filename
+		if (pak == NULL) {
+		    Com_sprintf(pakfile, sizeof(pakfile), "%s/htic2-%i.pak", dir, i);
+			pak = FS_LoadPackFile(pakfile);
+		}
+
+		if (pak != NULL)
+		{
+			searchpath_t* search = Z_Malloc(sizeof(searchpath_t));
+			search->pack = pak;
+			search->next = fs_searchpaths;
+			fs_searchpaths = search;
+		}
+	}
+
+	// Add language pack
+	const char *language_pack[] = { "french", "german", "italian", "spanish", NULL };
+	for (int i = 0; language_pack[i]; i++) {
+		char pakfile[MAX_OSPATH];
+		Com_sprintf(pakfile, sizeof(pakfile), "%s/%s-1.pak", dir, language_pack[i]);
+
+		pack_t* pak = FS_LoadPackFile(pakfile);
 		if (pak != NULL)
 		{
 			searchpath_t* search = Z_Malloc(sizeof(searchpath_t));
