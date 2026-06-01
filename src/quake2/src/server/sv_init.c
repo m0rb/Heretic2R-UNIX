@@ -452,7 +452,13 @@ static void SetNextserver(char* levelstring)
 		*ch = 0;
 
 		// Skip intro/outro cinematics in multiplayer.
-		if ((Cvar_IsSet("coop") || Cvar_IsSet("deathmatch")) && (strcmp(levelstring, "intro.smk") == 0 || strcmp(levelstring, "outro.smk") == 0))
+		if (
+		    (Cvar_IsSet("coop") || Cvar_IsSet("deathmatch")) &&
+		    (
+			strcmp(levelstring, "intro.smk") == 0 || strcmp(levelstring, "outro.smk") == 0 ||
+			strcmp(levelstring, "intro.mpg") == 0 || strcmp(levelstring, "outro.mpg") == 0
+		    )
+		)
 		{
 			// 'intro.smk+ssdocks' -> 'ssdocks'.
 			memmove(levelstring, levelstring + strlen(levelstring) + 1, strlen(ch + 1) + 1);
@@ -494,7 +500,10 @@ qboolean SV_ValidateMapFilename(const char* level)
 		return true;
 
 	// Check movie file.
-	return (Q_stricmp(&level[strlen(level) - 4], ".smk") == 0);
+	return (
+		Q_stricmp(&level[strlen(level) - 4], ".smk") == 0 ||
+		Q_stricmp(&level[strlen(level) - 4], ".mpg") == 0
+	);
 }
 
 // The full syntax is:
@@ -549,7 +558,7 @@ void SV_Map(const qboolean attractloop, const char* levelstring, const qboolean 
 
 	const char* ext = ((len <= 4) ? NULL : level + len - 4); //mxd
 
-	if (ext != NULL && strcmp(ext, ".smk") == 0)
+	if (ext != NULL && (strcmp(ext, ".smk") == 0 || strcmp(ext, ".mpg") == 0))
 	{
 		SV_SpawnServer(level, spawnpoint, ss_cinematic, attractloop, loadgame);
 	}
