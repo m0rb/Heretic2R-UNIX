@@ -31,6 +31,7 @@ jobs:
           # .gitattributes normalizes line endings; tell merge/rebase to honor it
           # so upstream CRLF doesn't conflict with unix LF on identical content.
           git config merge.renormalize true
+          printf '* text=auto eol=lf\n' > .git/info/attributes
 
       # Persist rerere resolutions across runs so recurring conflict patterns
       # (same upstream change vs same unix patch) auto-resolve without manual intervention.
