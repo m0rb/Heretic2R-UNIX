@@ -30,7 +30,7 @@ jobs:
               -DSDL_STATIC=OFF \
               -DSDL_TEST=OFF \
               -DSDL_KMSDRM=OFF
-            cmake --build SDL3-build --parallel
+            cmake --build SDL3-build
             cmake --install SDL3-build
 
             export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib/64/pkgconfig
