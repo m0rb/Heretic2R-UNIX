@@ -142,7 +142,9 @@ void VID_Shutdown(void)
 
 qboolean VID_InitGraphics(int width, int height)
 {
-    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
+#if !defined(__APPLE__) && !defined(__HAIKU__)
+    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "wayland,x11");
+#endif
 
     if (window != NULL)
     {
