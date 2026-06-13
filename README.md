@@ -31,6 +31,7 @@ Loki Games Linux Release:
 - If said files are missing, you can either install [Heretic II v1.06 official patch](https://community.pcgamingwiki.com/files/file/1736-heretic-ii-enhancement-pack/) (also known as **Heretic II Enhancement Pack**), or extract [Heretic_II_Patch_106_for_H2R.zip](https://github.com/m-x-d/Heretic2R/tree/main/stuff) archive into Heretic II folder.
 
 Loki Games shipped version 1.06a.01.0504.01 -- patching is unnecessary.
+
 ---
 **Music:**  
 To enable OGG music playback, rip Heretic II CD tracks as **track02.ogg - track14.ogg** and place them in "**base\music**" folder.
