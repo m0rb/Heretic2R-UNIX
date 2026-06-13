@@ -19,6 +19,7 @@ set(INCLUDE_DIRS
     include/SDL3
     include/stb
     include/libsmacker
+    include/pl_mpeg
     src/qcommon                  # H2-specific shared headers (FX.h, Vector.h, …)
     src/quake2/src               # quake2 engine root (client/, server/, cs_shared/, win32/)
     src/quake2/src/cs_shared     # cmd.c / cmodel.c / common.c / …
@@ -102,6 +103,8 @@ set(CLIENT_SOURCES
     src/quake2/src/client/cl_screen.c
     src/quake2/src/client/cl_demo.c
     src/quake2/src/client/cl_smk.c
+    src/quake2/src/client/cl_mpeg.c
+    include/pl_mpeg/pl_mpeg.c
     src/quake2/src/client/cl_skeletons.c
     src/quake2/src/client/cl_inventory.c
     src/quake2/src/client/cl_messages.c
