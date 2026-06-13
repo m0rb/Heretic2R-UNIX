@@ -6,10 +6,15 @@
 
 #include <libsmacker/smacker.h>
 #include "client.h"
+#include "cl_mpeg.h"
 
 #ifndef _WIN32
 #include "../unix/compat.h"
 #endif
+
+// Which backend is driving the active cinematic: false = Smacker, true = MPEG.
+// Selected by file extension in SCR_PlayCinematic. --morb
+static qboolean cin_is_mpeg;
 
 typedef struct SMKPlaybackInfo_s
 {
@@ -194,7 +199,7 @@ static void SCR_DoAudioFrame(void) // Called every renderframe.
 
 void SCR_PlayCinematic(const char* name)
 {
-	char smk_filepath[MAX_OSPATH];
+	char cin_filepath[MAX_OSPATH];
 
 	//mxd. SCR_BeginLoadingPlaque() in original logic.
 	se.StopAllSounds_Sounding();
@@ -202,39 +207,60 @@ void SCR_PlayCinematic(const char* name)
 
 	//mxd. Skip 'SmackW32.dll' loading logic.
 
-	sprintf_s(smk_filepath, sizeof(smk_filepath), "video/%s", name); //mxd. sprintf -> sprintf_s
-	const char* path = FS_GetPath(smk_filepath);
+	sprintf_s(cin_filepath, sizeof(cin_filepath), "video/%s", name); //mxd. sprintf -> sprintf_s
+	// now cin_filepath. --morb
+	const char* path = FS_GetPath(cin_filepath);
 	if (path == NULL)
 	{
-		Com_Printf("...Unable to find file '%s'\n", smk_filepath);
+		Com_Printf("...Unable to find file '%s'\n", cin_filepath);
 		SCR_FinishCinematic();
 
 		return;
 	}
 
-	// Use Sys_FindFirst so the resolved on-fs filename is used instead. --morb
-	//sprintf_s(smk_filepath, sizeof(smk_filepath), "%s/video/%s", path, name); //mxd. sprintf -> sprintf_s
+	// Use Sys_FindFirst so the resolved filename is used instead. --morb
 	{
 		char candidate[MAX_OSPATH];
 		sprintf_s(candidate, sizeof(candidate), "%s/video/%s", path, name);
 		const char* found = Sys_FindFirst(candidate, 0, 0);
-		sprintf_s(smk_filepath, sizeof(smk_filepath), "%s", found != NULL ? found : candidate);
+		sprintf_s(cin_filepath, sizeof(cin_filepath), "%s", found != NULL ? found : candidate);
 		Sys_FindClose();
 	}
-	Com_Printf("Opening cinematic file: '%s'...\n", smk_filepath);
+	Com_Printf("Opening cinematic file: '%s'...\n", cin_filepath);
 
-	if (!SMK_Open(smk_filepath))
+	// Dispatch by extension --morb
+	const char* ext = strrchr(name, '.');
+	cin_is_mpeg = (ext != NULL && Q_stricmp(ext, ".mpg") == 0);
+
+	if (cin_is_mpeg)
 	{
-		Com_Printf("...Unable to open file\n");
-		SCR_FinishCinematic();
+		if (!MPEG_Open(cin_filepath))
+		{
+			Com_Printf("...Unable to open file\n");
+			SCR_FinishCinematic();
 
-		return;
+			return;
+		}
+
+		// MPEG drives its own playback clock; cl.cinematictime is just the "active"
+		// flag for the rest of the engine. --morb
+		cl.cinematictime = max(1, cls.realtime);
 	}
+	else
+	{
+		if (!SMK_Open(cin_filepath))
+		{
+			Com_Printf("...Unable to open file\n");
+			SCR_FinishCinematic();
 
-	cl.cinematictime = (int)((float)cls.realtime - 2000.0f / spi.fps);
-	cl.cinematictime = max(1, cl.cinematictime); //mxd. Ensure positive value (can get negative value here, because unlike original logic, cls.realtime starts from 0).
+			return;
+		}
 
-	SCR_DoVideoFrame(); // Advance cinematic_frame to match with cl.cinematictime in SCR_RunCinematic()...
+		cl.cinematictime = (int)((float)cls.realtime - 2000.0f / spi.fps);
+		cl.cinematictime = max(1, cl.cinematictime); //mxd. Ensure positive value (can get negative value here, because unlike original logic, cls.realtime starts from 0).
+
+		SCR_DoVideoFrame(); // Advance cinematic_frame to match with cl.cinematictime in SCR_RunCinematic()...
+	}
 
 	Cvar_SetValue("paused", 0);
 	cls.state = ca_connected;
@@ -248,7 +274,12 @@ void SCR_PlayCinematic(const char* name)
 
 void SCR_DrawCinematic(void) // Called every rendered frame.
 {
-	if (cl.cinematictime > 0)
+	if (cl.cinematictime <= 0)
+		return;
+
+	if (cin_is_mpeg)
+		MPEG_Draw(); // Loki cinematics. --morb
+	else
 		re.DrawCinematic(spi.video_frame, (const paletteRGB_t*)spi.palette);
 }
 
@@ -256,6 +287,12 @@ void SCR_RunCinematic(void) // Called every rendered frame.
 {
 	if (cl.cinematictime < 1)
 		return;
+
+	if (cin_is_mpeg)
+	{
+		MPEG_Run(); // Loki cinematics. --morb
+		return;
+	}
 
 	// Pause if menu or console is up.
 	if (cls.key_dest != key_game)
@@ -298,7 +335,11 @@ void SCR_RunCinematic(void) // Called every rendered frame.
 void SCR_StopCinematic(void)
 {
 	cl.cinematictime = 0; // Done
-	SMK_Shutdown(); // H2
+
+	if (cin_is_mpeg)
+		MPEG_Shutdown(); // Loki cinematics. --morb
+	else
+		SMK_Shutdown(); // H2
 }
 
 // Called when either the cinematic completes, or it is aborted.

@@ -232,6 +232,7 @@ CLIENT_SRCS := \
 	$(CLIENT_DIR)/cl_screen.c \
 	$(CLIENT_DIR)/cl_skeletons.c \
 	$(CLIENT_DIR)/cl_smk.c \
+	$(CLIENT_DIR)/cl_mpeg.c \
 	$(CLIENT_DIR)/cl_view.c \
 	$(CLIENT_DIR)/console.c \
 	$(CLIENT_DIR)/glimp_sdl3.c \
@@ -240,6 +241,7 @@ CLIENT_SRCS := \
 	$(CLIENT_DIR)/menu.c \
 	$(wildcard $(CLIENT_DIR)/menus/*.c) \
 	$(INCLUDE_DIR)/libsmacker/smacker.c \
+	$(INCLUDE_DIR)/pl_mpeg/pl_mpeg.c \
 	src/snd_sdl3/src/snd_main.c \
 	src/snd_sdl3/src/snd_sdl3.c \
 	src/snd_sdl3/src/snd_wav.c \

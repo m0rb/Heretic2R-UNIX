@@ -9,7 +9,6 @@
 #include "qcommon.h"
 
 #define REF_API_VERSION		4 // H2: 3. Changed because of H2R rendering API changes.
-
 // These are the maximum number that may be rendered on any given frame.
 #define MAX_DLIGHTS			32
 #define MAX_ENTITIES		128	
@@ -232,6 +231,9 @@ typedef struct refexport_s
 	void (*DrawInitCinematic)(int width, int height);
 	void (*DrawCloseCinematic)(void);
 	void (*DrawCinematic)(const byte* data, const paletteRGB_t* palette);
+	// Full-color cinematic path for MPEG (RGBA frames, no palette). --morb
+	void (*DrawInitCinematicRGBA)(int width, int height);
+	void (*DrawCinematicRGBA)(const byte* rgba);
 	void (*Draw_Name)(const vec3_t origin, const char* name, paletteRGBA_t color);
 
 	// Video mode and refresh state management entry points.

@@ -22,6 +22,7 @@ extern void R_BindImage(const image_t* image);
 extern void R_MBind(GLenum target, int texnum);
 extern void R_MBindImage(GLenum target, const image_t* image);
 extern void R_UploadPaletted(int level, const byte* data, const paletteRGB_t* palette, int width, int height);
+extern void R_UploadRGBA(int level, const byte* rgba, int width, int height); // Cinematic RGBA upload (MPEG). --morb
 extern void R_FreeImageNoHash(image_t* image);
 extern void R_FreeUnusedImages(void);
 

@@ -375,6 +375,12 @@ void R_UploadPaletted(const int level, const byte* data, const paletteRGB_t* pal
 	glTexImage2D(GL_TEXTURE_2D, level, GL_TEX_SOLID_FORMAT, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, upload_buffer);
 }
 
+// Upload a tightly-packed 32-bit RGBA frame (used by the MPEG cinematic path). --morb
+void R_UploadRGBA(const int level, const byte* rgba, const int width, const int height)
+{
+	glTexImage2D(GL_TEXTURE_2D, level, GL_TEX_SOLID_FORMAT, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+}
+
 static void GrabPalette(paletteRGB_t* src, paletteRGB_t* dst) // H2
 {
 	int i;

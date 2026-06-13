@@ -1047,6 +1047,8 @@ REF_DECLSPEC refexport_t GetRefAPI(const refimport_t rimp)
 	re.DrawInitCinematic = Draw_InitCinematic;
 	re.DrawCloseCinematic = Draw_CloseCinematic;
 	re.DrawCinematic = Draw_Cinematic;
+	re.DrawInitCinematicRGBA = Draw_InitCinematicRGBA; // Loki cinematics. --morb
+	re.DrawCinematicRGBA = Draw_CinematicRGBA; // Loki cinematics. --morb
 	re.Draw_Name = Draw_Name;
 
 	re.Init = RI_Init;

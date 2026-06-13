@@ -409,7 +409,8 @@ static void CL_ParseServerData(void)
 	str = MSG_ReadString(&net_message);
 	if (cl.playernum == -1)
 	{
-		if (!(int)show_splash_movies->value && strcmp(str, "bumper.smk") == 0) //mxd. Add show_splash_movies option.
+		if (!(int)show_splash_movies->value && (strcmp(str, "bumper.smk") == 0 || strcmp(str, "bumper.mpg") == 0)) //mxd. Add show_splash_movies option.
+		// Added Loki bumper. --morb
 			SCR_FinishCinematic(); // Skipping a cinematic.
 		else
 			SCR_PlayCinematic(str); // Playing a cinematic, not a level.
