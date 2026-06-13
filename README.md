@@ -16,15 +16,21 @@ targeting UNIX-like operating systems such as GNU/Linux, *BSD, macOS, and Haiku.
 ## Installation
 
 **Game data:**  
-Heretic2R requires Heretic II game data in order to run. You can either:  
-– Overwrite Heretic II binaries with the Heretic2R ones.  
-**or**  
+Heretic2R-UNIX requires either the Windows or Linux Heretic II game data or in order to run.
+
+Windows:
 – Copy "**Heretic II\base**" folder (excluding all .dll files) to Heretic2R folder.
 
----
-**NOTICE**: make sure your copy of Heretic II is updated to v1.06, otherwise Heretic2R will not work correctly because of missing models/textures/sounds. 
+Loki Games Linux Release:
+
+- Copy "**Heretic\ II/base**" to your Heretic2R-UNIX directory
+- Unpack "**Heretic\ II/data.tar.gz**" to your Heretic2R-UNIX directory
+
+**NOTICE**: If using the Windows assets, make sure your copy of Heretic II is updated to v1.06, otherwise Heretic2R will not work correctly because of missing models/textures/sounds. 
 - If you are not sure, the presence of "**base\models\items\Defense\tornado\tris.fm**" and "**base\models\items\Defense\tornado\!skin.pcx.m8**" files is a good indication that your copy is already updated to v1.06.
 - If said files are missing, you can either install [Heretic II v1.06 official patch](https://community.pcgamingwiki.com/files/file/1736-heretic-ii-enhancement-pack/) (also known as **Heretic II Enhancement Pack**), or extract [Heretic_II_Patch_106_for_H2R.zip](https://github.com/m-x-d/Heretic2R/tree/main/stuff) archive into Heretic II folder.
+
+Loki Games shipped version 1.06a.01.0504.01 -- patching is unnecessary.
 ---
 **Music:**  
 To enable OGG music playback, rip Heretic II CD tracks as **track02.ogg - track14.ogg** and place them in "**base\music**" folder.
