@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>@FREEDESKTOP_APP_ID@</id>
+  <name>Heretic2R</name>
+  <developer id="@FREEDESKTOP_APP_ID@">
+    <name>Heretic2R Contributors</name>
+    <url>@META_CONTRIBUTORS_URL@</url>
+  </developer>
+  <branding>
+    <color type="primary" scheme_preference="light">#739dca</color>
+    <color type="primary" scheme_preference="dark">#393569</color>
+  </branding>
+  <summary>Reverse engineered port of Heretic 2</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0</project_license>
+  <launchable type="desktop-id">@FREEDESKTOP_APP_ID@.desktop</launchable>
+  <url type="homepage">@META_WEBSITE_URL@</url>
+  <url type="vcs-browser">@META_REPO_URL@</url>
+  <description>
+    <p>A fully reverse engineered PC port of the the 90s action RPG.</p>
+    @META_GAMEDATA_NOTE@
+  </description>
+  <screenshots>
+    <screenshot type="default">
+      <image type="source">https://cdn.jsdelivr.net/gh/@META_REPO_NAME@@@META_REPO_DEFAULT_BRANCH@/dist/screenshots/linux/title.png</image>
+      <caption>Title screen</caption>
+    </screenshot>
+    <screenshot>
+      <image type="source">https://cdn.jsdelivr.net/gh/@META_REPO_NAME@@@META_REPO_DEFAULT_BRANCH@/dist/screenshots/linux/intro.jpg</image>
+      <caption>Intro</caption>
+    </screenshot>
+    <screenshot>
+      <image type="source">https://cdn.jsdelivr.net/gh/@META_REPO_NAME@@@META_REPO_DEFAULT_BRANCH@/dist/screenshots/linux/ingame.jpg</image>
+      <caption>Ingame</caption>
+    </screenshot>
+  </screenshots>
+  <categories>
+    <category>Game</category>
+    <category>RolePlaying</category>
+  </categories>
+  <supports>
+    <control>gamepad</control>
+  </supports>
+  <recommends>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </recommends>
+  <provides>
+    <binary>heretic2r</binary>
+    <binary>heretic2r-server</binary>
+  </provides>
+  <keywords>
+    <keyword>rpg</keyword>
+    <keyword>shooter</keyword>
+    <keyword>heretic</keyword>
+  </keywords>
+  <releases>@META_RELEASE_INFO@</releases>
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-fantasy">intense</content_attribute>
+    <content_attribute id="violence-bloodshed">intense</content_attribute>
+  </content_rating>
+</component>
