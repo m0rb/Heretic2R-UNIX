@@ -1,6 +1,29 @@
 cmake_minimum_required(VERSION 3.16)
 project(heretic2 C CXX)
 
+set(FREEDESKTOP_FILE_NAME "io.github.m0rb.heretic2r-unix")
+set(FREEDESKTOP_APP_ID "${FREEDESKTOP_FILE_NAME}")
+set(META_REPO_NAME "m0rb/Heretic2R-UNIX")
+set(META_REPO_URL "https://github.com/${META_REPO_NAME}")
+set(META_REPO_DEFAULT_BRANCH "unix")
+set(META_WEBSITE_URL "${META_REPO_URL}")
+set(META_CONTRIBUTORS_URL "${META_REPO_URL}/graphs/contributors")
+set(META_RELEASE_INFO "")
+set(META_GAMEDATA_NOTE "")
+
+if(DEFINED ENV{FLATPAK_ID})
+    set(FREEDESKTOP_APP_ID $ENV{FLATPAK_ID})
+    set(META_GAMEDATA_NOTE "<p><em>PLEASE NOTE:</em> This Flatpak does <em>not</em> include any game data.\n\
+      Please copy at least the files <code>Htic2-0.pak</code> and <code>Htic2-1.pak</code>\n\
+      <code>$HOME/.var/app/${FREEDESKTOP_APP_ID}/heretic2r/base/</code>.</p>\n\
+      <p>Launching the game will inform you with a message if any of the required\n\
+      files are missing and where you need to copy them.</p>\n")
+else()
+    set(META_GAMEDATA_NOTE "<p><em>PLEASE NOTE:</em> This package does <em>not</em> include any game data.\n\
+      You will need to supply at least <code>Htic2-0.pak</code> and <code>Htic2-1.pak</code>\n\
+      for the game to function.</p>")
+endif()
+
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -10,6 +33,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SDL3 REQUIRED sdl3)
 pkg_check_modules(OPENAL openal)
+
+include(GNUInstallDirs)
 
 # ---------------------------------------------------------------------------
 # Common include directories (shared by all targets)
@@ -345,3 +370,55 @@ target_include_directories(clfx PRIVATE ${INCLUDE_DIRS} ${CLFX_EXTRA_INCLUDES})
 target_compile_definitions(clfx PRIVATE CLIENT_EFFECTS_DLL H2COMMON _UNIX NDEBUG)
 target_compile_options(clfx PRIVATE ${COMMON_CFLAGS} -fPIC)
 target_link_options(clfx PRIVATE ${OPENBSD_LINK_DIRS})
+
+# ---------------------------------------------------------------------------
+# FreeDesktop support data  →  "dist/freedesktop/*"
+# ---------------------------------------------------------------------------
+# Fill in variables in metainfo file
+if(UNIX AND NOT APPLE)
+    # Fill in variables in metainfo and desktop file
+    configure_file(
+        dist/freedesktop/${FREEDESKTOP_FILE_NAME}.metainfo.xml.in
+        dist/freedesktop/${FREEDESKTOP_FILE_NAME}.metainfo.xml
+    )
+    configure_file(
+        dist/freedesktop/${FREEDESKTOP_FILE_NAME}.desktop.in
+        dist/freedesktop/${FREEDESKTOP_FILE_NAME}.desktop
+    )
+
+    # Icon
+    install(
+        FILES dist/freedesktop/${FREEDESKTOP_FILE_NAME}.png
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps/
+        RENAME ${FREEDESKTOP_APP_ID}.png
+        PERMISSIONS WORLD_READ GROUP_READ OWNER_READ OWNER_WRITE
+    )
+    # metainfo
+    install(
+        FILES ${CMAKE_BINARY_DIR}/dist/freedesktop/${FREEDESKTOP_FILE_NAME}.metainfo.xml
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo/
+        RENAME ${FREEDESKTOP_APP_ID}.metainfo.xml
+        PERMISSIONS WORLD_READ GROUP_READ OWNER_READ OWNER_WRITE
+    )
+    # desktop launcher
+    install(
+        FILES ${CMAKE_BINARY_DIR}/dist/freedesktop/${FREEDESKTOP_FILE_NAME}.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications/
+        RENAME ${FREEDESKTOP_APP_ID}.desktop
+        PERMISSIONS WORLD_READ WORLD_EXECUTE
+            GROUP_READ GROUP_EXECUTE
+            OWNER_READ OWNER_WRITE OWNER_EXECUTE
+    )
+
+    # Flatpak launche script if necessary
+    if(DEFINED ENV{FLATPAK_ID})
+        install(
+            FILES dist/flatpak/${FREEDESKTOP_FILE_NAME}.sh
+            DESTINATION ${CMAKE_INSTALL_BINDIR}
+            RENAME ${FREEDESKTOP_APP_ID}.sh
+            PERMISSIONS WORLD_READ WORLD_EXECUTE
+                GROUP_READ GROUP_EXECUTE
+                OWNER_READ OWNER_WRITE OWNER_EXECUTE
+        )
+    endif()
+endif()

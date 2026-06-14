@@ -1,0 +1,10 @@
+[Desktop Entry]
+Categories=Game
+Comment=A reverse-engineered port of Heretic 2
+Exec=heretic2r
+Icon=@FREEDESKTOP_APP_ID@
+Keywords=heretic;doom;heretic 2;id;quake;fantasy
+Name=Heretic2R
+StartupNotify=true
+Terminal=false
+Type=Application
