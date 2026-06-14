@@ -44,6 +44,7 @@ set(INCLUDE_DIRS
     include/SDL3
     include/stb
     include/libsmacker
+    include/pl_mpeg
     src/qcommon                  # H2-specific shared headers (FX.h, Vector.h, …)
     src/quake2/src               # quake2 engine root (client/, server/, cs_shared/, win32/)
     src/quake2/src/cs_shared     # cmd.c / cmodel.c / common.c / …
@@ -127,6 +128,8 @@ set(CLIENT_SOURCES
     src/quake2/src/client/cl_screen.c
     src/quake2/src/client/cl_demo.c
     src/quake2/src/client/cl_smk.c
+    src/quake2/src/client/cl_mpeg.c
+    include/pl_mpeg/pl_mpeg.c
     src/quake2/src/client/cl_skeletons.c
     src/quake2/src/client/cl_inventory.c
     src/quake2/src/client/cl_messages.c
@@ -293,6 +296,12 @@ target_link_libraries(heretic2
 )
 target_link_options(heretic2 PRIVATE ${SDL3_LDFLAGS} ${OPENBSD_LINK_DIRS} -Wl,--export-dynamic)
 
+# Install
+if(UNIX AND NOT APPLE)
+    install(TARGETS heretic2 DESTINATION ${CMAKE_INSTALL_BINDIR}
+            PERMISSIONS WORLD_READ WORLD_EXECUTE GROUP_READ GROUP_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+endif()
+
 # ---------------------------------------------------------------------------
 # Dedicated server  →  heretic2r-server
 # ---------------------------------------------------------------------------
@@ -328,6 +337,12 @@ target_link_libraries(heretic2r-server
 )
 target_link_options(heretic2r-server PRIVATE ${OPENBSD_LINK_DIRS} -Wl,--export-dynamic)
 
+# Install
+if(UNIX AND NOT APPLE)
+    install(TARGETS heretic2r-server DESTINATION ${CMAKE_INSTALL_BINDIR}
+            PERMISSIONS WORLD_READ WORLD_EXECUTE GROUP_READ GROUP_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+endif()
+
 # ---------------------------------------------------------------------------
 # Game DLL  →  base/gamex86.so
 # ---------------------------------------------------------------------------
@@ -342,6 +357,12 @@ target_compile_definitions(gamex86 PRIVATE GAME_DLL H2COMMON _UNIX NDEBUG)
 target_compile_options(gamex86 PRIVATE ${COMMON_CFLAGS} -fPIC)
 target_link_options(gamex86 PRIVATE ${OPENBSD_LINK_DIRS})
 
+# Install
+if(UNIX AND NOT APPLE)
+    install(TARGETS gamex86 DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            PERMISSIONS WORLD_READ GROUP_READ OWNER_READ OWNER_WRITE)
+endif()
+
 # ---------------------------------------------------------------------------
 # Player DLL  →  base/Player.so
 # ---------------------------------------------------------------------------
@@ -355,6 +376,12 @@ target_include_directories(player PRIVATE ${INCLUDE_DIRS})
 target_compile_definitions(player PRIVATE PLAYER_DLL H2COMMON _UNIX NDEBUG)
 target_compile_options(player PRIVATE ${COMMON_CFLAGS} -fPIC)
 target_link_options(player PRIVATE ${OPENBSD_LINK_DIRS})
+
+# Install
+if(UNIX AND NOT APPLE)
+    install(TARGETS player DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            PERMISSIONS WORLD_READ GROUP_READ OWNER_READ OWNER_WRITE)
+endif()
 
 # ---------------------------------------------------------------------------
 # Client Effects DLL  →  "base/Client Effects.so"
@@ -421,4 +448,8 @@ if(UNIX AND NOT APPLE)
                 OWNER_READ OWNER_WRITE OWNER_EXECUTE
         )
     endif()
+# Install
+if(UNIX AND NOT APPLE)
+    install(TARGETS clfx DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            PERMISSIONS WORLD_READ GROUP_READ OWNER_READ OWNER_WRITE)
 endif()
