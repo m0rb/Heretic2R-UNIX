@@ -398,6 +398,12 @@ target_compile_definitions(clfx PRIVATE CLIENT_EFFECTS_DLL H2COMMON _UNIX NDEBUG
 target_compile_options(clfx PRIVATE ${COMMON_CFLAGS} -fPIC)
 target_link_options(clfx PRIVATE ${OPENBSD_LINK_DIRS})
 
+# Install
+if(UNIX AND NOT APPLE)
+    install(TARGETS clfx DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            PERMISSIONS WORLD_READ GROUP_READ OWNER_READ OWNER_WRITE)
+endif()
+
 # ---------------------------------------------------------------------------
 # FreeDesktop support data  →  "dist/freedesktop/*"
 # ---------------------------------------------------------------------------
@@ -448,8 +454,4 @@ if(UNIX AND NOT APPLE)
                 OWNER_READ OWNER_WRITE OWNER_EXECUTE
         )
     endif()
-# Install
-if(UNIX AND NOT APPLE)
-    install(TARGETS clfx DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            PERMISSIONS WORLD_READ GROUP_READ OWNER_READ OWNER_WRITE)
 endif()
