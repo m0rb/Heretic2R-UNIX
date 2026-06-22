@@ -154,13 +154,20 @@ static const struct { int w, h; } vid_std_modes[] = {
     { 1600, 900 },
 };
 
+static float VID_GetDisplayDensity(void)
+{
+    const SDL_DisplayMode* dm = SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay());
+    return (dm != NULL && dm->pixel_density > 0.0f) ? dm->pixel_density : 1.0f;
+}
+
 static void VID_BuildModeList(void)
 {
     const SDL_DisplayID disp = SDL_GetPrimaryDisplay();
     const SDL_DisplayMode* desktop = SDL_GetDesktopDisplayMode(disp);
+    const float density = (desktop != NULL && desktop->pixel_density > 0.0f) ? desktop->pixel_density : 1.0f;
 
-    const int desk_w = (desktop != NULL) ? desktop->w : DEF_WIDTH;
-    const int desk_h = (desktop != NULL) ? desktop->h : DEF_HEIGHT;
+    const int desk_w = (desktop != NULL) ? (int)(desktop->w * density + 0.5f) : DEF_WIDTH;
+    const int desk_h = (desktop != NULL) ? (int)(desktop->h * density + 0.5f) : DEF_HEIGHT;
 
     const int num_std = (int)(sizeof(vid_std_modes) / sizeof(vid_std_modes[0]));
     viddef_t* list = malloc(sizeof(viddef_t) * (num_std + 1));
@@ -236,7 +243,18 @@ qboolean VID_InitGraphics(int width, int height)
     if (highdpi)
         flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
-    window = SDL_CreateWindow("Heretic2R", width, height, flags);
+    int create_w = width, create_h = height;
+    if (highdpi)
+    {
+        const float density = VID_GetDisplayDensity();
+        if (density > 1.0f)
+        {
+            create_w = (int)(width / density + 0.5f);
+            create_h = (int)(height / density + 0.5f);
+        }
+    }
+
+    window = SDL_CreateWindow("Heretic2R", create_w, create_h, flags);
 
     if (!window) {
         Com_Printf("VID_InitGraphics: SDL_CreateWindow failed: %s\n", SDL_GetError());
