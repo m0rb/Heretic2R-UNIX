@@ -33,6 +33,7 @@ cvar_t *vid_brightness;
 cvar_t *vid_contrast;
 cvar_t *vid_ref;
 cvar_t *vid_mode;
+cvar_t *vid_highdpiaware;
 qboolean vid_restart_required;
 
 vidmode_t *vid_modes = NULL;
@@ -98,6 +99,7 @@ void VID_Init(void)
     vid_fullscreen = Cvar_Get("vid_fullscreen", "0", CVAR_ARCHIVE);
     vid_width = Cvar_Get("vid_width", "640", CVAR_ARCHIVE);
     vid_height = Cvar_Get("vid_height", "480", CVAR_ARCHIVE);
+    vid_highdpiaware = Cvar_Get("vid_highdpiaware", "1", CVAR_ARCHIVE);
 
     vid_ref = Cvar_Get("vid_ref", "gl1", CVAR_ARCHIVE);
 
@@ -140,10 +142,63 @@ void VID_Shutdown(void)
     SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
 
+static const struct { int w, h; } vid_std_modes[] = {
+    { 320, 240 },   { 400, 300 },   { 512, 384 },   { 640, 400 },
+    { 640, 480 },   { 800, 500 },   { 800, 600 },   { 960, 720 },
+    { 1024, 480 },  { 1024, 640 },  { 1024, 768 },  { 1152, 768 },
+    { 1152, 864 },  { 1280, 800 },  { 1280, 720 },  { 1280, 960 },
+    { 1280, 1024 }, { 1366, 768 },  { 1440, 900 },  { 1600, 1200 },
+    { 1680, 1050 }, { 1920, 1080 }, { 1920, 1200 }, { 2048, 1536 },
+    { 2560, 1080 }, { 2560, 1440 }, { 2560, 1600 }, { 3440, 1440 },
+    { 3840, 1600 }, { 3840, 2160 }, { 4096, 2160 }, { 5120, 2880 },
+    { 1600, 900 },
+};
+
+static void VID_BuildModeList(void)
+{
+    const SDL_DisplayID disp = SDL_GetPrimaryDisplay();
+    const SDL_DisplayMode* desktop = SDL_GetDesktopDisplayMode(disp);
+
+    const int desk_w = (desktop != NULL) ? desktop->w : DEF_WIDTH;
+    const int desk_h = (desktop != NULL) ? desktop->h : DEF_HEIGHT;
+
+    const int num_std = (int)(sizeof(vid_std_modes) / sizeof(vid_std_modes[0]));
+    viddef_t* list = malloc(sizeof(viddef_t) * (num_std + 1));
+    int n = 0;
+
+    list[0].width  = desk_w;
+    list[0].height = desk_h;
+    n = 1;
+
+    for (int i = 0; i < num_std; i++)
+    {
+        const int w = vid_std_modes[i].w;
+        const int h = vid_std_modes[i].h;
+
+        if (w > desk_w || h > desk_h)
+            continue;
+
+        qboolean dup = false;
+        for (int c = 0; c < n; c++)
+            if (list[c].width == w && list[c].height == h) { dup = true; break; }
+
+        if (!dup)
+        {
+            list[n].width  = w;
+            list[n].height = h;
+            n++;
+        }
+    }
+
+    VID_InitModes(list, n);
+    free(list);
+}
+
 qboolean VID_InitGraphics(int width, int height)
 {
 #if !defined(__APPLE__) && !defined(__HAIKU__)
-    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "wayland,x11");
+    if (SDL_getenv("SDL_VIDEODRIVER") == NULL)
+        SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "wayland,x11");
 #endif
 
     if (window != NULL)
@@ -159,46 +214,7 @@ qboolean VID_InitGraphics(int width, int height)
     }
 
     if (num_vid_modes == 0)
-    {
-        const SDL_DisplayID disp = SDL_GetPrimaryDisplay();
-        int num_modes = 0;
-        SDL_DisplayMode** modes = SDL_GetFullscreenDisplayModes(disp, &num_modes);
-        if (modes != NULL && num_modes > 0)
-        {
-            viddef_t* valid_modes = malloc(sizeof(viddef_t) * (num_modes + 1));
-            int num_valid = 0;
-
-            const SDL_DisplayMode* desktop = SDL_GetDesktopDisplayMode(disp);
-            if (desktop)
-            {
-                valid_modes[0].width  = desktop->w;
-                valid_modes[0].height = desktop->h;
-                num_valid = 1;
-            }
-
-            for (int i = 0; i < num_modes; i++)
-            {
-                if (modes[i]->w < 640 || modes[i]->h < 480)
-                    continue;
-                qboolean dup = false;
-                for (int c = 0; c < num_valid; c++)
-                    if (valid_modes[c].width == modes[i]->w && valid_modes[c].height == modes[i]->h)
-                        { dup = true; break; }
-                if (!dup)
-                {
-                    valid_modes[num_valid].width  = modes[i]->w;
-                    valid_modes[num_valid].height = modes[i]->h;
-                    num_valid++;
-                }
-            }
-            SDL_free(modes);
-
-            if (num_valid > 0)
-                VID_InitModes(valid_modes, num_valid);
-
-            free(valid_modes);
-        }
-    }
+        VID_BuildModeList();
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
@@ -206,15 +222,21 @@ qboolean VID_InitGraphics(int width, int height)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-    int flags = SDL_WINDOW_OPENGL;
-    if (vid_fullscreen->value) {
-        flags |= SDL_WINDOW_FULLSCREEN;
+    SDL_WindowFlags flags = SDL_WINDOW_OPENGL;
+    switch ((int)vid_fullscreen->value)
+    {
+        case 1:  flags |= SDL_WINDOW_FULLSCREEN; break;
+        case 2:  flags |= SDL_WINDOW_BORDERLESS; break;
+        default: break;
     }
 
-    window = SDL_CreateWindow("Heretic2R",
-                              width,
-                              height,
-                              flags);
+    const char* driver = SDL_GetCurrentVideoDriver();
+    const qboolean highdpi = (vid_highdpiaware->value != 0) && (driver != NULL) &&
+                             (SDL_strcmp(driver, "wayland") == 0 || SDL_strcmp(driver, "x11") == 0);
+    if (highdpi)
+        flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+
+    window = SDL_CreateWindow("Heretic2R", width, height, flags);
 
     if (!window) {
         Com_Printf("VID_InitGraphics: SDL_CreateWindow failed: %s\n", SDL_GetError());
@@ -228,12 +250,22 @@ qboolean VID_InitGraphics(int width, int height)
         return false;
     }
 
-    int actual_w, actual_h;
-    SDL_GetWindowSizeInPixels(window, &actual_w, &actual_h);
-    if (actual_w != width || actual_h != height)
-        Com_Printf("VID_InitGraphics: drawable %dx%d vs requested %dx%d\n", actual_w, actual_h, width, height);
-    viddef.width  = actual_w;
-    viddef.height = actual_h;
+    if (highdpi)
+    {
+        int draw_w = width, draw_h = height;
+        SDL_GetWindowSizeInPixels(window, &draw_w, &draw_h);
+        viddef.width  = draw_w;
+        viddef.height = draw_h;
+
+        if (draw_w != width || draw_h != height)
+            Com_Printf("VID_InitGraphics: high-dpi drawable %dx%d (requested %dx%d)\n",
+                       draw_w, draw_h, width, height);
+    }
+    else
+    {
+        viddef.width  = width;
+        viddef.height = height;
+    }
 
     return true;
 }

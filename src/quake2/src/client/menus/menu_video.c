@@ -5,6 +5,7 @@
 //
 
 #include "menu_video.h"
+#include "menu_main.h"
 #include "client/client.h"
 #include "win32/dll_io/vid_dll.h"
 #include "../unix/vid_dll.h"
@@ -14,6 +15,7 @@ cvar_t* m_banner_video;
 
 cvar_t* m_item_driver; // "Renderer"
 cvar_t* m_item_vidmode; // "Video resolution"
+cvar_t* m_item_fullscreen; // "Fullscreen"
 cvar_t* m_item_target_fps; //mxd. "Target FPS"
 cvar_t* m_item_gamma;
 cvar_t* m_item_brightness;
@@ -34,6 +36,7 @@ static menuframework_t s_video_menu;
 
 static menulist_t s_ref_list;
 static menulist_t s_mode_list;
+static menulist_t s_fullscreen_list;
 static menulist_t s_target_fps_list; //mxd
 static menuslider_t s_gamma_slider;
 static menuslider_t s_brightness_slider;
@@ -51,6 +54,7 @@ static int initial_reflib_index; // vid_ref index when entering menu.
 #define MAX_DISPLAYED_VIDMODES	64 //mxd. This is kinda ugly, since vid_modes array itself is dynamically allocated... 
 static const char* vid_mode_titles[MAX_DISPLAYED_VIDMODES];
 static int initial_vid_mode; // vid_mode when entering menu.
+static int initial_fullscreen; // vid_fullscreen when entering menu.
 
 #pragma region ========================== MENU ITEM CALLBACKS ==========================
 
@@ -124,6 +128,13 @@ static void ApplyChanges(const qboolean close_menu) //mxd. +close_menu arg.
 		vid_restart_required = true;
 	}
 
+	if (initial_fullscreen != s_fullscreen_list.curvalue)
+	{
+		Cvar_SetValue("vid_fullscreen", (float)s_fullscreen_list.curvalue);
+		initial_fullscreen = s_fullscreen_list.curvalue;
+		vid_restart_required = true;
+	}
+
 	if (initial_reflib_index != s_ref_list.curvalue)
 	{
 		Cvar_Set("vid_ref", reflib_infos[s_ref_list.curvalue].id);
@@ -137,6 +148,7 @@ static void ApplyChanges(const qboolean close_menu) //mxd. +close_menu arg.
 	if (vid_restart_required)
 	{
 		M_ForceMenuOff();
+		M_Menu_Main_f();
 		return;
 	}
 
@@ -182,6 +194,7 @@ void VID_PreMenuInit(void)
 	}
 
 	initial_vid_mode = (int)vid_mode->value; //mxd
+	initial_fullscreen = ClampI((int)Cvar_VariableValue("vid_fullscreen"), 0, 2);
 
 	if (scr_viewsize == NULL)
 		scr_viewsize = Cvar_Get("viewsize", "100", CVAR_ARCHIVE);
@@ -192,9 +205,11 @@ static void VID_MenuInit(void)
 	static const char* target_fps_names[] = { "30", "60", "90", "120", "240", NULL }; //mxd
 	static const char* vsync_names[]        = { "Off", "On", "Adaptive", NULL };        // YQ2
 	static const char* scale_names[]        = { "Auto", "1x", "2x", "3x", "4x", NULL }; // YQ2
+	static const char* fullscreen_names[]   = { "Windowed", "Fullscreen", "Borderless", NULL };
 
 	static char name_driver[MAX_QPATH];
 	static char name_vidmode[MAX_QPATH];
+	static char name_fullscreen[MAX_QPATH];
 	static char name_target_fps[MAX_QPATH]; //mxd
 	static char name_gamma[MAX_QPATH];
 	static char name_brightness[MAX_QPATH];
@@ -237,10 +252,20 @@ static void VID_MenuInit(void)
 	s_mode_list.curvalue = initial_vid_mode;
 	s_mode_list.itemnames = vid_mode_titles;
 
+	Com_sprintf(name_fullscreen, sizeof(name_fullscreen), "\x02%s", m_item_fullscreen->string);
+	s_fullscreen_list.generic.type = MTYPE_SPINCONTROL;
+	s_fullscreen_list.generic.x = 0;
+	s_fullscreen_list.generic.y = 80;
+	s_fullscreen_list.generic.name = name_fullscreen;
+	s_fullscreen_list.generic.width = re.BF_Strlen(name_fullscreen);
+	s_fullscreen_list.generic.flags = QMF_SINGLELINE;
+	s_fullscreen_list.itemnames = fullscreen_names;
+	s_fullscreen_list.curvalue = initial_fullscreen;
+
 	Com_sprintf(name_target_fps, sizeof(name_target_fps), "\x02%s", m_item_target_fps->string);
 	s_target_fps_list.generic.type = MTYPE_SPINCONTROL;
 	s_target_fps_list.generic.x = 0;
-	s_target_fps_list.generic.y = 80;
+	s_target_fps_list.generic.y = 106;
 	s_target_fps_list.generic.name = name_target_fps;
 	s_target_fps_list.generic.width = re.BF_Strlen(name_target_fps);
 	s_target_fps_list.generic.flags = QMF_SINGLELINE;
@@ -252,7 +277,7 @@ static void VID_MenuInit(void)
 	s_gamma_slider.generic.type = MTYPE_SLIDER;
 	s_gamma_slider.generic.flags = QMF_SELECT_SOUND;
 	s_gamma_slider.generic.x = 0;
-	s_gamma_slider.generic.y = 100;
+	s_gamma_slider.generic.y = 132;
 	s_gamma_slider.generic.name = name_gamma;
 	s_gamma_slider.generic.width = re.BF_Strlen(name_gamma);
 	s_gamma_slider.generic.callback = UpdateGammaFunc;
@@ -264,7 +289,7 @@ static void VID_MenuInit(void)
 	s_brightness_slider.generic.type = MTYPE_SLIDER;
 	s_brightness_slider.generic.flags = QMF_SELECT_SOUND;
 	s_brightness_slider.generic.x = 0;
-	s_brightness_slider.generic.y = 140;
+	s_brightness_slider.generic.y = 172;
 	s_brightness_slider.generic.name = name_brightness;
 	s_brightness_slider.generic.width = re.BF_Strlen(name_brightness);
 	s_brightness_slider.generic.callback = UpdateBrightnessFunc;
@@ -276,7 +301,7 @@ static void VID_MenuInit(void)
 	s_contrast_slider.generic.type = MTYPE_SLIDER;
 	s_contrast_slider.generic.flags = QMF_SELECT_SOUND;
 	s_contrast_slider.generic.x = 0;
-	s_contrast_slider.generic.y = 180;
+	s_contrast_slider.generic.y = 212;
 	s_contrast_slider.generic.name = name_contrast;
 	s_contrast_slider.generic.width = re.BF_Strlen(name_contrast);
 	s_contrast_slider.generic.callback = UpdateContrastFunc;
@@ -289,7 +314,7 @@ static void VID_MenuInit(void)
 	s_minlight_slider.generic.type = MTYPE_SLIDER;
 	s_minlight_slider.generic.flags = QMF_SELECT_SOUND;
 	s_minlight_slider.generic.x = 0;
-	s_minlight_slider.generic.y = 220;
+	s_minlight_slider.generic.y = 252;
 	s_minlight_slider.generic.name = name_minlight;
 	s_minlight_slider.generic.width = re.BF_Strlen(name_minlight);
 	s_minlight_slider.generic.callback = UpdateMinlightFunc;
@@ -301,7 +326,7 @@ static void VID_MenuInit(void)
 	s_detail_slider.generic.type = MTYPE_SLIDER;
 	s_detail_slider.generic.flags = QMF_SELECT_SOUND; //mxd. QMF_SELECT_SOUND flag was missing in original version.
 	s_detail_slider.generic.x = 0;
-	s_detail_slider.generic.y = 260;
+	s_detail_slider.generic.y = 292;
 	s_detail_slider.generic.name = name_detail;
 	s_detail_slider.generic.width = re.BF_Strlen(name_detail);
 	s_detail_slider.generic.callback = UpdateDetailFunc;
@@ -312,7 +337,7 @@ static void VID_MenuInit(void)
 	Com_sprintf(name_vsync, sizeof(name_vsync), "\x02%s", m_item_vsync->string);
 	s_vsync_list.generic.type = MTYPE_SPINCONTROL;
 	s_vsync_list.generic.x = 0;
-	s_vsync_list.generic.y = 300;
+	s_vsync_list.generic.y = 332;
 	s_vsync_list.generic.name = name_vsync;
 	s_vsync_list.generic.width = re.BF_Strlen(name_vsync);
 	s_vsync_list.generic.flags = QMF_SINGLELINE;
@@ -323,7 +348,7 @@ static void VID_MenuInit(void)
 	Com_sprintf(name_consolescale, sizeof(name_consolescale), "\x02%s", m_item_consolescale->string);
 	s_consolescale_list.generic.type = MTYPE_SPINCONTROL;
 	s_consolescale_list.generic.x = 0;
-	s_consolescale_list.generic.y = 340;
+	s_consolescale_list.generic.y = 358;
 	s_consolescale_list.generic.name = name_consolescale;
 	s_consolescale_list.generic.width = re.BF_Strlen(name_consolescale);
 	s_consolescale_list.generic.flags = QMF_SINGLELINE;
@@ -335,7 +360,7 @@ static void VID_MenuInit(void)
 	Com_sprintf(name_hudscale, sizeof(name_hudscale), "\x02%s", m_item_hudscale->string);
 	s_hudscale_list.generic.type = MTYPE_SPINCONTROL;
 	s_hudscale_list.generic.x = 0;
-	s_hudscale_list.generic.y = 380;
+	s_hudscale_list.generic.y = 384;
 	s_hudscale_list.generic.name = name_hudscale;
 	s_hudscale_list.generic.width = re.BF_Strlen(name_hudscale);
 	s_hudscale_list.generic.flags = QMF_SINGLELINE;
@@ -346,7 +371,7 @@ static void VID_MenuInit(void)
 	Com_sprintf(name_menuscale, sizeof(name_menuscale), "\x02%s", m_item_menuscale->string);
 	s_menuscale_list.generic.type = MTYPE_SPINCONTROL;
 	s_menuscale_list.generic.x = 0;
-	s_menuscale_list.generic.y = 420;
+	s_menuscale_list.generic.y = 410;
 	s_menuscale_list.generic.name = name_menuscale;
 	s_menuscale_list.generic.width = re.BF_Strlen(name_menuscale);
 	s_menuscale_list.generic.flags = QMF_SINGLELINE;
@@ -356,6 +381,7 @@ static void VID_MenuInit(void)
 
 	Menu_AddItem(&s_video_menu, &s_ref_list);
 	Menu_AddItem(&s_video_menu, &s_mode_list);
+	Menu_AddItem(&s_video_menu, &s_fullscreen_list);
 	Menu_AddItem(&s_video_menu, &s_target_fps_list); //mxd
 	Menu_AddItem(&s_video_menu, &s_gamma_slider);
 	Menu_AddItem(&s_video_menu, &s_brightness_slider);

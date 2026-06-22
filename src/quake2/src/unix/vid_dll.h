@@ -18,6 +18,7 @@ extern cvar_t *vid_gamma;
 extern cvar_t *vid_brightness;
 extern cvar_t *vid_contrast;
 extern cvar_t *vid_mode;
+extern cvar_t *vid_highdpiaware;
 
 typedef struct
 {

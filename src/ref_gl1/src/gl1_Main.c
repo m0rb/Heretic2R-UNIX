@@ -706,7 +706,7 @@ static void R_Register(void)
 	vid_ref = ri.Cvar_Get("vid_ref", "gl", CVAR_ARCHIVE);
 
 	// H2:
-	vid_mode = ri.Cvar_Get("vid_mode", "1", CVAR_ARCHIVE); // H2: 3
+	vid_mode = ri.Cvar_Get("vid_mode", "0", CVAR_ARCHIVE); // H2: 3
 	menus_active = ri.Cvar_Get("menus_active", "0", 0);
 	cl_camera_under_surface = ri.Cvar_Get("cl_camera_under_surface", "0", 0);
 	quake_amount = ri.Cvar_Get("quake_amount", "0", 0);
@@ -783,7 +783,7 @@ static qboolean RI_Init(void)
 	R_Register();
 
 	// Set our "safe" mode.
-	gl_state.prev_mode = 1; // H2: 3.
+	gl_state.prev_mode = 0; // H2: 3.
 
 	// Create the window and set up the context.
 	if (!R_SetMode())
