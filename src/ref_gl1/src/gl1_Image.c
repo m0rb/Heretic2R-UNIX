@@ -216,6 +216,20 @@ void R_MBindImage(const GLenum target, const image_t* image)
 		R_BindImage(image);
 }
 
+void R_SetTexAnisotropy(void) // YQ2
+{
+	if (!GLAD_GL_EXT_texture_filter_anisotropic || gl_config.max_anisotropy < 2.0f)
+		return;
+
+	GLfloat aniso = r_anisotropic->value;
+	if (aniso < 1.0f)
+		aniso = 1.0f;
+	else if (aniso > gl_config.max_anisotropy)
+		aniso = gl_config.max_anisotropy;
+
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
+}
+
 void R_TextureMode(const char* string) // Q2: GL_TextureMode()
 {
 	int cur_mode;
@@ -243,6 +257,7 @@ void R_TextureMode(const char* string) // Q2: GL_TextureMode()
 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min); // H2_1.07: GL_TEXTURE_MIN_FILTER -> 0x84fe //mxd. Q2/H2: qglTexParameterf
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max); // H2_1.07: GL_TEXTURE_MAG_FILTER -> 0x84fe //mxd. Q2/H2: qglTexParameterf
+			R_SetTexAnisotropy(); // YQ2
 		} //TODO: add 'texture has no mipmaps' YQ2 logic?
 	}
 }
@@ -265,6 +280,7 @@ void R_SetFilter(const image_t* image)
 		default:
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
+			R_SetTexAnisotropy(); // YQ2
 			break;
 	}
 }

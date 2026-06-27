@@ -46,5 +46,6 @@ extern qboolean vid_restart_required;
 
 #include <SDL3/SDL.h>
 extern SDL_Window* VID_GetSDLWindow(void);
+extern int VID_GetNumDisplays(void);
 
 #endif /* _VID_DLL_H_ */

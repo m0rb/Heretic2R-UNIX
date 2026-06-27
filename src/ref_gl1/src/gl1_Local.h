@@ -34,6 +34,9 @@ extern cvar_t* r_novis;
 extern cvar_t* r_nocull;
 extern cvar_t* r_lerpmodels;
 extern cvar_t* r_vsync; // YQ2
+extern cvar_t* r_anisotropic; // YQ2
+extern cvar_t* r_msaa_samples; // YQ2
+extern cvar_t* gl_zfix; // YQ2
 
 extern cvar_t* r_lightlevel;
 

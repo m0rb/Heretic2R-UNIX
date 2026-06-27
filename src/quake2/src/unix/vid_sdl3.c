@@ -34,6 +34,8 @@ cvar_t *vid_contrast;
 cvar_t *vid_ref;
 cvar_t *vid_mode;
 cvar_t *vid_highdpiaware;
+cvar_t *vid_displayindex;
+cvar_t *vid_rate;
 qboolean vid_restart_required;
 
 vidmode_t *vid_modes = NULL;
@@ -94,14 +96,23 @@ static qboolean VID_LoadRefresh(void)
     return true;
 }
 
+static void VID_Restart_f(void)
+{
+    vid_restart_required = true;
+}
+
 void VID_Init(void)
 {
     vid_fullscreen = Cvar_Get("vid_fullscreen", "0", CVAR_ARCHIVE);
     vid_width = Cvar_Get("vid_width", "640", CVAR_ARCHIVE);
     vid_height = Cvar_Get("vid_height", "480", CVAR_ARCHIVE);
     vid_highdpiaware = Cvar_Get("vid_highdpiaware", "1", CVAR_ARCHIVE);
+    vid_displayindex = Cvar_Get("vid_displayindex", "0", CVAR_ARCHIVE);
+    vid_rate = Cvar_Get("vid_rate", "-1", CVAR_ARCHIVE);
 
     vid_ref = Cvar_Get("vid_ref", "gl1", CVAR_ARCHIVE);
+
+    Cmd_AddCommand("vid_restart", VID_Restart_f);
 
     VID_LoadRefresh();
 
@@ -154,15 +165,41 @@ static const struct { int w, h; } vid_std_modes[] = {
     { 1600, 900 },
 };
 
+int VID_GetNumDisplays(void)
+{
+    int count = 0;
+    SDL_DisplayID* ids = SDL_GetDisplays(&count);
+    if (ids != NULL)
+        SDL_free(ids);
+    return (count > 0) ? count : 1;
+}
+
+static SDL_DisplayID VID_SelectedDisplay(void)
+{
+    int count = 0;
+    SDL_DisplayID* ids = SDL_GetDisplays(&count);
+    SDL_DisplayID result = SDL_GetPrimaryDisplay();
+
+    if (ids != NULL)
+    {
+        const int idx = (int)vid_displayindex->value;
+        if (idx >= 0 && idx < count)
+            result = ids[idx];
+        SDL_free(ids);
+    }
+
+    return result;
+}
+
 static float VID_GetDisplayDensity(void)
 {
-    const SDL_DisplayMode* dm = SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay());
+    const SDL_DisplayMode* dm = SDL_GetDesktopDisplayMode(VID_SelectedDisplay());
     return (dm != NULL && dm->pixel_density > 0.0f) ? dm->pixel_density : 1.0f;
 }
 
 static void VID_BuildModeList(void)
 {
-    const SDL_DisplayID disp = SDL_GetPrimaryDisplay();
+    const SDL_DisplayID disp = VID_SelectedDisplay();
     const SDL_DisplayMode* desktop = SDL_GetDesktopDisplayMode(disp);
     const float density = (desktop != NULL && desktop->pixel_density > 0.0f) ? desktop->pixel_density : 1.0f;
 
@@ -201,6 +238,23 @@ static void VID_BuildModeList(void)
     free(list);
 }
 
+static SDL_Window* VID_CreateWindow(int w, int h, SDL_WindowFlags flags, SDL_DisplayID disp)
+{
+    SDL_PropertiesID props = SDL_CreateProperties();
+    const Sint64 pos = (Sint64)SDL_WINDOWPOS_CENTERED_DISPLAY(disp);
+
+    SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Heretic2R");
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, pos);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, pos);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, (Sint64)flags);
+
+    SDL_Window* win = SDL_CreateWindowWithProperties(props);
+    SDL_DestroyProperties(props);
+    return win;
+}
+
 qboolean VID_InitGraphics(int width, int height)
 {
 #if !defined(__APPLE__) && !defined(__HAIKU__)
@@ -220,14 +274,23 @@ qboolean VID_InitGraphics(int width, int height)
         return false;
     }
 
-    if (num_vid_modes == 0)
+    static SDL_DisplayID mode_list_display = 0;
+    const SDL_DisplayID sel_display = VID_SelectedDisplay();
+    if (num_vid_modes == 0 || sel_display != mode_list_display)
+    {
         VID_BuildModeList();
+        mode_list_display = sel_display;
+    }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+    const int msaa = (int)Cvar_VariableValue("r_msaa_samples");
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, msaa > 0 ? 1 : 0);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, msaa > 0 ? msaa : 0);
 
     SDL_WindowFlags flags = SDL_WINDOW_OPENGL;
     switch ((int)vid_fullscreen->value)
@@ -254,11 +317,38 @@ qboolean VID_InitGraphics(int width, int height)
         }
     }
 
-    window = SDL_CreateWindow("Heretic2R", create_w, create_h, flags);
+    window = VID_CreateWindow(create_w, create_h, flags, sel_display);
+
+    if (!window && msaa > 0) {
+        Com_Printf("VID_InitGraphics: MSAA x%d unavailable, retrying without it: %s\n", msaa, SDL_GetError());
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
+        Cvar_SetValue("r_msaa_samples", 0);
+        window = VID_CreateWindow(create_w, create_h, flags, sel_display);
+    }
 
     if (!window) {
         Com_Printf("VID_InitGraphics: SDL_CreateWindow failed: %s\n", SDL_GetError());
         return false;
+    }
+
+    if ((int)vid_fullscreen->value == 1)
+    {
+        SDL_DisplayMode closest;
+        const float rate = vid_rate->value;
+
+        if (SDL_GetClosestFullscreenDisplayMode(sel_display, width, height, (rate > 0.0f) ? rate : 0.0f, false, &closest))
+        {
+            if (!SDL_SetWindowFullscreenMode(window, &closest))
+                Com_Printf("VID_InitGraphics: exclusive mode %dx%d@%g failed, using desktop fullscreen: %s\n",
+                           width, height, rate, SDL_GetError());
+            else
+                SDL_SyncWindow(window);
+        }
+        else
+        {
+            Com_Printf("VID_InitGraphics: no exclusive mode near %dx%d@%g, using desktop fullscreen\n", width, height, rate);
+        }
     }
 
     if (!re.InitContext(window)) {
@@ -266,6 +356,18 @@ qboolean VID_InitGraphics(int width, int height)
         SDL_DestroyWindow(window);
         window = NULL;
         return false;
+    }
+
+    {
+        int got_buffers = 0, got_samples = 0;
+        SDL_GL_GetAttribute(SDL_GL_MULTISAMPLEBUFFERS, &got_buffers);
+        SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &got_samples);
+        if (msaa > 0)
+            Com_Printf("MSAA: requested x%d, got %d buffer(s) / x%d samples%s\n",
+                       msaa, got_buffers, got_samples,
+                       (got_samples < msaa) ? " (driver downgraded/denied)" : "");
+        else
+            Com_Printf("MSAA: disabled\n");
     }
 
     if (highdpi)

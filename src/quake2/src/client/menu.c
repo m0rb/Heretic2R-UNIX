@@ -639,8 +639,13 @@ void M_Init(void)
 	// Video Settings menu.
 	m_item_driver = Cvar_Get("m_item_driver", "Renderer", 0);
 	m_item_vidmode = Cvar_Get("m_item_vidmode", "Video Resolution", 0);
+	m_item_display = Cvar_Get("m_item_display", "Display", 0);
 	m_item_fullscreen = Cvar_Get("m_item_fullscreen", "Fullscreen", 0);
+	m_item_rate = Cvar_Get("m_item_rate", "Refresh Rate", 0);
 	m_item_target_fps = Cvar_Get("m_item_target_fps", "Target FPS", 0); //mxd
+	m_item_texfilter = Cvar_Get("m_item_texfilter", "Texture Filter", 0);
+	m_item_anisotropic = Cvar_Get("m_item_anisotropic", "Anisotropic Filter", 0);
+	m_item_antialias = Cvar_Get("m_item_antialias", "Antialiasing", 0);
 	m_item_gamma = Cvar_Get("m_item_gamma", "Gamma", 0);
 	m_item_brightness = Cvar_Get("m_item_brightness", "Brightness", 0);
 	m_item_contrast = Cvar_Get("m_item_contrast", "Contrast", 0);

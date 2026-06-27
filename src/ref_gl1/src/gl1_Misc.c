@@ -53,6 +53,11 @@ void R_SetDefaultState(void) // Q2: GL_SetDefaultState()
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_BLEND);
 
+	if (r_msaa_samples->value > 0)
+		glEnable(GL_MULTISAMPLE);
+	else
+		glDisable(GL_MULTISAMPLE);
+
 	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

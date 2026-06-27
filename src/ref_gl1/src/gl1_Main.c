@@ -77,6 +77,8 @@ cvar_t* r_nocull;
 cvar_t* r_lerpmodels;
 static cvar_t* r_speeds;
 cvar_t* r_vsync; // YQ2
+cvar_t* r_anisotropic; // YQ2
+cvar_t* r_msaa_samples; // YQ2
 
 cvar_t* r_lightlevel; // FIXME: This is a HACK to get the client's light level
 
@@ -111,6 +113,7 @@ cvar_t* gl_nobind;
 cvar_t* gl_showtris;
 static cvar_t* gl_reporthash;
 static cvar_t* gl_ztrick;
+cvar_t* gl_zfix; // YQ2
 static cvar_t* gl_finish;
 static cvar_t* gl_clear;
 static cvar_t* gl_cull;
@@ -633,6 +636,9 @@ static void R_Clear(void)
 	}
 
 	glDepthRange((double)gldepthmin, (double)gldepthmax);
+
+	if (gl_zfix->value) // YQ2
+		glPolygonOffset(gldepthmax > gldepthmin ? 0.05f : -0.05f, gldepthmax > gldepthmin ? 1.0f : -1.0f);
 }
 
 static void R_Register(void)
@@ -646,6 +652,8 @@ static void R_Register(void)
 	r_lerpmodels = ri.Cvar_Get("r_lerpmodels", "1", 0);
 	r_speeds = ri.Cvar_Get("r_speeds", "0", 0);
 	r_vsync = ri.Cvar_Get("r_vsync", "1", CVAR_ARCHIVE); // YQ2
+	r_anisotropic = ri.Cvar_Get("r_anisotropic", "0", CVAR_ARCHIVE); // YQ2
+	r_msaa_samples = ri.Cvar_Get("r_msaa_samples", "0", CVAR_ARCHIVE); // YQ2
 
 	r_lightlevel = ri.Cvar_Get("r_lightlevel", "0", 0);
 
@@ -680,6 +688,7 @@ static void R_Register(void)
 	gl_showtris = ri.Cvar_Get("gl_showtris", "0", 0);
 	gl_reporthash = ri.Cvar_Get("gl_reporthash", "0", 0);
 	gl_ztrick = ri.Cvar_Get("gl_ztrick", "0", 0);
+	gl_zfix = ri.Cvar_Get("gl_zfix", "0", CVAR_ARCHIVE); // YQ2
 	gl_finish = ri.Cvar_Get("gl_finish", "0", 0);
 	gl_clear = ri.Cvar_Get("gl_clear", "0", 0);
 	gl_cull = ri.Cvar_Get("gl_cull", "1", 0);
@@ -878,10 +887,20 @@ static void RI_BeginFrame(const float camera_separation) //TODO: remove camera_s
 	}
 
 	// Texturemode stuff.
-	if (gl_texturemode->modified)
+	if (gl_texturemode->modified || r_anisotropic->modified) // YQ2
 	{
+		if (r_anisotropic->modified)
+		{
+			if (!GLAD_GL_EXT_texture_filter_anisotropic || gl_config.max_anisotropy < 2.0f)
+				ri.Con_Printf(PRINT_ALL, "Anisotropic filtering not supported by this GL context.\n");
+			else
+				ri.Con_Printf(PRINT_ALL, "Anisotropic filtering: x%i (max x%i).\n",
+					ClampI((int)r_anisotropic->value, 1, (int)gl_config.max_anisotropy), (int)gl_config.max_anisotropy);
+		}
+
 		R_TextureMode(gl_texturemode->string);
 		gl_texturemode->modified = false;
+		r_anisotropic->modified = false;
 	}
 
 	// Missing: gl_texturealphamode and gl_texturesolidmode logic
