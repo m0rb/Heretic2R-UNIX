@@ -9,3 +9,5 @@
 #include "client/menu.h"
 
 extern cvar_t* m_banner_main;
+
+extern void M_Menu_Main_f(void);

@@ -32,7 +32,13 @@ extern cvar_t* m_music_track; //mxd
 extern cvar_t* m_item_defaults;
 extern cvar_t* m_item_driver;
 extern cvar_t* m_item_vidmode;
+extern cvar_t* m_item_display;
+extern cvar_t* m_item_fullscreen;
+extern cvar_t* m_item_rate;
 extern cvar_t* m_item_target_fps; //mxd
+extern cvar_t* m_item_texfilter;
+extern cvar_t* m_item_anisotropic;
+extern cvar_t* m_item_antialias;
 extern cvar_t* m_item_gamma;
 extern cvar_t* m_item_brightness;
 extern cvar_t* m_item_contrast;

@@ -711,6 +711,15 @@ static void R_DrawTextureChains(const entity_t* ent) // Q2: DrawTextureChains().
 {
 	c_visible_textures = 0;
 
+	if (gl_zfix->value) // YQ2
+		glEnable(GL_POLYGON_OFFSET_FILL);
+
+	if (r_msaa_samples->value > 0)
+	{
+		glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+		R_AlphaFunc(GL_GREATER, 0.25f);
+	}
+
 	// H2: extra gl_sortmulti logic:
 	if (multitexture_mode)
 	{
@@ -758,6 +767,12 @@ static void R_DrawTextureChains(const entity_t* ent) // Q2: DrawTextureChains().
 
 	R_EnableMultitexture(false);
 
+	if (r_msaa_samples->value > 0)
+	{
+		glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+		R_AlphaFunc(GL_GREATER, 0.666f);
+	}
+
 	// Render warping (water) surfaces (no lightmaps).
 	image = &gltextures[0];
 	for (int i = 0; i < numgltextures; i++, image++)
@@ -773,6 +788,9 @@ static void R_DrawTextureChains(const entity_t* ent) // Q2: DrawTextureChains().
 	}
 
 	R_TexEnv(GL_REPLACE);
+
+	if (gl_zfix->value) // YQ2
+		glDisable(GL_POLYGON_OFFSET_FILL);
 }
 
 static qboolean R_CullBox(const vec3_t mins, const vec3_t maxs)
