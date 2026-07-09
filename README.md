@@ -46,9 +46,6 @@ To enable OGG music playback, rip Heretic II CD tracks as **track02.ogg - track1
 * H2R is **NOT** compatible with H2 gamex86/Player/Client Effects libraries (because of API changes).
 * GameSpy online multiplayer logic is not implemented.
 * Gamepad support is currently not implemented.
-* HiDPI support is currently not implemented.
-* Framerates above 60 FPS are not tested.
-* Screen resolutions above FullHD are not tested.
 
 ## Planned features
 
