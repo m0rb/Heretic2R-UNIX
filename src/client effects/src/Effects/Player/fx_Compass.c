@@ -56,10 +56,10 @@ void FXCompass(centity_t* owner, const int type, const int flags, vec3_t origin)
 {
 	static const vec3_t compass_offsets[] =
 	{
-		{ 0.0f, COMPASS_OFFSET, 0.0f },  // North.
-		{ COMPASS_OFFSET, 0.0f, 0.0f },  // East.
 		{ 0.0f, -COMPASS_OFFSET, 0.0f }, // South.
 		{ -COMPASS_OFFSET, 0.0f, 0.0f }, // West.
+		{ 0.0f, COMPASS_OFFSET, 0.0f },  // North.
+		{ COMPASS_OFFSET, 0.0f, 0.0f },  // East.
 	};
 
 	assert(owner);
