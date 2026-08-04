@@ -8,7 +8,7 @@
 
 #include "qcommon.h"
 #include "qfiles.h"
-#include "game.h"
+#include "Game.h"
 #include "q_Physics.h"
 #include "SinglyLinkedList.h"
 
