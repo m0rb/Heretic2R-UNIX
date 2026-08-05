@@ -1138,6 +1138,9 @@ static void CL_SetupClipMoveToEntities(const int brushmask, const int flags, con
 
 	if (flags & CTF_IGNORE_PLAYER) //mxd
 		trace_ignore_player = set;
+
+	if (flags & CTF_LERP_BMODEL_ORIGIN) //mxd
+		trace_lerp_bmodel_origin = set;
 }
 
 //mxd. By default, contents are CONTENTS_EMPTY or CONTENTS_SOLID when startsolid/fraction:0 or CONTENTS_EMPTY when fraction:1.

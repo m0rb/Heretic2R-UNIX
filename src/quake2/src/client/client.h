@@ -717,6 +717,7 @@ extern qboolean trace_ignore_player; //mxd
 extern qboolean trace_ignore_camera; //mxd
 extern qboolean trace_ignore_bmodels; //mxd
 extern qboolean trace_ignore_entities; //mxd
+extern qboolean trace_lerp_bmodel_origin; //mxd
 
 extern void CL_CheckPredictionError(void);
 extern int CL_PMpointcontents(const vec3_t point); //mxd

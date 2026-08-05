@@ -109,6 +109,7 @@
 #define CTF_IGNORE_PLAYER			0x00000008	// Turns off collision detection with player.
 #define CTF_ALWAYS_CHECK_CONTENTS	0x00000010	// When set, sets trace contents via PointContents() on endpos when fraction is 0 or 1
 												// (by default, contents are CONTENTS_EMPTY or CONTENTS_SOLID when startsolid/fraction:0 or CONTENTS_EMPTY when fraction:1).
+#define CTF_LERP_BMODEL_ORIGIN		0x00000020	// Interpolate between previous and current bmodel origin based on cl.lerpfrac.
 
 //mxd. Legacy flags for compatibility reasons.
 #define CTF_CLIP_TO_WORLD_LEGACY	0x08000000 // CEF_CLIP_TO_WORLD in original logic. Converted to CTF_CLIP_TO_WORLD in CL_Trace().
