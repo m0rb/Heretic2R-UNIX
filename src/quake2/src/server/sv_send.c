@@ -74,8 +74,8 @@ void SV_BroadcastPrintf(const int printlevel, const char* fmt, ...)
 	if ((int)dedicated->value)
 		Com_Printf("%s", string); // H2: missing 'mask off high bits' logic.
 
-	client_t* cl = svs.clients;
-	for (int i = 0; i < (int)maxclients->value; i++, cl++)
+	client_t* cl = &svs.clients[0];
+	for (int i = 0; i < svs.num_clients; i++, cl++)
 	{
 		if (printlevel < cl->messagelevel || cl->state != cs_spawned)
 			continue;
@@ -88,8 +88,8 @@ void SV_BroadcastPrintf(const int printlevel, const char* fmt, ...)
 
 void SV_BroadcastCaption(const int printlevel, const short stringid) // H2
 {
-	client_t* cl = svs.clients;
-	for (int i = 0; i < (int)maxclients->value; i++, cl++)
+	client_t* cl = &svs.clients[0];
+	for (int i = 0; i < svs.num_clients; i++, cl++)
 	{
 		if (cl->state != cs_spawned || printlevel < cl->messagelevel)
 			continue;
@@ -109,8 +109,8 @@ void SV_BroadcastObituary(const int printlevel, const short stringid, const shor
 		Com_Printf("Client Obituary #%d: %s and %s\n", stringid, name1, name2);
 	}
 
-	client_t* cl = svs.clients;
-	for (int i = 0; i < (int)maxclients->value; i++, cl++)
+	client_t* cl = &svs.clients[0];
+	for (int i = 0; i < svs.num_clients; i++, cl++)
 	{
 		if (cl->state != cs_spawned || printlevel < cl->messagelevel)
 			continue;
@@ -190,15 +190,15 @@ void SV_Multicast(const vec3_t origin, const multicast_t to)
 	}
 
 	// Send the data to all relevant clients.
-	client_t* client = svs.clients;
-	for (int i = 0; i < (int)maxclients->value; i++, client++)
+	client_t* cl = &svs.clients[0];
+	for (int i = 0; i < svs.num_clients; i++, cl++)
 	{
-		if (client->state == cs_free || client->state == cs_zombie || (client->state != cs_spawned && !reliable))
+		if (cl->state == cs_free || cl->state == cs_zombie || (cl->state != cs_spawned && !reliable))
 			continue;
 
 		if (mask != NULL)
 		{
-			const int leafnum = CM_PointLeafnum(client->edict->s.origin);
+			const int leafnum = CM_PointLeafnum(cl->edict->s.origin);
 			cluster = CM_LeafCluster(leafnum);
 			const int area2 = CM_LeafArea(leafnum);
 
@@ -210,9 +210,9 @@ void SV_Multicast(const vec3_t origin, const multicast_t to)
 		}
 
 		if (reliable)
-			SZ_Write(&client->netchan.message, sv.multicast.data, sv.multicast.cursize);
+			SZ_Write(&cl->netchan.message, sv.multicast.data, sv.multicast.cursize);
 		else
-			SZ_Write(&client->datagram, sv.multicast.data, sv.multicast.cursize);
+			SZ_Write(&cl->datagram, sv.multicast.data, sv.multicast.cursize);
 	}
 
 	SZ_Clear(&sv.multicast);
@@ -269,15 +269,15 @@ static void SV_MulticastSound(const vec3_t origin, const multicast_t to, const i
 	}
 
 	// Send the data to all relevant clients.
-	client_t* client = svs.clients;
-	for (int i = 0; i < (int)maxclients->value; i++, client++)
+	client_t* cl = &svs.clients[0];
+	for (int i = 0; i < svs.num_clients; i++, cl++)
 	{
-		if (client->state == cs_free || client->state == cs_zombie || (client->state != cs_spawned && !reliable))
+		if (cl->state == cs_free || cl->state == cs_zombie || (cl->state != cs_spawned && !reliable))
 			continue;
 
 		if (mask != NULL)
 		{
-			const int leafnum = CM_PointLeafnum(client->edict->s.origin);
+			const int leafnum = CM_PointLeafnum(cl->edict->s.origin);
 			const int cluster = CM_LeafCluster(leafnum);
 			const int area2 = CM_LeafArea(leafnum);
 
@@ -289,7 +289,7 @@ static void SV_MulticastSound(const vec3_t origin, const multicast_t to, const i
 		}
 
 		// Add position flag or skip position info. //TODO: Why is it done here?..
-		if (!(sv.multicast.data[message_start] & SND_POS) && (to == MULTICAST_PHS || to == MULTICAST_PHS_R) && !PF_inPVS(client->edict->s.origin, origin))
+		if (!(sv.multicast.data[message_start] & SND_POS) && (to == MULTICAST_PHS || to == MULTICAST_PHS_R) && !PF_inPVS(cl->edict->s.origin, origin))
 			sv.multicast.data[message_start] |= SND_POS;
 
 		int send_size;
@@ -299,9 +299,9 @@ static void SV_MulticastSound(const vec3_t origin, const multicast_t to, const i
 			send_size = sv.multicast.cursize - 6; // Skip position info (last 3 shorts).
 
 		if (reliable)
-			SZ_Write(&client->netchan.message, sv.multicast.data, send_size);
+			SZ_Write(&cl->netchan.message, sv.multicast.data, send_size);
 		else
-			SZ_Write(&client->datagram, sv.multicast.data, send_size);
+			SZ_Write(&cl->datagram, sv.multicast.data, send_size);
 	}
 
 	SZ_Clear(&sv.multicast);
@@ -603,41 +603,41 @@ void SV_SendClientMessages(const qboolean send_client_data)
 	// Send a message to each spawned client.
 	int send_mask = 0; // H2
 
-	client_t* c = &svs.clients[0];
-	for (int i = 0; i < (int)maxclients->value; i++, c++)
+	client_t* cl = &svs.clients[0];
+	for (int i = 0; i < svs.num_clients; i++, cl++)
 	{
-		if (c->state == cs_free)
+		if (cl->state == cs_free)
 			continue;
 
-		const qboolean overflowed = c->datagram.overflowed; // H2
+		const qboolean overflowed = cl->datagram.overflowed; // H2
 
 		// If the reliable message overflowed, drop the client.
-		if (c->netchan.message.overflowed)
+		if (cl->netchan.message.overflowed)
 		{
-			SV_SendDisconnect(c); // YQ2
+			SV_SendDisconnect(cl); // YQ2
 			continue;
 		}
 
-		send_mask |= EDICT_MASK(c->edict); // H2
+		send_mask |= EDICT_MASK(cl->edict); // H2
 
 		if (sv.state == ss_cinematic || sv.state == ss_demo)
 		{
-			Netchan_Transmit(&c->netchan, msglen, msgbuf);
+			Netchan_Transmit(&cl->netchan, msglen, msgbuf);
 		}
-		else if (c->state == cs_spawned)
+		else if (cl->state == cs_spawned)
 		{
 			// Don't overrun bandwidth.
-			if (SV_RateDrop(c))
+			if (SV_RateDrop(cl))
 				continue;
 
-			SV_SendClientDatagram(c, send_client_data); // H2: new 2-nd arg.
+			SV_SendClientDatagram(cl, send_client_data); // H2: new 2-nd arg.
 		}
 
 		// Messages to non-spawned clients are sent by SV_SendPrepClientMessages() -- YQ2.
 
 		if (!overflowed) // H2
 		{
-			const int mask = EDICT_MASK(c->edict);
+			const int mask = EDICT_MASK(cl->edict);
 			for (int e = 1; e < ge->num_edicts; e++)
 			{
 				edict_t* ent = EDICT_NUM(e);
@@ -668,21 +668,21 @@ void SV_SendPrepClientMessages(void) // YQ2
 		return;
 
 	// Send a message to each inactive client if needed.
-	client_t* c = &svs.clients[0];
-	for (int i = 0; i < (int)maxclients->value; i++, c++)
+	client_t* cl = &svs.clients[0];
+	for (int i = 0; i < svs.num_clients; i++, cl++)
 	{
-		if (c->state == cs_free || c->state == cs_spawned)
+		if (cl->state == cs_free || cl->state == cs_spawned)
 			continue;
 
-		if (c->netchan.message.overflowed)
+		if (cl->netchan.message.overflowed)
 		{
-			SV_SendDisconnect(c);
+			SV_SendDisconnect(cl);
 			continue;
 		}
 
 		// Just update reliable if needed.
-		if (c->netchan.message.cursize > 0 || curtime - c->netchan.last_sent > 1000)
-			Netchan_Transmit(&c->netchan, 0, NULL);
+		if (cl->netchan.message.cursize > 0 || curtime - cl->netchan.last_sent > 1000)
+			Netchan_Transmit(&cl->netchan, 0, NULL);
 	}
 }
 

@@ -144,7 +144,8 @@ typedef struct
 	int spawncount; // Incremented each server start. Used to check late spawns.
 
 	client_t* clients;					// [maxclients->value]
-	int num_client_entities;			// maxclients->value * UPDATE_BACKUP * MAX_PACKET_ENTITIES
+	int num_clients;					// mxd. Because maxclients->value can be unreliable (e.g. loading COOP save while playing SP game)...
+	int num_client_entities;			// maxclients->value * UPDATE_BACKUP * MAX_PACKET_ENTITIES.
 	int next_client_entities;			// Next client_entity to use.
 	entity_state_t* client_entities;	// [num_client_entities]
 

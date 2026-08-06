@@ -317,7 +317,7 @@ static qboolean SV_SetPlayer(void)
 	{
 		const int idnum = Q_atoi(s);
 
-		if (idnum < 0 || idnum >= (int)maxclients->value)
+		if (idnum < 0 || idnum >= svs.num_clients)
 		{
 			Com_Printf("Bad client slot: %i\n", idnum);
 			return false;
@@ -336,8 +336,8 @@ static qboolean SV_SetPlayer(void)
 	}
 
 	// Check for a name match.
-	client_t* cl = svs.clients;
-	for (int i = 0; i < (int)maxclients->value; i++, cl++)
+	client_t* cl = &svs.clients[0];
+	for (int i = 0; i < svs.num_clients; i++, cl++)
 	{
 		if (cl->state != cs_free && strcmp(cl->name, s) == 0)
 		{
@@ -391,8 +391,8 @@ static void SV_Status_f(void)
 	Com_Printf("num score ping name            lastmsg address               qport  rate \n"); // H2: +rate.
 	Com_Printf("--- ----- ---- --------------- ------- --------------------- ------ -----\n");
 
-	client_t* cl = svs.clients;
-	for (int i = 0; i < (int)maxclients->value; i++, cl++)
+	client_t* cl = &svs.clients[0];
+	for (int i = 0; i < svs.num_clients; i++, cl++)
 	{
 		if (cl->state == cs_free)
 			continue;
@@ -532,10 +532,10 @@ static void SV_GameMap_f(void)
 
 		// Clear all the client inuse flags before saving so that when the level is re-entered,
 		// the clients will spawn at spawn points instead of occupying body shells.
-		qboolean* saved_inuse = malloc((int)maxclients->value * sizeof(qboolean));
+		qboolean* saved_inuse = malloc(svs.num_clients * sizeof(qboolean));
 
 		client_t* cl = &svs.clients[0];
-		for (int i = 0; i < (int)maxclients->value; i++, cl++)
+		for (int i = 0; i < svs.num_clients; i++, cl++)
 		{
 			cl->edict = EDICT_NUM(i + 1); //mxd. This fixes "use after free" Address sanitizer error (is triggered because cl->edict pointer is not updated after freeing/re-allocating edicts in ReadGame())...
 			saved_inuse[i] = cl->edict->inuse;
@@ -546,7 +546,7 @@ static void SV_GameMap_f(void)
 
 		// We must restore these for clients to transfer over correctly.
 		cl = &svs.clients[0];
-		for (int i = 0; i < (int)maxclients->value; i++, cl++)
+		for (int i = 0; i < svs.num_clients; i++, cl++)
 			cl->edict->inuse = saved_inuse[i];
 
 		free(saved_inuse);
@@ -665,8 +665,8 @@ static void SV_ConSay_f(void)
 
 	strcat_s(text, sizeof(text), p); //mxd. strcat -> strcat_s
 
-	client_t* cl = svs.clients;
-	for (int j = 0; j < (int)maxclients->value; j++, cl++)
+	client_t* cl = &svs.clients[0];
+	for (int i = 0; i < svs.num_clients; i++, cl++)
 		if (cl->state == cs_spawned)
 			SV_ClientPrintf(cl, PRINT_CHAT, "%s\n", text);
 }
@@ -771,7 +771,7 @@ static void SV_Savegame_f(void)
 		return;
 	}
 
-	if (maxclients->value == 1.0f && svs.clients[0].edict->client->ps.stats[STAT_HEALTH] <= 0)
+	if (svs.num_clients == 1 && svs.clients[0].edict->client->ps.stats[STAT_HEALTH] <= 0)
 	{
 		Com_Printf("Can't savegame while dead!\n");
 		return;

@@ -805,7 +805,7 @@ int SV_GetContentsAtPoint(const vec3_t point) // H2
 qboolean SV_CheckDistances(const vec3_t origin, const float dist) // H2
 {
 	client_t* cl = &svs.clients[0];
-	for (int i = 0; i < (int)maxclients->value; i++, cl++)
+	for (int i = 0; i < svs.num_clients; i++, cl++)
 	{
 		if (cl->state != cs_spawned)
 			continue;

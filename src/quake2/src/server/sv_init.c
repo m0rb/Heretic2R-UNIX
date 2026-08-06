@@ -281,9 +281,9 @@ static void SV_SpawnServer(const char* server, const char* spawnpoint, const ser
 	strcpy_s(sv.name, sizeof(sv.name), server); //mxd. strcpy -> strcpy_s
 
 	// Leave slots at start for clients only.
-	for (int i = 0; i < (int)maxclients->value; i++)
+	for (int i = 0; i < svs.num_clients; i++)
 	{
-		// Needs to reconnect
+		// Needs to reconnect.
 		if (svs.clients[i].state > cs_connected)
 			svs.clients[i].state = cs_connected;
 
@@ -395,17 +395,17 @@ void SV_InitGame(void)
 	if ((int)dedicated->value && !Cvar_IsSet("coop"))
 		Cvar_FullSet("deathmatch", "1", CVAR_SERVERINFO | CVAR_LATCH);
 
-	// Init clients
+	// Init clients.
 	if (Cvar_IsSet("deathmatch"))
 	{
-		if (maxclients->value <= 1)
+		if ((int)maxclients->value <= 1)
 			Cvar_FullSet("maxclients", "8", CVAR_SERVERINFO | CVAR_LATCH);
-		else if (maxclients->value > MAX_CLIENTS)
+		else if ((int)maxclients->value > MAX_CLIENTS)
 			Cvar_FullSet("maxclients", va("%i", MAX_CLIENTS), CVAR_SERVERINFO | CVAR_LATCH);
 	}
 	else if (Cvar_IsSet("coop"))
 	{
-		if (maxclients->value <= 1 || maxclients->value > 4)
+		if ((int)maxclients->value <= 1 || (int)maxclients->value > 4)
 			Cvar_FullSet("maxclients", "4", CVAR_SERVERINFO | CVAR_LATCH);
 	}
 	else // Non-deathmatch, non-coop is one player.
@@ -414,20 +414,21 @@ void SV_InitGame(void)
 	}
 
 	svs.spawncount = rand();
-	svs.clients = Z_Malloc((int)maxclients->value * (int)sizeof(client_t));
-	svs.num_client_entities = (int)maxclients->value * UPDATE_BACKUP * 64;
+	svs.num_clients = (int)maxclients->value; //mxd
+	svs.clients = Z_Malloc(svs.num_clients * (int)sizeof(client_t));
+	svs.num_client_entities = svs.num_clients * UPDATE_BACKUP * 64;
 	svs.client_entities = Z_Malloc(svs.num_client_entities * (int)sizeof(entity_state_t));
 
-	// Init network stuff
-	NET_Config(maxclients->value > 1);
+	// Init network stuff.
+	NET_Config(svs.num_clients > 1);
 
-	// Heartbeats will always be sent to the id master
-	svs.last_heartbeat = -99999; // Send immediately
+	// Heartbeats will always be sent to the id master.
+	svs.last_heartbeat = -99999; // Send immediately.
 
-	// Init game
+	// Init game.
 	SV_InitGameProgs();
 
-	for (int i = 0; i < (int)maxclients->value; i++)
+	for (int i = 0; i < svs.num_clients; i++)
 	{
 		edict_t* ent = EDICT_NUM(i + 1);
 		ent->s.number = (short)(i + 1);
@@ -555,7 +556,7 @@ void SV_Map(const qboolean attractloop, const char* levelstring, const qboolean 
 	else
 	{
 		// For some reason calling send messages here causes a lengthy reconnect delay -- YQ2.
-		if ((int)maxclients->value > 1)
+		if (svs.num_clients > 1)
 		{
 			SV_SendClientMessages(false);
 			SV_SendPrepClientMessages(); // YQ2

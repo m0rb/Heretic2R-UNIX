@@ -213,11 +213,11 @@ static void SV_Begin_f(void)
 			}
 
 			int c = 0;
-			for (; c < (int)maxclients->value; c++)
+			for (; c < svs.num_clients; c++)
 				if (svs.clients[c].coop_state < cst_coop_timeout)
 					break;
 
-			if (c < (int)maxclients->value && sv.time < (uint)Cvar_VariableInt("sv_cooptimeout") * 1000)
+			if (c < svs.num_clients && sv.time < (uint)Cvar_VariableInt("sv_cooptimeout") * 1000)
 			{
 				MSG_WriteByte(&sv_client->netchan.message, svc_stufftext);
 				MSG_WriteString(&sv_client->netchan.message, va("cmd begin %i\n", svs.spawncount));
