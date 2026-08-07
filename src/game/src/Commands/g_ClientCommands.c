@@ -189,7 +189,24 @@ static void Cmd_Give_f(edict_t* ent)
 		return;
 	}
 
-	const char* name = gi.argv(1); //H2_BUGFIX: mxd. gi.args() in original logic (so "give health NNN" didn't work).
+	//mxd. Manually split args into 'name' and 'count' parts, so both 'give health 10' and 'give full container' cmds work...
+	char name[128] = {0};
+	int count = 0;
+
+	for (int i = 1; i < gi.argc(); i++)
+	{
+		count = Q_atoi(gi.argv(i));
+		if (count != 0)
+			break; // Count is supposed to be the last arg.
+
+		strcat_s(name, sizeof(name), (i == 1 ? gi.argv(i) : va(" %s", gi.argv(i))));
+	}
+
+	if (name[0] == 0) //mxd
+	{
+		gi.cprintf(NULL, PRINT_HIGH, "Usage: give all | level | weapons | defences | health <amount> | mana | armor | staff | lungs | powerup | reflection | ghost | chicken | plague | puzzle | [pickup name] <amount>\n");
+		return;
+	}
 
 	// FOR TESTING ONLY!
 	if (Q_stricmp(name, "level") == 0)
@@ -245,8 +262,8 @@ static void Cmd_Give_f(edict_t* ent)
 
 	if (give_all || Q_stricmp(name, "health") == 0)
 	{
-		if (gi.argc() == 3)
-			ent->health += Q_atoi(gi.argv(2)); //mxd. atoi -> Q_atoi //TODO: shouldn't this be clamped by max_health?
+		if (count != 0)
+			ent->health += count; //TODO: shouldn't this be clamped by max_health?
 		else
 			ent->health = ent->max_health;
 
@@ -432,7 +449,7 @@ static void Cmd_Give_f(edict_t* ent)
 	const int index = ITEM_INDEX(item);
 
 	if (item->flags & IT_AMMO)
-		pers->inventory.Items[index] += ((gi.argc() == 3) ? Q_atoi(gi.argv(2)) : item->quantity); //mxd. atoi -> Q_atoi
+		pers->inventory.Items[index] += ((count != 0) ? count : item->quantity);
 	else
 		pers->inventory.Items[index]++;
 
