@@ -349,6 +349,7 @@ void SP_monster_chicken(edict_t* self)
 
 	self->health = CHICKEN_HEALTH;
 	self->mass = CHICKEN_MASS;
+	self->viewheight = 12; //mxd. Not set in original logic (so was set to 25 in M_WalkmonsterStartGo()).
 	self->yaw_speed = 20.0f;
 
 	self->movetype = PHYSICSTYPE_STEP;
