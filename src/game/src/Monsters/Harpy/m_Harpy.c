@@ -95,6 +95,7 @@ void HarpyHeadThink(edict_t* self) //mxd. Named 'harpy_head_think' in original l
 		self->solid = SOLID_BBOX;
 		self->takedamage = DAMAGE_YES;
 		self->clipmask = MASK_MONSTERSOLID;
+		self->think = NULL; //mxd
 		self->nextthink = THINK_NEVER; //mxd. Use define.
 		self->svflags |= SVF_DEADMONSTER;
 		self->health = 25;
