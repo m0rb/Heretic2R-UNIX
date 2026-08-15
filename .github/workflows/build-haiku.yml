@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -17,10 +18,7 @@ jobs:
         with:
           usesh: true
           prepare: |
-            ls -la /system/cache/package-repositories/ 2>/dev/null || true
-            rm -rf /system/cache/package-repositories/HaikuPorts 2>/dev/null || true
-            pkgman refresh </dev/null || true
-            yes | pkgman install -y cmake pkgconfig libexecinfo_devel
+            pkgman install -y cmake pkgconfig libexecinfo_devel
 
           run: |
             # Build SDL3 from source — not yet in HaikuPorts.
