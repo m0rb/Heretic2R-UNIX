@@ -471,12 +471,13 @@ GL1_CFLAGS := $(REF_CFLAGS)
 GL3_CFLAGS := $(REF_CFLAGS) -I./src/ref_gl3/src -I./$(INCLUDE_DIR)/glad-GL3.2/include -DGL3_MODULES_READY
 VK_CFLAGS  := $(REF_CFLAGS) -I./src/ref_vk/src -I./src/ref_vk $(VULKAN_CFLAGS) -DVK_MODULES_READY
 
-# Probe volk.h with the real build flags: OpenBSD/Solaris ship vulkan.h without
-# the vk_platform.h/vulkan_core.h volk needs, so probing vulkan.h false-positives.
+# Probe volk.h with the real build flags. Uses -include rather than piping a
+# source line in: make turns '\#' into a literal backslash-hash, which the
+# preprocessor accepts as plain text, so the old probe always succeeded.
 ifdef NO_VULKAN
   HAVE_VULKAN :=
 else
-  HAVE_VULKAN := $(shell echo '\#include "volk/volk.h"' | $(CC) $(VK_CFLAGS) -E -x c - >/dev/null 2>&1 && echo yes)
+  HAVE_VULKAN := $(shell $(CC) $(VK_CFLAGS) -E -include volk/volk.h -x c /dev/null >/dev/null 2>&1 && echo yes)
 endif
 
 # Renderers to build: gl1 and gl3 everywhere, vk only where headers were found.
