@@ -17,12 +17,19 @@ jobs:
         with:
           usesh: true
           prepare: |
-            pkgman install -y cmake ninja pkgconfig libexecinfo_devel
+            # Refresh first: a stale HaikuPorts index makes pkgman request package
+            # versions that no longer exist on the mirror ("Resource not found").
+            # Tolerate refresh failures - the cached index is still usable.
+            pkgman refresh || true
+            # No ninja: it is repeatedly unavailable from HaikuPorts, and the SDL3
+            # build below uses the Unix Makefiles generator instead (as on
+            # OpenIndiana/Solaris). Haiku ships GNU make in the base image.
+            pkgman install -y cmake pkgconfig libexecinfo_devel
 
           run: |
             # Build SDL3 from source — not yet in HaikuPorts.
             git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
-            cmake -S SDL3-src -B SDL3-build -G Ninja \
+            cmake -S SDL3-src -B SDL3-build -G "Unix Makefiles" \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INSTALL_PREFIX=/boot/system/non-packaged \
               -DSDL_SHARED=ON \
@@ -37,8 +44,8 @@ jobs:
             make -j$NCPU
             make server -j$NCPU
             # Fail loudly if a renderer module silently did not build. ref_vk is
-            # required here because this platform ships Vulkan headers; platforms
-            # without them skip it by design.
+            # not required here: this platform has no Vulkan headers, so the build
+            # skips it by design.
             for m in gl1 gl3; do
               test -f "build/release/ref_$m.so" || { echo "::error::ref_$m.so was not built"; exit 1; }
             done

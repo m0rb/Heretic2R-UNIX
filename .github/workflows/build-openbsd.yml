@@ -30,8 +30,8 @@ jobs:
             gmake -j$(sysctl -n hw.ncpu)
             gmake server -j$(sysctl -n hw.ncpu)
             # Fail loudly if a renderer module silently did not build. ref_vk is
-            # required here because this platform ships Vulkan headers; platforms
-            # without them skip it by design.
+            # not required here: this platform has no Vulkan headers, so the build
+            # skips it by design.
             for m in gl1 gl3; do
               test -f "build/release/ref_$m.so" || { echo "::error::ref_$m.so was not built"; exit 1; }
             done
