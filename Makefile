@@ -148,11 +148,6 @@ endif
 # (Haiku, Solaris, ...). Point at a custom SDK with VULKAN_CFLAGS=-I/path,
 # or skip it explicitly with NO_VULKAN=1.
 VULKAN_CFLAGS ?=
-ifdef NO_VULKAN
-  HAVE_VULKAN :=
-else
-  HAVE_VULKAN := $(shell echo '\#include <vulkan/vulkan.h>' | $(CC) $(VULKAN_CFLAGS) -E -x c - >/dev/null 2>&1 && echo yes)
-endif
 
 # Additional libraries
 # dl is part of libc on OpenBSD, Darwin, Haiku, and NetBSD.
@@ -475,6 +470,14 @@ REF_CFLAGS := $(CFLAGS) -fPIC
 GL1_CFLAGS := $(REF_CFLAGS)
 GL3_CFLAGS := $(REF_CFLAGS) -I./src/ref_gl3/src -I./$(INCLUDE_DIR)/glad-GL3.2/include -DGL3_MODULES_READY
 VK_CFLAGS  := $(REF_CFLAGS) -I./src/ref_vk/src -I./src/ref_vk $(VULKAN_CFLAGS) -DVK_MODULES_READY
+
+# Probe volk.h with the real build flags: OpenBSD/Solaris ship vulkan.h without
+# the vk_platform.h/vulkan_core.h volk needs, so probing vulkan.h false-positives.
+ifdef NO_VULKAN
+  HAVE_VULKAN :=
+else
+  HAVE_VULKAN := $(shell echo '\#include "volk/volk.h"' | $(CC) $(VK_CFLAGS) -E -x c - >/dev/null 2>&1 && echo yes)
+endif
 
 # Renderers to build: gl1 and gl3 everywhere, vk only where headers were found.
 REF_MODULES := $(BUILD_DIR)/ref_gl1$(SHARED_EXT) $(BUILD_DIR)/ref_gl3$(SHARED_EXT)

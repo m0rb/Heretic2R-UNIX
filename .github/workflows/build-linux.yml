@@ -87,9 +87,6 @@ jobs:
         run: |
           make -j$(nproc)
           make server -j$(nproc)
-          # Fail loudly if a renderer module silently did not build. ref_vk is
-          # required here because this platform ships Vulkan headers; platforms
-          # without them skip it by design.
           for m in gl1 gl3 vk; do
             test -f "build/release/ref_$m.so" || { echo "::error::ref_$m.so was not built"; exit 1; }
           done
@@ -98,7 +95,6 @@ jobs:
         run: |
           mkdir -p dist dist-ded
           cp build/release/heretic2r dist/
-          # Renderer modules must sit next to the executable (the engine scans its own dir).
           cp build/release/ref_*.so dist/
           cp -r build/release/base dist/
           cp build/release/heretic2r-server dist-ded/

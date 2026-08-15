@@ -18,13 +18,9 @@ jobs:
 
       - name: Build
         run: |
-          # Homebrew headers are not on the default include path (esp. Apple Silicon).
           export VULKAN_CFLAGS="-I$(brew --prefix)/include"
           make -j$(sysctl -n hw.logicalcpu)
           make server -j$(sysctl -n hw.logicalcpu)
-          # Fail loudly if a renderer module silently did not build. ref_vk is
-          # required here because this platform ships Vulkan headers; platforms
-          # without them skip it by design.
           for m in gl1 gl3 vk; do
             test -f "build/release/ref_$m.dylib" || { echo "::error::ref_$m.dylib was not built"; exit 1; }
           done
@@ -33,7 +29,6 @@ jobs:
         run: |
           mkdir -p dist dist-ded
           cp build/release/heretic2r dist/
-          # Renderer modules must sit next to the executable (the engine scans its own dir).
           cp build/release/ref_*.dylib dist/
           cp -r build/release/base dist/
           cp build/release/heretic2r-server dist-ded/
