@@ -142,7 +142,7 @@ set(CLIENT_SOURCES
     src/quake2/src/client/cl_globals.c
 )
 
-file(GLOB MENU_SOURCES "src/quake2/src/client/menus/*.c")
+file(GLOB MENU_SOURCES CONFIGURE_DEPENDS "src/quake2/src/client/menus/*.c")
 
 # ---------------------------------------------------------------------------
 # Source files - Server
@@ -182,17 +182,17 @@ set(H2COMMON_SOURCES
 # ---------------------------------------------------------------------------
 # Source files - Game DLL
 # ---------------------------------------------------------------------------
-file(GLOB_RECURSE GAME_SOURCES "src/game/src/*.c" "src/game/src/*.cpp")
+file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS "src/game/src/*.c" "src/game/src/*.cpp")
 
 # ---------------------------------------------------------------------------
 # Source files - Player DLL
 # ---------------------------------------------------------------------------
-file(GLOB_RECURSE PLAYER_SOURCES "src/Player/src/*.c")
+file(GLOB_RECURSE PLAYER_SOURCES CONFIGURE_DEPENDS "src/Player/src/*.c")
 
 # ---------------------------------------------------------------------------
 # Source files - Client Effects DLL
 # ---------------------------------------------------------------------------
-file(GLOB_RECURSE CLFX_SOURCES "src/client effects/src/*.c")
+file(GLOB_RECURSE CLFX_SOURCES CONFIGURE_DEPENDS "src/client effects/src/*.c")
 # qcommon files the .so needs locally (can't rely on main exe's hidden symbols)
 set(CLFX_EXTRA_SOURCES
     src/qcommon/turbsin.c
@@ -214,7 +214,7 @@ set(SOUND_SOURCES
 # ---------------------------------------------------------------------------
 # Source files - GL1 Renderer
 # ---------------------------------------------------------------------------
-file(GLOB_RECURSE GL1_SOURCES "src/ref_gl1/src/*.c")
+file(GLOB_RECURSE GL1_SOURCES CONFIGURE_DEPENDS "src/ref_gl1/src/*.c")
 
 # ---------------------------------------------------------------------------
 # Source files - OpenGL 1.3 GLAD
