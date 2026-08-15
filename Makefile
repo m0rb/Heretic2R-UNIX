@@ -88,8 +88,8 @@ ifeq ($(UNAME),FreeBSD)
 endif
 
 ifeq ($(UNAME),OpenBSD)
-  CFLAGS += -DOPENBSD -I/usr/X11R6/include
-  LDFLAGS := -lm -lexecinfo -L/usr/X11R6/lib
+  CFLAGS += -DOPENBSD -I/usr/X11R6/include -I/usr/local/include
+  LDFLAGS := -lm -lexecinfo -L/usr/X11R6/lib -L/usr/local/lib
   SHARED_EXT := .so
   EXE_EXT :=
 endif
@@ -142,11 +142,7 @@ else
   GL_LIBS := -lGL
 endif
 
-# Vulkan configuration. Only the headers are needed at build time - volk
-# dlopen()s libvulkan at runtime and it is never linked - so the Vulkan renderer
-# is built wherever <vulkan/vulkan.h> can be found and skipped elsewhere
-# (Haiku, Solaris, ...). Point at a custom SDK with VULKAN_CFLAGS=-I/path,
-# or skip it explicitly with NO_VULKAN=1.
+# Headers only; volk dlopen()s libvulkan. Override with VULKAN_CFLAGS=-I/path or NO_VULKAN=1.
 VULKAN_CFLAGS ?=
 
 # Additional libraries

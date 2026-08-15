@@ -24,12 +24,12 @@ jobs:
         with:
           arch: ${{ matrix.arch == 'x86_64' && '' || matrix.arch }}
           usesh: true
-          prepare: pkg_add sdl3 gmake pkgconf
+          prepare: pkg_add sdl3 gmake pkgconf vulkan-headers
 
           run: |
             gmake -j$(sysctl -n hw.ncpu)
             gmake server -j$(sysctl -n hw.ncpu)
-            for m in gl1 gl3; do
+            for m in gl1 gl3 vk; do
               test -f "build/release/ref_$m.so" || { echo "::error::ref_$m.so was not built"; exit 1; }
             done
             mkdir -p dist dist-ded

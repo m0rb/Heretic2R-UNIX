@@ -23,7 +23,7 @@ jobs:
         with:
           arch: ${{ matrix.arch == 'x86_64' && '' || matrix.arch }}
           usesh: true
-          prepare: pkg_add gmake pkg-config libexecinfo
+          prepare: pkg_add gmake pkg-config libexecinfo vulkan-headers
 
           run: |
             # Install the X11 development set for this arch from the NetBSD CDN.
@@ -47,7 +47,7 @@ jobs:
             NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
             gmake -j$NCPU
             gmake server -j$NCPU
-            for m in gl1 gl3; do
+            for m in gl1 gl3 vk; do
               test -f "build/release/ref_$m.so" || { echo "::error::ref_$m.so was not built"; exit 1; }
             done
 

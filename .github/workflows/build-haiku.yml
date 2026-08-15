@@ -17,13 +17,12 @@ jobs:
         with:
           usesh: true
           prepare: |
-            # A stale HaikuPorts index resolves to package versions the mirror no
-            # longer has; force a clean re-fetch if refresh fails.
             pkgman refresh || {
               pkgman drop-repo HaikuPorts
-              pkgman add-repo https://eu.hpkg.haiku-os.org/haikuports/r1beta5/x86_64/current
+              yes | pkgman add-repo https://eu.hpkg.haiku-os.org/haikuports/r1beta5/x86_64/current
+              pkgman refresh || true
             }
-            pkgman install -y cmake pkgconfig libexecinfo_devel
+            yes | pkgman install -y cmake pkgconfig libexecinfo_devel
 
           run: |
             # Build SDL3 from source — not yet in HaikuPorts.
