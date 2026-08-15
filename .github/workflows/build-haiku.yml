@@ -17,7 +17,9 @@ jobs:
         with:
           usesh: true
           prepare: |
-            pkgman refresh </dev/null || yes | pkgman add-repo -f https://eu.hpkg.haiku-os.org/haikuports/r1beta5/x86_64/current
+            ls -la /system/cache/package-repositories/ 2>/dev/null || true
+            rm -rf /system/cache/package-repositories/HaikuPorts 2>/dev/null || true
+            pkgman refresh </dev/null || true
             yes | pkgman install -y cmake pkgconfig libexecinfo_devel
 
           run: |
