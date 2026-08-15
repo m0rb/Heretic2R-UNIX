@@ -71,20 +71,23 @@ Q2DLL_DECLSPEC void DBG_HudPrint(const int slot, const char* label, const char* 
 		return;
 	}
 
+	DebugHudMessage_t* msg = &dbg_messages[slot];
+
+	// Title.
 	if (label == NULL || *label == 0)
 	{
-		DBG_IDEPrint("DBG_HudPrint: invalid label for slot %i!", slot);
+		msg->title[0] = 0;
+		msg->message[0] = 0;
+
 		return;
 	}
-
-	DebugHudMessage_t* msg = &dbg_messages[slot];
 
 	// Title
 	strncpy(msg->title, label, sizeof(msg->title) - 1);
 	msg->title[sizeof(msg->title) - 1] = 0;
 
-	// Message
-	if (fmt != NULL)
+	// Message.
+	if (fmt != NULL && *fmt != 0)
 	{
 		va_list argptr;
 

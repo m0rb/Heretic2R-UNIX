@@ -28,10 +28,28 @@ jobs:
           git config rerere.enabled true
           git config rerere.autoupdate true
           git config checkout.defaultRemote origin
-          # .gitattributes normalizes line endings; tell merge/rebase to honor it
-          # so upstream CRLF doesn't conflict with unix LF on identical content.
+          # Upstream commits CRLF, the unix branch is LF. Without renormalization every
+          # file both sides touched conflicts in FULL (whole-file conflict) even when the
+          # content is identical. Two safeguards, because .gitattributes only lives on the
+          # unix branch and is absent while the rebase has main checked out:
+          #   1. .git/info/attributes applies regardless of which branch is checked out.
+          #   2. core.autocrlf=input makes text=auto the default even without attributes.
           git config merge.renormalize true
+          git config core.autocrlf input
           printf '* text=auto eol=lf\n' > .git/info/attributes
+
+      # Fail fast if the CRLF safeguards above aren't actually in effect: without them
+      # the rebase still "works", but reports a huge bogus conflict set (every co-touched
+      # file, whole-file) that masks the handful of real content conflicts.
+      - name: Verify CRLF normalization is active
+        run: |
+          attr=$(git check-attr text -- probe.c | sed 's/.*: //')
+          renorm=$(git config --get merge.renormalize || echo false)
+          echo "text attribute = $attr / merge.renormalize = $renorm"
+          if [ "$attr" != "auto" ] || [ "$renorm" != "true" ]; then
+            echo "::error::CRLF normalization inactive - rebase would produce bogus whole-file conflicts."
+            exit 1
+          fi
 
       # Persist rerere resolutions across runs so recurring conflict patterns
       # (same upstream change vs same unix patch) auto-resolve without manual intervention.
@@ -96,13 +114,40 @@ jobs:
           if git rebase refs/heads/main; then
             echo "success=true" >> "$GITHUB_OUTPUT"
           else
-            git diff --name-only --diff-filter=U > /tmp/conflicts.txt || true
+            # Classify each conflict before aborting, so a line-ending artifact can never
+            # masquerade as a real conflict. A file is a pure CRLF artifact when either:
+            #   a) both sides are byte-identical once CR is stripped, or
+            #   b) the replayed unix side changed ONLY line endings vs the merge base
+            #      (so it contributed no content and should have taken upstream's version).
+            # Both are impossible when renormalization is working, so any hit means the
+            # safeguards slipped and this conflict list is inflated.
+            hash() { git show "$1" 2>/dev/null | git hash-object --stdin; }
+            hash_nocr() { git show "$1" 2>/dev/null | tr -d '\r' | git hash-object --stdin; }
+            crlf_only=0
+            : > /tmp/conflicts.txt
+            git diff --name-only --diff-filter=U > /tmp/unmerged.txt || true
+            while IFS= read -r f; do
+              [ -n "$f" ] || continue
+              base_raw=$(hash ":1:$f")       || base_raw=no-base
+              theirs_raw=$(hash ":3:$f")     || theirs_raw=no-theirs
+              base_str=$(hash_nocr ":1:$f")  || base_str=no-base
+              ours_str=$(hash_nocr ":2:$f")  || ours_str=no-ours
+              theirs_str=$(hash_nocr ":3:$f")|| theirs_str=no-theirs
+              if [ "$ours_str" = "$theirs_str" ] || \
+                 { [ "$base_str" = "$theirs_str" ] && [ "$base_raw" != "$theirs_raw" ]; }; then
+                echo "[line-endings] $f" >> /tmp/conflicts.txt
+                crlf_only=$((crlf_only + 1))
+              else
+                echo "[content]      $f" >> /tmp/conflicts.txt
+              fi
+            done < /tmp/unmerged.txt
             git rebase --abort
             {
               echo 'conflicts<<EOF'
               cat /tmp/conflicts.txt
               echo 'EOF'
             } >> "$GITHUB_OUTPUT"
+            echo "crlf_only=$crlf_only" >> "$GITHUB_OUTPUT"
             echo "success=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -144,6 +189,34 @@ jobs:
           script: |
             const log       = `${{ steps.check.outputs.log }}`;
             const conflicts = `${{ steps.rebase.outputs.conflicts }}`;
+            const crlfOnly  = parseInt(`${{ steps.rebase.outputs.crlf_only }}` || '0', 10);
+            const assignee  = context.repo.owner;
+
+            // Any [line-endings] conflict means normalization slipped: the reported set is
+            // inflated with files whose content is actually identical.
+            const crlfWarning = crlfOnly > 0
+              ? [
+                  '> [!WARNING]',
+                  `> ${crlfOnly} conflict(s) are **line endings only** (identical content once CR is stripped).`,
+                  '> CRLF renormalization did not take effect, so this list is inflated and hides the real conflicts.',
+                  '',
+                ].join('\n')
+              : '';
+
+            // Reproduces CI's conflict set exactly; without the flags every co-touched
+            // file conflicts in full.
+            const resolveSteps = [
+              '```sh',
+              'git fetch origin main',
+              'git checkout unix',
+              '# Upstream is CRLF, unix is LF - these flags are required, or every file',
+              '# both sides touched conflicts in full (whole-file) instead of just the real ones.',
+              'git -c core.autocrlf=input -c merge.renormalize=true rebase origin/main',
+              '# resolve conflicts, git add <files>, then:',
+              'git -c core.autocrlf=input -c merge.renormalize=true rebase --continue',
+              'git push origin unix --force-with-lease',
+              '```',
+            ].join('\n');
 
             // Avoid duplicate issues — check for an existing open sync-conflict issue.
             const existing = await github.rest.issues.listForRepo({
@@ -154,11 +227,19 @@ jobs:
             });
 
             if (existing.data.length > 0) {
+              const number = existing.data[0].number;
               await github.rest.issues.createComment({
                 owner:      context.repo.owner,
                 repo:       context.repo.repo,
-                issue_number: existing.data[0].number,
-                body: `**New sync failure** (run [#${context.runNumber}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}))\n\n**New upstream commits**\n\`\`\`\n${log}\n\`\`\`\n\n**Conflicted files**\n\`\`\`\n${conflicts}\n\`\`\``,
+                issue_number: number,
+                body: `**New sync failure** (run [#${context.runNumber}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}))\n\n${crlfWarning}**New upstream commits**\n\`\`\`\n${log}\n\`\`\`\n\n**Conflicted files**\n\`\`\`\n${conflicts}\n\`\`\``,
+              });
+              // Re-assert assignment in case the issue was left unassigned.
+              await github.rest.issues.addAssignees({
+                owner:      context.repo.owner,
+                repo:       context.repo.repo,
+                issue_number: number,
+                assignees:  [assignee],
               });
             } else {
               await github.rest.issues.create({
@@ -166,12 +247,14 @@ jobs:
                 repo:   context.repo.repo,
                 title:  '⚠️ Upstream sync — rebase conflict requires manual resolution',
                 labels: ['upstream-sync-conflict'],
+                assignees: [assignee],
                 body: [
                   '## Upstream sync failed',
                   '',
                   'The automated rebase of `unix` onto new upstream `main` hit a conflict.',
                   'This issue will receive a comment on each subsequent failure until resolved.',
                   '',
+                  crlfWarning,
                   '### New upstream commits',
                   '```',
                   log,
@@ -183,13 +266,7 @@ jobs:
                   '```',
                   '',
                   '### To resolve locally',
-                  '```sh',
-                  'git fetch origin main',
-                  'git checkout unix',
-                  'git rebase origin/main',
-                  '# resolve conflicts, then:',
-                  'git push origin unix --force-with-lease',
-                  '```',
+                  resolveSteps,
                   '',
                   '_Close this issue once the conflict is resolved and pushed._',
                 ].join('\n'),

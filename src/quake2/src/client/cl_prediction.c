@@ -23,6 +23,7 @@ qboolean trace_ignore_player;
 qboolean trace_ignore_camera;
 qboolean trace_ignore_bmodels; //mxd
 qboolean trace_ignore_entities; //mxd (except bmodels).
+qboolean trace_lerp_bmodel_origin; //mxd
 
 static int pred_effects = 0;
 static int pred_clientnum = 0;
@@ -203,8 +204,22 @@ void CL_ClipMoveToEntities(const vec3_t start, const vec3_t mins, const vec3_t m
 		if (trace_check_water)
 			brushmask |= CONTENTS_WATER;
 
+		//mxd. Interpolate bmodel origin?
+		// Used by CL_UpdateCameraOrientation() to fix camera jittering when standing on a moving lift and looking upwards.
+		// Can't use ent->old_origin, because it's not per-frame transmitted from game side (and changing that disables bmodel rendering interpolation) --mxd.
+		vec3_t origin;
+		if (ent_is_bmodel && trace_lerp_bmodel_origin)
+		{
+			const centity_t* ce = &cl_entities[ent->number];
+			VectorLerp(ce->prev.origin, cl.lerpfrac, ce->current.origin, origin);
+		}
+		else
+		{
+			VectorCopy(ent->origin, origin);
+		}
+
 		trace_t trace;
-		CM_TransformedBoxTrace(start, end, mins, maxs, headnode, brushmask, ent->origin, angles, &trace);
+		CM_TransformedBoxTrace(start, end, mins, maxs, headnode, brushmask, origin, angles, &trace);
 
 		if (trace.fraction <= tr->fraction) //TODO: Q2 version seems more logical: 'trace.allsolid || trace.startsolid || trace.fraction < tr->fraction'.
 		{

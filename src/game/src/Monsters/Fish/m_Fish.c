@@ -97,6 +97,9 @@ static void FishPickNewDirection(edict_t* self) //mxd. Named 'fish_new_direction
 // Generic 'hit something' reaction - make us bounce off in a new direction.
 static void FishPickBounceDirection(edict_t* self) //mxd. Named 'fish_bounce_direction' in original logic.
 {
+	if (self->fish_is_turning) //mxd. Skip when already turning.
+		return;
+
 	// Reverse our direction with some randomness in the angles too.
 	VectorCopy(self->s.angles, self->movedir);
 
@@ -105,7 +108,7 @@ static void FishPickBounceDirection(edict_t* self) //mxd. Named 'fish_bounce_dir
 	self->movedir[PITCH] *= -1.0f;
 
 	// Add some randomness.
-	self->movedir[YAW] += flrand(-15.0f, 15.0f); //mxd. irand() in original logic.
+	self->movedir[YAW] += flrand(-45.0f, 45.0f); //mxd. Randomize more. irand() in original logic.
 	self->movedir[PITCH] += flrand(-5.0f, 5.0f); //mxd. irand() in original logic.
 
 	// Bring all our movedir angles up positive again.
@@ -124,34 +127,30 @@ static void FishPickBounceDirection(edict_t* self) //mxd. Named 'fish_bounce_dir
 	}
 }
 
-static float FishChangeYaw(edict_t* self) //mxd. Named 'M_ChangeFishYaw' in original logic. Very similar to MG_ChangeWhichYaw().
+static void FishChangeYaw(edict_t* self) //mxd. Named 'M_ChangeFishYaw' in original logic. Very similar to MG_ChangeWhichYaw(). Removed return value (unused).
 {
 	const float current = anglemod(self->s.angles[YAW]);
 	const float ideal = self->movedir[YAW];
 	float move = NormalizeAngleDeg(ideal - current); //mxd. Use function instead of doing it manually.
 
-	if (FloatIsZeroEpsilon(move)) //mxd. Avoid direct float comparison.
-		return 0.0f;
-
-	move = Clamp(move, -self->yaw_speed, self->yaw_speed);
-	self->s.angles[YAW] = anglemod(current + move);
-
-	return move;
+	if (!FloatIsZeroEpsilon(move)) //mxd. Avoid direct float comparison.
+	{
+		move = Clamp(move, -self->yaw_speed, self->yaw_speed);
+		self->s.angles[YAW] = anglemod(current + move);
+	}
 }
 
-static float FishChangePitch(edict_t* self) //mxd. Named 'M_ChangeFishPitch' in original logic. Very similar to MG_ChangeWhichYaw().
+static void FishChangePitch(edict_t* self) //mxd. Named 'M_ChangeFishPitch' in original logic. Very similar to MG_ChangeWhichYaw(). Removed return value (unused).
 {
 	const float current = anglemod(self->s.angles[PITCH]);
 	const float ideal = self->movedir[PITCH];
 	float move = NormalizeAngleDeg(ideal - current); //mxd. Use function instead of doing it manually.
 
-	if (FloatIsZeroEpsilon(move)) //mxd. Avoid direct float comparison.
-		return 0.0f;
-
-	move = Clamp(move, -self->fish_max_pitch_speed, self->fish_max_pitch_speed);
-	self->s.angles[PITCH] = anglemod(current + move);
-
-	return move;
+	if (!FloatIsZeroEpsilon(move)) //mxd. Avoid direct float comparison.
+	{
+		move = Clamp(move, -self->fish_max_pitch_speed, self->fish_max_pitch_speed);
+		self->s.angles[PITCH] = anglemod(current + move);
+	}
 }
 
 // Figure out where our prey is, and go get him.
@@ -350,7 +349,7 @@ void FishIsBlocked(edict_t* self, trace_t* trace) //mxd. Named 'fish_blocked' in
 		return;
 
 	// We hit something, which is not world geometry.
-	if (trace->ent != NULL)
+	if (trace->ent != NULL && trace->ent->solid != SOLID_BSP) //mxd. +SOLID_BSP check (because worldspawn is also an entity).
 	{
 		// Did we hit a monster or player?
 		if ((trace->ent->svflags & SVF_MONSTER) || trace->ent->client != NULL)
@@ -412,14 +411,14 @@ void fish_run(edict_t* self)
 {
 	const float delta = anglemod(self->s.angles[YAW] - self->movedir[YAW]);
 
-	if (delta > 70.0f && delta <= 180.0f) // Look right.
+	if (delta > FISH_RUN_TURN_ANGLE && delta <= 180.0f) // Look right.
 	{
 		// Tell the think function we are doing the turn, so don't play with the yaw.
 		self->fish_is_turning = true;
 		self->best_move_yaw = -FISH_RUN_TURN_ANGLE;
 		SetAnim(self, ANIM_RUN3);
 	}
-	else if (delta > 180.0f && delta < 290.0f) // Look left.
+	else if (delta > 180.0f && delta < 360.0f - FISH_RUN_TURN_ANGLE) // Look left.
 	{
 		// Tell the think function we are doing the turn, so don't play with the yaw.
 		self->fish_is_turning = true;
@@ -439,14 +438,14 @@ void fish_walk(edict_t* self)
 {
 	const float delta = anglemod(self->s.angles[YAW] - self->movedir[YAW]);
 
-	if (delta > 40.0f && delta <= 180.0f) // Look right.
+	if (delta > FISH_WALK_TURN_ANGLE && delta <= 180.0f) // Look right.
 	{
 		// tell the think function we are doing the turn, so don't play with the yaw.
 		self->fish_is_turning = true;
 		self->best_move_yaw = -FISH_WALK_TURN_ANGLE;
 		SetAnim(self, ANIM_WALK3);
 	}
-	else if (delta > 180.0f && delta < 320.0f) // Look left. //BUGFIX: mxd. 'delta > 180 && delta < 20' in original logic (e.g. never).
+	else if (delta > 180.0f && delta < 360.0f - FISH_WALK_TURN_ANGLE) // Look left. //BUGFIX: mxd. 'delta > 180 && delta < 20' in original logic (e.g. never).
 	{
 		// Tell the think function we are doing the turn, so don't play with the yaw.
 		self->fish_is_turning = true;

@@ -55,7 +55,7 @@ static void vectoangles2(const vec3_t value1, vec3_t angles)
 
 static void CL_UpdateWallDistances(void) // H2
 {
-	static int eax_presets[7][4] = // [world preset][sound preset]
+	static const int eax_presets[7][4] = // [world preset][sound preset]
 	{
 		{ EAX_ENVIRONMENT_GENERIC,		EAX_ENVIRONMENT_ROOM,		EAX_ENVIRONMENT_HALLWAY,		EAX_ENVIRONMENT_ALLEY }, // EAX_GENERIC
 		{ EAX_ENVIRONMENT_QUARRY,		EAX_ENVIRONMENT_CAVE,		EAX_ENVIRONMENT_STONECORRIDOR,	EAX_ENVIRONMENT_ALLEY }, // EAX_ALL_STONE
@@ -166,7 +166,8 @@ static void CL_InterpolateCameraOrigin(vec3_t cam_lerp_origin, const float yaw, 
 static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheight, const qboolean interpolate, const qboolean noclip_mode) // H2 //mxd. Add 'look_angles' arg, flip 'interpolate' arg logic, add 'noclip_mode' arg.
 {
 #define CAM_MODE_SWITCH_DURATION	500
-#define MASK_CAMERA					(CONTENTS_SOLID | CONTENTS_ILLUSIONARY | CONTENTS_CAMERABLOCK)
+#define CAMERA_MASK					(CONTENTS_SOLID | CONTENTS_ILLUSIONARY | CONTENTS_CAMERABLOCK)
+#define CAMERA_FLAGS				(CTF_CLIP_TO_ALL | CTF_LERP_BMODEL_ORIGIN) //mxd
 
 	if (PlayerEntPtr == NULL)
 		return;
@@ -255,7 +256,7 @@ static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheigh
 		VectorMA(start, viewheight, up, end);
 
 		trace_t tr;
-		CL_Trace(start, mins_2, maxs_2, end, MASK_CAMERA, CTF_CLIP_TO_ALL, &tr);
+		CL_Trace(start, mins_2, maxs_2, end, CAMERA_MASK, CAMERA_FLAGS, &tr);
 
 		if (!noclip_mode && tr.fraction != 1.0f)
 			VectorCopy(tr.endpos, end);
@@ -325,7 +326,7 @@ static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheigh
 	}
 
 	trace_t trace;
-	CL_Trace(start, mins_2, maxs_2, end, MASK_CAMERA, CTF_CLIP_TO_ALL, &trace);
+	CL_Trace(start, mins_2, maxs_2, end, CAMERA_MASK, CAMERA_FLAGS, &trace);
 
 	if (!noclip_mode && trace.fraction != 1.0f)
 		VectorCopy(trace.endpos, end);
@@ -351,7 +352,7 @@ static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheigh
 	if (!(int)cl_camera_clipdamp->value)
 		VectorCopy(end_2, end_3);
 
-	// Interpolate camera position when desired, not in fpmode and cl_camera_dampfactor vaues are sane.
+	// Interpolate camera position when desired, not in fpmode and cl_camera_dampfactor values are sane.
 	if (interpolate && !(int)cl_camera_fpmode->value && cl_camera_dampfactor->value > 0.0f && cl_camera_dampfactor->value < 1.0f)
 	{
 		float damp_factor = fabsf(look_angles[PITCH]);
@@ -362,7 +363,7 @@ static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheigh
 	}
 
 	// Check against world --mxd.
-	CL_Trace(end, mins, maxs, end_2, MASK_CAMERA, CTF_CLIP_TO_ALL, &trace);
+	CL_Trace(end, mins, maxs, end_2, CAMERA_MASK, CAMERA_FLAGS, &trace);
 
 	if (!noclip_mode && trace.fraction != 1.0f)
 	{
@@ -382,7 +383,7 @@ static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheigh
 		{
 			VectorCopy(end_3, end_2);
 
-			CL_Trace(end, mins, maxs, end_2, MASK_CAMERA, CTF_CLIP_TO_ALL, &trace);
+			CL_Trace(end, mins, maxs, end_2, CAMERA_MASK, CAMERA_FLAGS, &trace);
 
 			if (trace.fraction != 1.0f)
 			{
@@ -401,7 +402,7 @@ static void CL_UpdateCameraOrientation(const vec3_t look_angles, float viewheigh
 		const vec3_t v = VEC3_SET(mins[0], mins[1], -1.0f - roll_scaler * 2.0f);
 
 		// Check against bmodels / solid entities --mxd.
-		CL_Trace(end, v, maxs, end_2, MASK_WATER | CONTENTS_CAMERABLOCK, CTF_CLIP_TO_ALL, &trace);
+		CL_Trace(end, v, maxs, end_2, MASK_WATER | CONTENTS_CAMERABLOCK, CAMERA_FLAGS, &trace);
 
 		if (!noclip_mode && !trace.startsolid && trace.fraction != 1.0f) //mxd. Added trace.startsolid check (because now startsolid trace has fraction 0 instead of 1 in original logic).
 			VectorCopy(trace.endpos, end_2);

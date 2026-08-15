@@ -11,7 +11,6 @@
 #include "ce_Utilities.h"
 #include "q_Sprite.h"
 #include "g_PlayStats.h"
-//#include "Reference.h"
 #include "ResourceManager.h"
 #include "Skeletons.h"
 #include "Vector.h"

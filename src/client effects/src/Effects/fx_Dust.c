@@ -1,5 +1,5 @@
 //
-// fx_dust.c
+// fx_Dust.c
 //
 // Copyright 1998 Raven Software
 //

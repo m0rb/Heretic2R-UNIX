@@ -125,7 +125,7 @@ static char* SV_StatusString(void)
 	strcat_s(status, sizeof(status), "\n"); //mxd. strcat -> strcat_s
 	uint status_len = strlen(status);
 
-	for (int i = 0; i < (int)maxclients->value; i++)
+	for (int i = 0; i < svs.num_clients; i++)
 	{
 		client_t* client = &svs.clients[i];
 
@@ -136,7 +136,7 @@ static char* SV_StatusString(void)
 			const uint player_len = strlen(player);
 
 			if (status_len + player_len >= sizeof(status))
-				break; // Can't hold any more
+				break; // Can't hold any more.
 
 			strcpy_s(status + status_len, sizeof(status) - status_len - 1, player); //mxd. strcpy -> strcpy_s
 			status_len += player_len;
@@ -187,7 +187,7 @@ static void SVC_Info(void)
 {
 	char string[64];
 
-	if (maxclients->value == 1.0f)
+	if (svs.num_clients == 1)
 		return; // Ignore in single player.
 
 	const int version = Q_atoi(Cmd_Argv(1));
@@ -199,12 +199,12 @@ static void SVC_Info(void)
 	else
 	{
 		int count = 0;
-		for (int i = 0; i < (int)maxclients->value; i++)
+		for (int i = 0; i < svs.num_clients; i++)
 			if (svs.clients[i].state >= cs_connected)
 				count++;
 
 		hostname->string[44] = 0; // H2
-		Com_sprintf(string, sizeof(string), "%16s\n%8s %2i/%2i\n", hostname->string, sv.name, count, (int)maxclients->value); // H2: different format string.
+		Com_sprintf(string, sizeof(string), "%16s\n%8s %2i/%2i\n", hostname->string, sv.name, count, svs.num_clients); // H2: different format string.
 	}
 
 	Netchan_OutOfBandPrint(NS_SERVER, &net_from, "info\n%s", string);
@@ -319,8 +319,8 @@ static void SVC_DirectConnect(void)
 	client_t* newcl = NULL; //mxd
 
 	// If there is already a slot for this ip, reuse it.
-	client_t* client = svs.clients;
-	for (int i = 0; i < (int)maxclients->value; i++, client++)
+	client_t* client = &svs.clients[0];
+	for (int i = 0; i < svs.num_clients; i++, client++)
 	{
 		if (client->state == cs_free)
 			continue;
@@ -347,7 +347,7 @@ static void SVC_DirectConnect(void)
 	if (newcl == NULL)
 	{
 		client = svs.clients;
-		for (int i = 0; i < (int)maxclients->value; i++, client++)
+		for (int i = 0; i < svs.num_clients; i++, client++)
 		{
 			if (client->state == cs_free)
 			{
@@ -495,7 +495,7 @@ static void SV_ConnectionlessPacket(void)
 // Updates the cl->ping variables.
 static void SV_CalcPings(void)
 {
-	for (int i = 0; i < (int)maxclients->value; i++)
+	for (int i = 0; i < svs.num_clients; i++)
 	{
 		client_t* client = &svs.clients[i];
 		if (client->state != cs_spawned)
@@ -526,7 +526,7 @@ static void SV_GiveMsec(void)
 	if (sv.framenum & 15)
 		return;
 
-	for (int i = 0; i < (int)maxclients->value; i++)
+	for (int i = 0; i < svs.num_clients; i++)
 	{
 		client_t* client = &svs.clients[i];
 		if (client->state != cs_free)
@@ -552,8 +552,8 @@ static void SV_ReadPackets(void)
 		const ushort qport = (ushort)MSG_ReadShort(&net_message);
 
 		// Check for packets from connected clients.
-		client_t* client = svs.clients;
-		for (int i = 0; i < (int)maxclients->value; i++, client++)
+		client_t* client = &svs.clients[0];
+		for (int i = 0; i < svs.num_clients; i++, client++)
 		{
 			if (client->state == cs_free)
 				continue;
@@ -594,9 +594,9 @@ static void SV_CheckTimeouts(void)
 	const int droppoint = (int)((float)svs.realtime - timeout->value * 1000.0f);
 	const int zombiepoint = (int)((float)svs.realtime - zombietime->value * 1000.0f);
 
-	client_t* client = svs.clients;
+	client_t* client = &svs.clients[0];
 
-	for (int i = 0; i < (int)maxclients->value; i++, client++)
+	for (int i = 0; i < svs.num_clients; i++, client++)
 	{
 		// Message times may be wrong across a changelevel.
 		client->lastmessage = min(svs.realtime, client->lastmessage);
@@ -646,7 +646,7 @@ static void SV_RunGameFrame(void)
 	sv.time = sv.framenum * 100;
 
 	// Don't run if paused // H2: extra 'sv_freezeworldset' check.
-	if ((!(int)sv_paused->value && !(int)sv_freezeworldset->value) || maxclients->value > 1)
+	if ((!(int)sv_paused->value && !(int)sv_freezeworldset->value) || svs.num_clients > 1)
 	{
 		// H2: new loop logic. 
 		// Cap at 1000 frames to prevent infinite loop --morb
@@ -740,7 +740,7 @@ void SV_Frame(const int usec) // YQ2: msec -> usec.
 
 	// Send messages more often to new clients getting ready for spawning in.
 	// Speeds up the process of sending configstrings, entity deltas, etc.
-	const qboolean is_singleplayer = ((int)maxclients->value == 1); //mxd
+	const qboolean is_singleplayer = (svs.num_clients == 1); //mxd
 	if (is_singleplayer)
 		SV_SendPrepClientMessages(); // YQ2
 
@@ -877,8 +877,8 @@ static void SV_FinalMessage(const char* message, const qboolean reconnect)
 	// Send it twice. Stagger the packets to crutch operating system limited buffers.
 	for (int c = 0; c < 2; c++)
 	{
-		client_t* client = svs.clients;
-		for (int i = 0; i < (int)maxclients->value; i++, client++)
+		client_t* client = &svs.clients[0];
+		for (int i = 0; i < svs.num_clients; i++, client++)
 			if (client->state >= cs_connected)
 				Netchan_Transmit(&client->netchan, net_message.cursize, net_message.data);
 	}

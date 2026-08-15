@@ -558,6 +558,7 @@ extern cvar_t* cl_lightlevel; // FIXME HACK
 Q2DLL_DECLSPEC extern cvar_t* cl_paused;
 extern cvar_t* cl_freezeworld;
 extern cvar_t* cl_timedemo;
+extern cvar_t* cl_compass;
 
 extern cvar_t* cl_camera_clipdamp;
 extern cvar_t* cl_camera_dampfactor;
@@ -717,6 +718,7 @@ extern qboolean trace_ignore_player; //mxd
 extern qboolean trace_ignore_camera; //mxd
 extern qboolean trace_ignore_bmodels; //mxd
 extern qboolean trace_ignore_entities; //mxd
+extern qboolean trace_lerp_bmodel_origin; //mxd
 
 extern void CL_CheckPredictionError(void);
 extern int CL_PMpointcontents(const vec3_t point); //mxd

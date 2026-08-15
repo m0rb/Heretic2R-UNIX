@@ -88,6 +88,7 @@ cvar_t* m_item_teleport;
 cvar_t* m_item_shield;
 cvar_t* m_item_tornado;
 cvar_t* m_item_inventory;
+cvar_t* m_item_compass; //mxd
 cvar_t* m_item_messagemode;
 cvar_t* m_item_frags;
 
@@ -609,6 +610,7 @@ void M_Init(void)
 
 	// Start Server menu.
 	m_item_begin = Cvar_Get("m_item_begin", "Start the Slaughter", 0);
+	m_item_begin_coop = Cvar_Get("m_item_begin_coop", "Start the Journey", 0); //mxd
 	m_item_startmap = Cvar_Get("m_item_startmap", "Initial Map", 0);
 	m_item_rules = Cvar_Get("m_item_rules", "Rules", 0);
 	m_item_timelimit = Cvar_Get("m_item_timelimit", "Time Limit", 0);
@@ -756,6 +758,7 @@ void M_Init(void)
 	m_item_rollforward = Cvar_Get("m_item_rollforward", "Roll Forward", 0);
 	m_item_rollback = Cvar_Get("m_item_rollback", "Roll Back", 0);
 	m_item_spinattack = Cvar_Get("m_item_spinattack", "Spin Attack", 0);
+	m_item_compass = Cvar_Get("m_banner_compass", "Toggle Compass", 0); //mxd
 
 	//mxd. System keys.
 	m_item_quicksave = Cvar_Get("m_item_quicksave", "Quicksave", 0);
@@ -1108,9 +1111,19 @@ static void Field_Draw(const menufield_t* field, const qboolean selected)
 	// Draw field value.
 	char value[128];
 	strncpy_s(value, sizeof(value), field->buffer + field->visible_offset, field->visible_length); //mxd. strncpy -> strncpy_s
+
+	const paletteRGBA_t field_color = //mxd. Apply alpha.
+	{
+		.r = TextPalette[P_MENUFIELD].r,
+		.g = TextPalette[P_MENUFIELD].g,
+		.b = TextPalette[P_MENUFIELD].b,
+		.a = color.a
+	};
+
+	// Drawn per-char at menu scale (not DrawString, which uses the console ui_scale).
 	for (int fi = 0; value[fi] != '\0' && fi < field->visible_length; fi++)
 	{
-		re.DrawChar(x + fi * mc, y, ms, (unsigned char)value[fi], TextPalette[P_MENUFIELD], false);
+		re.DrawChar(x + fi * mc, y, ms, (unsigned char)value[fi], field_color, false);
 	}
 
 	// Draw cursor?

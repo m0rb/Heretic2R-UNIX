@@ -29,7 +29,7 @@ static void PF_Unicast(const edict_t* ent, const qboolean reliable)
 		return;
 
 	const int n = NUM_FOR_EDICT(ent);
-	if (n < 1 || n > (int)maxclients->value)
+	if (n < 1 || n > svs.num_clients)
 		return;
 
 	client_t* client = &svs.clients[n - 1];
@@ -66,7 +66,7 @@ static void PF_cprintf(const edict_t* ent, const int level, const char* fmt, ...
 	if (ent != NULL)
 	{
 		n = NUM_FOR_EDICT(ent);
-		if (n < 1 || n > (int)maxclients->value)
+		if (n < 1 || n > svs.num_clients)
 			Com_Error(ERR_DROP, "cprintf to a non-client");
 	}
 
@@ -89,7 +89,7 @@ static void PF_clprintf(const edict_t* ent, const edict_t* from, const int color
 	if (ent != NULL)
 	{
 		n = NUM_FOR_EDICT(ent);
-		if (n < 1 || n > (int)maxclients->value)
+		if (n < 1 || n > svs.num_clients)
 			Com_Error(ERR_DROP, "clprintf to a non-client");
 	}
 
@@ -111,7 +111,7 @@ static void PF_centerprintf(const edict_t* ent, const char* fmt, ...)
 	va_list argptr;
 
 	const int n = NUM_FOR_EDICT(ent);
-	if (n < 1 || n > (int)maxclients->value)
+	if (n < 1 || n > svs.num_clients)
 		return;
 
 	va_start(argptr, fmt);
@@ -126,7 +126,7 @@ static void PF_centerprintf(const edict_t* ent, const char* fmt, ...)
 static void PF_gamemsg_centerprintf(const edict_t* ent, const short msg) // H2
 {
 	const int n = NUM_FOR_EDICT(ent);
-	if (n < 1 || n > (int)maxclients->value)
+	if (n < 1 || n > svs.num_clients)
 		return;
 
 	MSG_WriteByte(&sv.multicast, svc_gamemsg_centerprint);
@@ -137,7 +137,7 @@ static void PF_gamemsg_centerprintf(const edict_t* ent, const short msg) // H2
 static void PF_levelmsg_centerprintf(const edict_t* ent, const short msg) // H2
 {
 	const int n = NUM_FOR_EDICT(ent);
-	if (n < 1 || n > (int)maxclients->value)
+	if (n < 1 || n > svs.num_clients)
 		return;
 
 	MSG_WriteByte(&sv.multicast, svc_levelmsg_centerprint);
@@ -148,7 +148,7 @@ static void PF_levelmsg_centerprintf(const edict_t* ent, const short msg) // H2
 static void PF_captionprintf(const edict_t* ent, const short msg) // H2
 {
 	const int n = NUM_FOR_EDICT(ent);
-	if (n < 1 || n > (int)maxclients->value)
+	if (n < 1 || n > svs.num_clients)
 		return;
 
 	MSG_WriteByte(&sv.multicast, svc_captionprint);
@@ -159,7 +159,7 @@ static void PF_captionprintf(const edict_t* ent, const short msg) // H2
 static void PF_msgvar_centerprintf(const edict_t* ent, const short msg, const int vari) // H2
 {
 	const int n = NUM_FOR_EDICT(ent);
-	if (n < 1 || n > (int)maxclients->value)
+	if (n < 1 || n > svs.num_clients)
 		return;
 
 	MSG_WriteByte(&sv.multicast, svc_gamemsgvar_centerprint);
@@ -171,7 +171,7 @@ static void PF_msgvar_centerprintf(const edict_t* ent, const short msg, const in
 static void PF_msgdual_centerprintf(const edict_t* ent, const short msg1, const short msg2) // H2
 {
 	const int n = NUM_FOR_EDICT(ent);
-	if (n < 1 || n > (int)maxclients->value)
+	if (n < 1 || n > svs.num_clients)
 		return;
 
 	MSG_WriteByte(&sv.multicast, svc_gamemsgdual_centerprint);
@@ -362,8 +362,8 @@ static void PF_ChangeCDtrack(const edict_t* ent, const int track, const int loop
 		return;
 
 	const int n = NUM_FOR_EDICT(ent);
-	if (n < 1 || n > (int)maxclients->value)
-		Com_Error(ERR_DROP, "changeCDtrack to a non-client");
+	if (n < 1 || n > svs.num_clients)
+		Com_Error(ERR_DROP, "ChangeCDtrack to a non-client");
 
 	//mxd. Was done in a separate function in original version.
 	client_t* cl = &svs.clients[n - 1];
