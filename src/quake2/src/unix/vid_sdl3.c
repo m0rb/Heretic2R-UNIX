@@ -14,16 +14,19 @@
 
 
 #include <SDL3/SDL.h>
+#include <dirent.h>
+#include <unistd.h>
 #include "../../../qcommon/qcommon.h"
 #include "../client/client.h"
 #include "../client/cl_skeletons.h"
 #include "vid_dll.h"
+#include "dll_io_unix.h"
 #include "../client/glimp_sdl3.h"
-#include "../../../ref_gl1/src/gl1_Local.h"
 #include "../win32/vid_Screenshot.h"
 
 static SDL_Window *window = NULL;
 static SDL_GLContext gl_context = NULL;
+static void *reflib_library = NULL;
 
 cvar_t *vid_fullscreen;
 cvar_t *vid_width;
@@ -47,13 +50,173 @@ extern refexport_t re;
 
 qboolean VID_GetModeInfo(int *width, int *height, int mode);
 qboolean VID_InitGraphics(int width, int height);
-refexport_t GetRefAPI(refimport_t rimp);
+
+typedef refexport_t (*GetRefAPI_t)(refimport_t rimp);
+
+// Directory containing the running executable (renderer .so files live beside it).
+static void VID_GetExeDir(char *dir, const size_t size)
+{
+    char path[MAX_OSPATH] = { 0 };
+
+    ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1); // Linux
+    if (len < 1)
+        len = readlink("/proc/curproc/file", path, sizeof(path) - 1); // FreeBSD (procfs)
+
+    if (len > 0)
+    {
+        path[len] = 0;
+        char *slash = strrchr(path, '/');
+        if (slash != NULL)
+        {
+            *slash = 0;
+            Com_sprintf(dir, (int)size, "%s", path);
+            return;
+        }
+    }
+
+    Com_sprintf(dir, (int)size, "."); // Fallback: current directory.
+}
+
+// Probe a renderer library and register it in reflib_infos. Mirrors win32 VID_StroreReflibInfo().
+static void VID_StoreReflibInfo(const char *dir, const char *filename)
+{
+    if (num_reflib_infos >= MAX_REFLIBS)
+        return;
+
+    char path[MAX_OSPATH];
+    Com_sprintf(path, sizeof(path), "%s/%s", dir, filename);
+
+    void *lib = Sys_LoadLibrary(path);
+    if (lib == NULL)
+    {
+        Com_Printf("VID_StoreReflibInfo: failed to load '%s': %s\n", path, dlerror());
+        return;
+    }
+
+    const GetRefAPI_t get_ref_api = (GetRefAPI_t)Sys_GetProcAddress(lib, "GetRefAPI");
+    if (get_ref_api != NULL)
+    {
+        // GetRefAPI() only stores the import struct and fills the export vtable,
+        // so probing with a zeroed import is safe (same assumption as win32).
+        refimport_t ri_probe;
+        memset(&ri_probe, 0, sizeof(ri_probe));
+        const refexport_t re_probe = get_ref_api(ri_probe);
+
+        if (re_probe.api_version == REF_API_VERSION && re_probe.title != NULL)
+        {
+            reflib_info_t *info = &reflib_infos[num_reflib_infos];
+
+            // Derive id from filename: "ref_gl1.so" -> "gl1".
+            const char *start = strchr(filename, '_');
+            const char *end = strrchr(filename, '.');
+            if (start != NULL && end != NULL && end > start + 1)
+            {
+                size_t id_len = (size_t)(end - start - 1);
+            if (id_len > sizeof(info->id) - 1)
+                id_len = sizeof(info->id) - 1;
+                memcpy(info->id, start + 1, id_len);
+                info->id[id_len] = 0;
+
+                Com_sprintf(info->title, sizeof(info->title), "%s", re_probe.title);
+                num_reflib_infos++;
+
+                Com_Printf("Found renderer: %s (%s)\n", info->title, info->id);
+            }
+        }
+        else
+        {
+            Com_Printf("VID_StoreReflibInfo: '%s' has incompatible api_version %i\n", filename, re_probe.api_version);
+        }
+    }
+
+    Sys_FreeLibrary(lib);
+}
+
+static int VID_CompareReflibInfos(const void *a, const void *b) //mxd
+{
+    return strcmp(((const reflib_info_t *)a)->id, ((const reflib_info_t *)b)->id);
+}
+
+// Scan the exe directory for ref_*.so and populate reflib_infos. Mirrors win32 VID_InitReflibInfos().
+static void VID_InitReflibInfos(void)
+{
+    char dir[MAX_OSPATH];
+    VID_GetExeDir(dir, sizeof(dir));
+
+    num_reflib_infos = 0;
+
+    DIR *d = opendir(dir);
+    if (d == NULL)
+    {
+        Com_Printf("VID_InitReflibInfos: can't scan '%s'\n", dir);
+        return;
+    }
+
+    const struct dirent *entry;
+    while ((entry = readdir(d)) != NULL)
+    {
+        const char *name = entry->d_name;
+        const size_t len = strlen(name);
+
+#ifdef __APPLE__
+        const char *ext = ".dylib";
+#else
+        const char *ext = ".so";
+#endif
+        const size_t ext_len = strlen(ext);
+
+        if (strncmp(name, "ref_", 4) == 0 && len > 4 + ext_len && strcmp(name + len - ext_len, ext) == 0)
+            VID_StoreReflibInfo(dir, name);
+    }
+
+    closedir(d);
+
+    // Sort by id for a stable menu order.
+    qsort(reflib_infos, num_reflib_infos, sizeof(reflib_info_t), VID_CompareReflibInfos);
+}
+
+static void VID_FreeReflib(void)
+{
+    memset(&re, 0, sizeof(re));
+
+    if (reflib_library != NULL)
+    {
+        Sys_FreeLibrary(reflib_library);
+        reflib_library = NULL;
+    }
+}
 
 static qboolean VID_LoadRefresh(void)
 {
     refimport_t ri;
 
-    Com_Printf("------- Loading renderer -------\n");
+    VID_FreeReflib();
+
+    Com_Printf("------- Loading ref_%s -------\n", vid_ref->string);
+
+    char dir[MAX_OSPATH];
+    char path[MAX_OSPATH];
+    VID_GetExeDir(dir, sizeof(dir));
+#ifdef __APPLE__
+    Com_sprintf(path, sizeof(path), "%s/ref_%s.dylib", dir, vid_ref->string);
+#else
+    Com_sprintf(path, sizeof(path), "%s/ref_%s.so", dir, vid_ref->string);
+#endif
+
+    reflib_library = Sys_LoadLibrary(path);
+    if (reflib_library == NULL)
+    {
+        Com_Printf("VID_LoadRefresh: failed to load '%s'\n", path);
+        return false;
+    }
+
+    const GetRefAPI_t get_ref_api = (GetRefAPI_t)Sys_GetProcAddress(reflib_library, "GetRefAPI");
+    if (get_ref_api == NULL)
+    {
+        Com_Printf("VID_LoadRefresh: no GetRefAPI in '%s'\n", path);
+        VID_FreeReflib();
+        return false;
+    }
 
     ri.Sys_Error = VID_Error;
     ri.Com_Error = Com_Error;
@@ -77,18 +240,21 @@ static qboolean VID_LoadRefresh(void)
     ri.DBG_HudPrint = DBG_HudPrint;
 #endif
 
-    re = GetRefAPI(ri);
+    re = get_ref_api(ri);
 
     if (re.api_version != REF_API_VERSION)
     {
         Com_Printf("Renderer has incompatible api_version %i!\n", re.api_version);
+        VID_FreeReflib();
         return false;
     }
 
     if (!re.Init())
     {
         Com_Printf("Failed to initialize renderer!\n");
-        memset(&re, 0, sizeof(re)); 
+        if (re.Shutdown != NULL)
+            re.Shutdown();
+        VID_FreeReflib();
         return false;
     }
 
@@ -114,11 +280,27 @@ void VID_Init(void)
 
     Cmd_AddCommand("vid_restart", VID_Restart_f);
 
-    VID_LoadRefresh();
+    VID_InitReflibInfos();
 
-    // Force vid_ref to "gl1" for now. Circle back when we have more renderers.
-    Cvar_Set("vid_ref", "gl1");
-    vid_ref->modified = false; 
+    if (!VID_LoadRefresh())
+    {
+        // Selected renderer failed - fall back to gl1.
+        if (Q_stricmp(vid_ref->string, "gl1") != 0)
+        {
+            Com_Printf("Falling back to ref_gl1.\n");
+            Cvar_Set("vid_ref", "gl1");
+
+            if (VID_LoadRefresh())
+            {
+                vid_ref->modified = false;
+                return;
+            }
+        }
+
+        Com_Error(ERR_FATAL, "VID_Init: could not load a renderer library!");
+    }
+
+    vid_ref->modified = false;
 }
 
 qboolean VID_GetModeInfo(int *width, int *height, int mode)
@@ -282,17 +464,20 @@ qboolean VID_InitGraphics(int width, int height)
         mode_list_display = sel_display;
     }
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    // The renderer sets its own context attributes (GL version/profile, depth, MSAA...)
+    // and returns the SDL window flags it needs (SDL_WINDOW_OPENGL / SDL_WINDOW_VULKAN).
+    SDL_GL_ResetAttributes();
+
+    const int renderer_flags = (re.PrepareForWindow != NULL) ? re.PrepareForWindow() : -1;
+    if (renderer_flags == -1)
+    {
+        Com_Printf("VID_InitGraphics: PrepareForWindow failed\n");
+        return false;
+    }
 
     const int msaa = (int)Cvar_VariableValue("r_msaa_samples");
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, msaa > 0 ? 1 : 0);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, msaa > 0 ? msaa : 0);
 
-    SDL_WindowFlags flags = SDL_WINDOW_OPENGL;
+    SDL_WindowFlags flags = (SDL_WindowFlags)renderer_flags;
     switch ((int)vid_fullscreen->value)
     {
         case 1:  flags |= SDL_WINDOW_FULLSCREEN; break;
@@ -321,9 +506,9 @@ qboolean VID_InitGraphics(int width, int height)
 
     if (!window && msaa > 0) {
         Com_Printf("VID_InitGraphics: MSAA x%d unavailable, retrying without it: %s\n", msaa, SDL_GetError());
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
-        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
         Cvar_SetValue("r_msaa_samples", 0);
+        SDL_GL_ResetAttributes();
+        re.PrepareForWindow(); // Re-request context attributes with MSAA now disabled.
         window = VID_CreateWindow(create_w, create_h, flags, sel_display);
     }
 
@@ -351,6 +536,12 @@ qboolean VID_InitGraphics(int width, int height)
         }
     }
 
+    // Report the display refresh rate to the frame loop (refresh-aware render pacing).
+    {
+        const SDL_DisplayMode* rmode = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(window));
+        Cvar_SetValue("vid_displayrefresh", (rmode != NULL && rmode->refresh_rate > 0.0f) ? rmode->refresh_rate : 0.0f);
+    }
+
     if (!re.InitContext(window)) {
         Com_Printf("VID_InitGraphics: InitContext failed\n");
         SDL_DestroyWindow(window);
@@ -358,6 +549,7 @@ qboolean VID_InitGraphics(int width, int height)
         return false;
     }
 
+    if (renderer_flags & SDL_WINDOW_OPENGL)
     {
         int got_buffers = 0, got_samples = 0;
         SDL_GL_GetAttribute(SDL_GL_MULTISAMPLEBUFFERS, &got_buffers);
@@ -440,8 +632,10 @@ void VID_CheckChanges(void)
     if (se.StopAllSounds != NULL)
         se.StopAllSounds();
 
-    if (re.ShutdownContext != NULL)
-        re.ShutdownContext();
+    // Full renderer teardown (frees GL objects, fonts, models, images, commands, context),
+    // then drop the library and window so a different renderer can be loaded.
+    if (re.Shutdown != NULL)
+        re.Shutdown();
 
     if (window != NULL)
     {
@@ -451,10 +645,18 @@ void VID_CheckChanges(void)
 
     GLimp_ResetGrabState();
 
-    if (re.Init == NULL || !re.Init())
+    if (!VID_LoadRefresh())
     {
-        cls.disable_screen = false;
-        return;
+        // Failed (e.g. new vid_ref lib is missing/broken) - fall back to gl1.
+        if (Q_stricmp(vid_ref->string, "gl1") != 0)
+        {
+            Com_Printf("Falling back to ref_gl1.\n");
+            Cvar_Set("vid_ref", "gl1");
+            vid_ref->modified = false;
+        }
+
+        if (!VID_LoadRefresh())
+            Com_Error(ERR_FATAL, "VID_CheckChanges: could not load a renderer library!");
     }
 
     cls.disable_screen = false;

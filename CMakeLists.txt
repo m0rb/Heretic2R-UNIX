@@ -272,8 +272,6 @@ set(EXE_SOURCES
     ${SERVER_SOURCES}
     ${H2COMMON_SOURCES}
     ${SOUND_SOURCES}
-    ${GL1_SOURCES}
-    ${GLAD_SOURCES}
     ${LIBSMACKER_SOURCES}
     src/game/src/q_Shared.c
 )
@@ -296,10 +294,113 @@ target_link_libraries(heretic2
 )
 target_link_options(heretic2 PRIVATE ${SDL3_LDFLAGS} ${OPENBSD_LINK_DIRS} -Wl,--export-dynamic)
 
+# ---------------------------------------------------------------------------
+# Renderer modules  →  ref_<id>.so, dlopen'd by the engine (yquake2-style).
+# Each renderer is self-contained (own GL loader) and exports only GetRefAPI.
+# ---------------------------------------------------------------------------
+add_library(ref_gl1 MODULE ${GL1_SOURCES} ${GLAD_SOURCES})
+set_target_properties(ref_gl1 PROPERTIES
+    PREFIX ""
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+target_include_directories(ref_gl1 PRIVATE ${INCLUDE_DIRS} ${SDL3_INCLUDE_DIRS})
+target_compile_definitions(ref_gl1 PRIVATE QUAKE2_DLL H2COMMON _UNIX NDEBUG)
+target_compile_options(ref_gl1 PRIVATE ${COMMON_CFLAGS} -fPIC)
+target_link_libraries(ref_gl1 ${SDL3_LIBRARIES} m)
+target_link_options(ref_gl1 PRIVATE ${SDL3_LDFLAGS})
+if(APPLE)
+    target_link_options(ref_gl1 PRIVATE -undefined dynamic_lookup)
+endif()
+
+file(GLOB GL3_SOURCES CONFIGURE_DEPENDS "src/ref_gl3/src/*.c")
+add_library(ref_gl3 MODULE
+    ${GL3_SOURCES}
+    include/glad-GL3.2/src/glad.c
+    # Renderer-agnostic sources shared with ref_gl1 (see src/ref_gl3/CONTRACT.md).
+    # gl1_FindSurface.c is intentionally excluded: FindSurface is bound to NULL
+    # and its glpoly_t layout differs in gl3.
+    src/ref_gl1/src/Hunk.c
+    src/ref_gl1/src/anormtab.c
+    src/ref_gl1/src/gl1_Matrix4.c
+    src/ref_gl1/src/Skeletons/r_Skeletons.c
+    src/ref_gl1/src/Skeletons/r_SkeletonLerp.c
+)
+set_target_properties(ref_gl3 PROPERTIES
+    PREFIX ""
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+target_include_directories(ref_gl3 PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/ref_gl3/src
+    ${CMAKE_SOURCE_DIR}/include/glad-GL3.2/include
+    ${INCLUDE_DIRS} ${SDL3_INCLUDE_DIRS})
+target_compile_definitions(ref_gl3 PRIVATE QUAKE2_DLL H2COMMON _UNIX NDEBUG GL3_MODULES_READY)
+target_compile_options(ref_gl3 PRIVATE ${COMMON_CFLAGS} -fPIC)
+target_link_libraries(ref_gl3 ${SDL3_LIBRARIES} m)
+target_link_options(ref_gl3 PRIVATE ${SDL3_LDFLAGS})
+if(APPLE)
+    target_link_options(ref_gl3 PRIVATE -undefined dynamic_lookup)
+endif()
+
+# Vulkan renderer. Needs Vulkan headers at compile time only (volk loads
+# libvulkan at runtime; never link it), so it's built only where those headers
+# exist - platforms without them (e.g. Haiku, Solaris) simply skip it.
+find_package(Vulkan QUIET)
+if(NOT Vulkan_INCLUDE_DIRS)
+    include(CheckIncludeFile)
+    check_include_file("vulkan/vulkan.h" HAVE_VULKAN_HEADERS)
+endif()
+
+if(Vulkan_INCLUDE_DIRS OR HAVE_VULKAN_HEADERS)
+    set(BUILD_REF_VK ON)
+    file(GLOB VK_SOURCES CONFIGURE_DEPENDS "src/ref_vk/src/*.c")
+    add_library(ref_vk MODULE
+        ${VK_SOURCES}
+        src/ref_vk/volk/volk.c
+        src/ref_gl1/src/Hunk.c
+        src/ref_gl1/src/anormtab.c
+        src/ref_gl1/src/gl1_Matrix4.c
+        src/ref_gl1/src/Skeletons/r_Skeletons.c
+        src/ref_gl1/src/Skeletons/r_SkeletonLerp.c
+    )
+    set_target_properties(ref_vk PROPERTIES
+        PREFIX ""
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+    target_include_directories(ref_vk PRIVATE
+        ${CMAKE_SOURCE_DIR}/src/ref_vk/src
+        ${CMAKE_SOURCE_DIR}/src/ref_vk
+        ${Vulkan_INCLUDE_DIRS}
+        ${INCLUDE_DIRS} ${SDL3_INCLUDE_DIRS})
+    target_compile_definitions(ref_vk PRIVATE QUAKE2_DLL H2COMMON _UNIX NDEBUG VK_MODULES_READY)
+    target_compile_options(ref_vk PRIVATE ${COMMON_CFLAGS} -fPIC)
+    target_link_libraries(ref_vk ${SDL3_LIBRARIES} m ${CMAKE_DL_LIBS})
+    target_link_options(ref_vk PRIVATE ${SDL3_LDFLAGS})
+    if(APPLE)
+        target_link_options(ref_vk PRIVATE -undefined dynamic_lookup)
+    endif()
+else()
+    set(BUILD_REF_VK OFF)
+    message(STATUS "Vulkan headers not found - skipping the Vulkan renderer (ref_vk).")
+endif()
+
+# macOS: the engine looks for "ref_<id>.dylib" (VID_LoadRefresh /
+# VID_InitReflibInfos), but CMake gives MODULE libraries a .so suffix there.
+# Force the match; the Makefile already produces .dylib via SHARED_EXT.
+if(APPLE)
+    set_target_properties(ref_gl1 ref_gl3 PROPERTIES SUFFIX ".dylib")
+    if(BUILD_REF_VK)
+        set_target_properties(ref_vk PROPERTIES SUFFIX ".dylib")
+    endif()
+endif()
+
 # Install
 if(UNIX AND NOT APPLE)
     install(TARGETS heretic2 DESTINATION ${CMAKE_INSTALL_BINDIR}
             PERMISSIONS WORLD_READ WORLD_EXECUTE GROUP_READ GROUP_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+    # All renderer modules must land next to the executable - the engine discovers
+    # them by scanning its own directory for ref_*.so.
+    install(TARGETS ref_gl1 ref_gl3 DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+    if(BUILD_REF_VK)
+        install(TARGETS ref_vk DESTINATION ${CMAKE_INSTALL_BINDIR})
+    endif()
 endif()
 
 # ---------------------------------------------------------------------------

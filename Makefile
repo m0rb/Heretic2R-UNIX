@@ -142,6 +142,18 @@ else
   GL_LIBS := -lGL
 endif
 
+# Vulkan configuration. Only the headers are needed at build time - volk
+# dlopen()s libvulkan at runtime and it is never linked - so the Vulkan renderer
+# is built wherever <vulkan/vulkan.h> can be found and skipped elsewhere
+# (Haiku, Solaris, ...). Point at a custom SDK with VULKAN_CFLAGS=-I/path,
+# or skip it explicitly with NO_VULKAN=1.
+VULKAN_CFLAGS ?=
+ifdef NO_VULKAN
+  HAVE_VULKAN :=
+else
+  HAVE_VULKAN := $(shell echo '\#include <vulkan/vulkan.h>' | $(CC) $(VULKAN_CFLAGS) -E -x c - >/dev/null 2>&1 && echo yes)
+endif
+
 # Additional libraries
 # dl is part of libc on OpenBSD, Darwin, Haiku, and NetBSD.
 ifeq ($(UNAME),Darwin)
@@ -271,8 +283,27 @@ UNIX_SRCS := \
 	$(UNIX_DIR)/snd_dll.c \
 	$(UNIX_DIR)/clfx_dll.c
 
-# Renderer source files (ref_gl1)
-RENDERER_SRCS := \
+# ---------------------------------------------------------------------------
+# Renderer modules
+#
+# Each renderer is a loadable "ref_<id>" shared object placed next to the
+# executable; the engine discovers them by scanning its own directory
+# (VID_InitReflibInfos()) and dlopen()s the one vid_ref selects. This mirrors
+# the CMake build - keep the two in sync when adding a renderer.
+# ---------------------------------------------------------------------------
+
+# Renderer-agnostic sources shared by every module. gl1_FindSurface.c is
+# deliberately NOT shared: FindSurface is bound to NULL in gl3/vk and the
+# glpoly_t layout differs there.
+REF_SHARED_SRCS := \
+	src/ref_gl1/src/Hunk.c \
+	src/ref_gl1/src/anormtab.c \
+	src/ref_gl1/src/gl1_Matrix4.c \
+	src/ref_gl1/src/Skeletons/r_Skeletons.c \
+	src/ref_gl1/src/Skeletons/r_SkeletonLerp.c
+
+# OpenGL 1.3 renderer
+GL1_SRCS := \
 	src/ref_gl1/src/gl1_Main.c \
 	src/ref_gl1/src/gl1_Draw.c \
 	src/ref_gl1/src/gl1_DrawBook.c \
@@ -289,12 +320,22 @@ RENDERER_SRCS := \
 	src/ref_gl1/src/gl1_Sprite.c \
 	src/ref_gl1/src/gl1_Surface.c \
 	src/ref_gl1/src/gl1_Warp.c \
-	src/ref_gl1/src/gl1_Matrix4.c \
-	src/ref_gl1/src/anormtab.c \
-	src/ref_gl1/src/Hunk.c \
-	src/ref_gl1/src/Skeletons/r_SkeletonLerp.c \
-	src/ref_gl1/src/Skeletons/r_Skeletons.c \
+	$(REF_SHARED_SRCS) \
 	$(INCLUDE_DIR)/glad-GL1.3/glad.c
+
+# OpenGL 3.2 renderer
+GL3_SRCS := \
+	$(wildcard src/ref_gl3/src/*.c) \
+	$(REF_SHARED_SRCS) \
+	$(INCLUDE_DIR)/glad-GL3.2/src/glad.c
+
+# Vulkan renderer. volk dlopen()s libvulkan at runtime, so only the Vulkan
+# headers are needed at build time and libvulkan is never linked.
+# src/ref_vk/src/spirv/*.c are #included by vk_shaders.c - do not glob them.
+VK_SRCS := \
+	$(wildcard src/ref_vk/src/*.c) \
+	src/ref_vk/volk/volk.c \
+	$(REF_SHARED_SRCS)
 
 # Game DLL sources (recursive)
 GAME_C_SRCS   := $(shell find "$(GAME_DIR)" -name "*.c")
@@ -312,19 +353,31 @@ CLFX_EXTRA_SRCS := \
 	$(QCOMMON_DIR)/anorms.c
 
 # Object files
-COMMON_OBJS   := $(patsubst %.c,$(BUILD_DIR)/%.o,$(COMMON_SRCS))
+# q_Shared.c lives under src/game/src, so the game-DLL pattern rule would claim
+# it (hidden visibility, -DGAME_DLL) and the exe would share that object. The exe
+# needs its own copy built with EXE_CFLAGS so symbols like BoxOnPlaneSide are
+# exported for the renderer modules. COMMON_SRCS itself is left intact for the
+# dedicated server, which builds its own objects under $(BUILD_DIR)/ded/.
+EXE_EXTRA_SRCS := $(GAME_DIR)/q_Shared.c
+COMMON_OBJS   := $(patsubst %.c,$(BUILD_DIR)/%.o,$(filter-out $(EXE_EXTRA_SRCS),$(COMMON_SRCS))) \
+                 $(patsubst %.c,$(BUILD_DIR)/exe_extra/%.o,$(EXE_EXTRA_SRCS))
 CLIENT_OBJS   := $(patsubst %.c,$(BUILD_DIR)/%.o,$(CLIENT_SRCS))
 SERVER_OBJS   := $(patsubst %.c,$(BUILD_DIR)/%.o,$(SERVER_SRCS))
 UNIX_OBJS     := $(patsubst %.c,$(BUILD_DIR)/%.o,$(UNIX_SRCS))
-RENDERER_OBJS := $(patsubst %.c,$(BUILD_DIR)/%.o,$(RENDERER_SRCS))
+# Renderer modules get their own object trees: each is compiled with different
+# include paths/defines, so the same shared source must not collide.
+GL1_OBJS := $(patsubst %.c,$(BUILD_DIR)/ref_gl1_mod/%.o,$(GL1_SRCS))
+GL3_OBJS := $(patsubst %.c,$(BUILD_DIR)/ref_gl3_mod/%.o,$(GL3_SRCS))
+VK_OBJS  := $(patsubst %.c,$(BUILD_DIR)/ref_vk_mod/%.o,$(VK_SRCS))
 GAME_OBJS     := $(patsubst %.c,$(BUILD_DIR)/%.o,$(GAME_C_SRCS)) \
                  $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(GAME_CPP_SRCS))
 PLAYER_OBJS   := $(patsubst %.c,$(BUILD_DIR)/%.o,$(PLAYER_SRCS))
 CLFX_OBJS     := $(patsubst %.c,$(BUILD_DIR)/%.o,$(CLFX_SRCS)) \
                  $(patsubst %.c,$(BUILD_DIR)/clfx_extra/%.o,$(CLFX_EXTRA_SRCS))
 
-# All object files for the main executable
-ALL_EXE_OBJS := $(COMMON_OBJS) $(CLIENT_OBJS) $(SERVER_OBJS) $(UNIX_OBJS) $(RENDERER_OBJS)
+# All object files for the main executable. The renderers are NOT linked in -
+# they are loadable modules built separately (see "Renderer modules" above).
+ALL_EXE_OBJS := $(COMMON_OBJS) $(CLIENT_OBJS) $(SERVER_OBJS) $(UNIX_OBJS)
 
 # Dedicated server source files (no client, renderer, or SDL/GL)
 DED_UNIX_SRCS := \
@@ -338,11 +391,11 @@ DED_SRCS := $(COMMON_SRCS) $(SERVER_SRCS) $(DED_UNIX_SRCS)
 DED_OBJS := $(patsubst %.c,$(BUILD_DIR)/ded/%.o,$(DED_SRCS))
 
 # Targets
-.PHONY: all clean game player client clfx ded server dedicated
+.PHONY: all clean game player client clfx ded server dedicated renderers
 # Note: "Client Effects.so" has a space in its name, so it cannot be a Make file target.
 # The clfx rule is phony and links directly to the correctly-named output.
 
-all: client game player clfx ded
+all: client renderers game player clfx ded
 
 # Main client executable (replaces Heretic2R.exe)
 client: $(BUILD_DIR)/heretic2r$(EXE_EXT)
@@ -414,6 +467,53 @@ clfx: $(CLFX_OBJS)
 CLFX_CFLAGS := $(filter-out -fvisibility=hidden,$(CFLAGS)) -fPIC -DCLIENT_EFFECTS_DLL \
 	-include ./src/quake2/src/unix/compat.h
 
+# ---- Renderer modules ----
+# GetRefAPI carries __attribute__((visibility("default"))), so the global
+# -fvisibility=hidden is kept: only that entry point is exported and everything
+# else stays private to the module.
+REF_CFLAGS := $(CFLAGS) -fPIC
+GL1_CFLAGS := $(REF_CFLAGS)
+GL3_CFLAGS := $(REF_CFLAGS) -I./src/ref_gl3/src -I./$(INCLUDE_DIR)/glad-GL3.2/include -DGL3_MODULES_READY
+VK_CFLAGS  := $(REF_CFLAGS) -I./src/ref_vk/src -I./src/ref_vk $(VULKAN_CFLAGS) -DVK_MODULES_READY
+
+# Renderers to build: gl1 and gl3 everywhere, vk only where headers were found.
+REF_MODULES := $(BUILD_DIR)/ref_gl1$(SHARED_EXT) $(BUILD_DIR)/ref_gl3$(SHARED_EXT)
+ifeq ($(HAVE_VULKAN),yes)
+  REF_MODULES += $(BUILD_DIR)/ref_vk$(SHARED_EXT)
+endif
+
+renderers: $(REF_MODULES)
+
+$(BUILD_DIR)/ref_gl1$(SHARED_EXT): $(GL1_OBJS)
+	@echo "  LINK    $@"
+	@mkdir -p $(dir $@)
+	@$(CC) $(GL1_CFLAGS) -shared $(SHARED_LDFLAGS) -o $@ $(GL1_OBJS) $(LIBS)
+
+$(BUILD_DIR)/ref_gl3$(SHARED_EXT): $(GL3_OBJS)
+	@echo "  LINK    $@"
+	@mkdir -p $(dir $@)
+	@$(CC) $(GL3_CFLAGS) -shared $(SHARED_LDFLAGS) -o $@ $(GL3_OBJS) $(LIBS)
+
+$(BUILD_DIR)/ref_vk$(SHARED_EXT): $(VK_OBJS)
+	@echo "  LINK    $@"
+	@mkdir -p $(dir $@)
+	@$(CC) $(VK_CFLAGS) -shared $(SHARED_LDFLAGS) -o $@ $(VK_OBJS) $(LIBS)
+
+$(BUILD_DIR)/ref_gl1_mod/%.o: %.c
+	@echo "  CC      $< (gl1)"
+	@mkdir -p $(dir $@)
+	@$(CC) $(GL1_CFLAGS) -MMD -MP -c -o $@ $<
+
+$(BUILD_DIR)/ref_gl3_mod/%.o: %.c
+	@echo "  CC      $< (gl3)"
+	@mkdir -p $(dir $@)
+	@$(CC) $(GL3_CFLAGS) -MMD -MP -c -o $@ $<
+
+$(BUILD_DIR)/ref_vk_mod/%.o: %.c
+	@echo "  CC      $< (vk)"
+	@mkdir -p $(dir $@)
+	@$(CC) $(VK_CFLAGS) -MMD -MP -c -o $@ $<
+
 # ---- Compile rules ----
 
 # Game C files
@@ -433,6 +533,12 @@ $(BUILD_DIR)/$(PLAYER_DIR)/%.o: $(PLAYER_DIR)/%.c
 	@mkdir -p $(dir $@)
 	@$(CC) $(filter-out -fvisibility=hidden,$(CFLAGS)) -fPIC -DPLAYER_DLL -MMD -MP -c -o $@ $<
 
+# Main-exe copies of sources that another pattern rule would otherwise claim.
+$(BUILD_DIR)/exe_extra/%.o: %.c
+	@echo "  CC      $< (exe)"
+	@mkdir -p $(dir $@)
+	@$(CC) $(EXE_CFLAGS) -fPIC -MMD -MP -c -o $@ $<
+
 # Client Effects extra qcommon files (compiled with CLFX flags, not main exe flags)
 $(BUILD_DIR)/clfx_extra/%.o: %.c
 	@echo "  CC      $< (clfx)"
@@ -449,16 +555,26 @@ $(BUILD_DIR)/$(CLFX_DIR)/%.o: $(CLFX_DIR)/%.c
 $(BUILD_DIR)/$(UNIX_DIR)/p_dll_unix.o: $(UNIX_DIR)/p_dll_unix.c
 	@echo "  CC      $<"
 	@mkdir -p $(dir $@)
-	@$(CC) $(CFLAGS) -MMD -MP -c -o $@ $<
+	@$(CC) $(EXE_CFLAGS) -MMD -MP -c -o $@ $<
 
-# Generic compile rule for all remaining .c files
+# Generic compile rule for the main executable's objects.
+# -fvisibility=hidden is filtered out here: the renderer modules resolve ~75
+# engine symbols (turbsin, AngleVectors, Com_sprintf, ...) from the executable
+# at dlopen() time, and hidden symbols cannot be exported even with
+# --export-dynamic. The modules themselves keep hidden visibility - only their
+# GetRefAPI entry point is marked visibility("default").
+EXE_CFLAGS := $(filter-out -fvisibility=hidden,$(CFLAGS))
+
 $(BUILD_DIR)/%.o: %.c
 	@echo "  CC      $<"
 	@mkdir -p $(dir $@)
-	@$(CC) $(CFLAGS) -fPIC -MMD -MP -c -o $@ $<
+	@$(CC) $(EXE_CFLAGS) -fPIC -MMD -MP -c -o $@ $<
 
 # Include auto-generated header dependencies
 -include $(ALL_EXE_OBJS:.o=.d)
+-include $(GL1_OBJS:.o=.d)
+-include $(GL3_OBJS:.o=.d)
+-include $(VK_OBJS:.o=.d)
 -include $(GAME_OBJS:.o=.d)
 -include $(PLAYER_OBJS:.o=.d)
 -include $(CLFX_OBJS:.o=.d)
@@ -473,6 +589,7 @@ install: all
 	@echo "Installing Heretic2R..."
 	@mkdir -p /usr/local/games/heretic2r
 	@cp $(BUILD_DIR)/heretic2r$(EXE_EXT) /usr/local/games/heretic2r/
+	@cp $(REF_MODULES) /usr/local/games/heretic2r/
 	@cp $(BUILD_DIR)/base/gamex86$(SHARED_EXT) /usr/local/games/heretic2r/base/
 	@cp $(BUILD_DIR)/base/Player$(SHARED_EXT) /usr/local/games/heretic2r/base/
 	@cp $(BUILD_DIR)/base/ClientEffects$(SHARED_EXT) /usr/local/games/heretic2r/base/
@@ -483,8 +600,9 @@ help:
 	@echo "================================="
 	@echo ""
 	@echo "Targets:"
-	@echo "  all       - Build client, game, player, and clfx (default)"
+	@echo "  all       - Build client, renderers, game, player, and clfx (default)"
 	@echo "  client    - Build the main client executable"
+	@echo "  renderers - Build the ref_gl1/ref_gl3/ref_vk renderer modules"
 	@echo "  game      - Build the game DLL"
 	@echo "  player    - Build the player DLL"
 	@echo "  clfx      - Build the client effects DLL"

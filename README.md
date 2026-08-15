@@ -44,12 +44,12 @@ To enable OGG music playback, rip Heretic II CD tracks as **track02.ogg - track1
 * H2R is **NOT** compatible with H2 renderers (because of API changes).
 * H2R is **NOT** compatible with H2 sound backends (because of API changes).
 * H2R is **NOT** compatible with H2 gamex86/Player/Client Effects libraries (because of API changes).
+* Three renderers are provided as loadable modules: **OpenGL 1.3** (`ref_gl1`, default), **OpenGL 3.2** (`ref_gl3`) and **Vulkan** (`ref_vk`). Pick one in the Video menu, or set the `vid_ref` cvar (`gl1`/`gl3`/`vk`).
 * GameSpy online multiplayer logic is not implemented.
 * Gamepad support is currently not implemented.
 
 ## Planned features
 
-* OpenGL 3 renderer.
 * OpenAL sound backend.
 * Gamepad support.
 
@@ -59,6 +59,7 @@ To enable OGG music playback, rip Heretic II CD tracks as **track02.ogg - track1
 * [libsmacker](https://github.com/JonnyH/libsmacker)
 * [SDL3](https://www.libsdl.org)
 * [stb](https://github.com/nothings/stb) (specifically, stb_image_write and stb_vorbis)
+* [volk](https://github.com/zeux/volk) (Vulkan meta-loader, used by the Vulkan renderer)
  
  ## SAST Tools
 

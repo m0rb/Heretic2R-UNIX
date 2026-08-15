@@ -23,15 +23,16 @@ void RI_EndFrame(void) //mxd. GLimp_EndFrame in original logic.
 int RI_PrepareForWindow(void)
 {
 	// Set GL context attributes bound to the window.
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 1);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
+	const cvar_t* msaa_samples = ri.Cvar_Get("r_msaa_samples", "0", CVAR_ARCHIVE);
+	const int msaa = (int)msaa_samples->value;
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, msaa > 0 ? 1 : 0);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, msaa > 0 ? msaa : 0);
 
 	return SDL_WINDOW_OPENGL;
 }
@@ -56,6 +57,10 @@ void R_SetVsync(void)
 
 	if (!SDL_GL_GetSwapInterval(&vsync))
 		ri.Con_Printf(PRINT_ALL, "Failed to get VSync state, assuming no VSync.\n");
+
+	// Tell the frame loop whether presentation is vblank-limited (so it paces to the
+	// display refresh instead of a flat vid_maxfps that beats against vblank).
+	ri.Cvar_SetValue("vid_vsync_active", (vsync != 0) ? 1.0f : 0.0f);
 
 	//TODO: update r_vsync cvar?
 }

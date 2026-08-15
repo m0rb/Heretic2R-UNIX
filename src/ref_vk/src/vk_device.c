@@ -1,0 +1,420 @@
+#include "compat.h"
+//
+// vk_device.c -- Vulkan physical/logical device selection and creation
+// (vk_device cvar picks a device index, -1 = auto), plus debug label helpers.
+//
+// Mechanical port of yquake2remaster vk_device.c (Copyright (C) 2018-2019
+// Krzysztof Kondrak, GPLv2) - yq2 refimport calls replaced with H2R's ri.*,
+// r_validation -> vk_validation, __APPLE__/MoltenVK paths dropped (unix-only
+// port; CONTRACT.md).
+//
+
+#include "vk_Local.h"
+
+/* internal helper */
+static qboolean
+deviceExtensionsSupported(const VkPhysicalDevice* physicalDevice, const char* extensionName)
+{
+	uint32_t availableExtCount = 0;
+	qboolean vk_extension_available = false;
+	VK_VERIFY(vkEnumerateDeviceExtensionProperties(*physicalDevice, NULL, &availableExtCount, NULL));
+
+	if (availableExtCount > 0)
+	{
+		VkExtensionProperties* extensions;
+		uint32_t i;
+
+		extensions = (VkExtensionProperties*)malloc(availableExtCount * sizeof(VkExtensionProperties));
+		VK_CHECK_OOM(extensions, "malloc() VkExtensionProperties")
+
+		VK_VERIFY(vkEnumerateDeviceExtensionProperties(*physicalDevice, NULL, &availableExtCount, extensions));
+
+		for (i = 0; i < availableExtCount; ++i)
+		{
+			vk_extension_available |= strcmp(extensions[i].extensionName, extensionName) == 0;
+		}
+
+		free(extensions);
+	}
+
+	// lack of extension disqualifies the device
+	return vk_extension_available;
+}
+
+/* internal helper */
+static void
+getBestPhysicalDevice(const VkPhysicalDevice* devices, int preferredIdx, int count, VkPhysicalDeviceType deviceType)
+{
+	VkPhysicalDeviceProperties deviceProperties;
+	VkPhysicalDeviceFeatures deviceFeatures;
+	uint32_t queueFamilyCount = 0;
+
+	for (int i = 0; i < count; ++i)
+	{
+		vkGetPhysicalDeviceProperties(devices[i], &deviceProperties);
+		vkGetPhysicalDeviceFeatures(devices[i], &deviceFeatures);
+		vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, NULL);
+
+		if (queueFamilyCount == 0)
+			continue;
+
+		// prefer discrete GPU but if it's the only one available then don't be picky
+		// also - if the user specifies a preferred device, select it
+		qboolean bestProperties = deviceProperties.deviceType == deviceType;
+		if (preferredIdx == i || (bestProperties && preferredIdx < 0) || count == 1)
+		{
+			VkQueueFamilyProperties* queueFamilies;
+			uint32_t formatCount = 0;
+			uint32_t presentModesCount = 0;
+
+			// check if requested device extensions are present
+			if (!deviceExtensionsSupported(&devices[i], VK_KHR_SWAPCHAIN_EXTENSION_NAME))
+			{
+				// no required extensions? try next device
+				continue;
+			}
+
+			// if extensions are fine, query surface formats and present modes to see if the device can be used
+			VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(devices[i], vk_surface, &formatCount, NULL));
+			VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(devices[i], vk_surface, &presentModesCount, NULL));
+
+			if (formatCount == 0 || presentModesCount == 0)
+			{
+				continue;
+			}
+
+			int gfxFamily = -1;
+			int presentFamily = -1;
+			int transferFamily = -1;
+
+			queueFamilies = (VkQueueFamilyProperties*)malloc(queueFamilyCount * sizeof(VkQueueFamilyProperties));
+			VK_CHECK_OOM(queueFamilies, "malloc() VkQueueFamilyProperties")
+
+			vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, queueFamilies);
+
+			// secondary check - device is OK if there's at least one queue with VK_QUEUE_GRAPHICS_BIT set
+			for (uint32_t j = 0; j < queueFamilyCount; ++j)
+			{
+				// check if this queue family has support for presentation
+				VkBool32 presentSupported;
+				VK_VERIFY(vkGetPhysicalDeviceSurfaceSupportKHR(devices[i], j, vk_surface, &presentSupported));
+
+				// good optimization would be to find a queue where presentIdx == gfxQueueIdx for less overhead
+				if (presentFamily < 0 && queueFamilies[j].queueCount > 0 && presentSupported)
+				{
+					presentFamily = j;
+				}
+
+				if (gfxFamily < 0 && queueFamilies[j].queueCount > 0 && (queueFamilies[j].queueFlags & VK_QUEUE_GRAPHICS_BIT))
+				{
+					gfxFamily = j;
+				}
+
+				if (transferFamily < 0 && queueFamilies[j].queueCount > 0 &&
+					!(queueFamilies[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queueFamilies[j].queueFlags & VK_QUEUE_TRANSFER_BIT))
+				{
+					transferFamily = j;
+				}
+			}
+
+			free(queueFamilies);
+
+			// accept only device that has support for presentation and drawing
+			if (presentFamily >= 0 && gfxFamily >= 0)
+			{
+				if (transferFamily < 0)
+				{
+					transferFamily = gfxFamily;
+				}
+
+				vk_device.presentFamilyIndex = presentFamily;
+				vk_device.gfxFamilyIndex = gfxFamily;
+				vk_device.transferFamilyIndex = transferFamily;
+				vk_device.physical = devices[i];
+				vk_device.properties = deviceProperties;
+				vk_device.features = deviceFeatures;
+				return;
+			}
+		}
+	}
+}
+
+/* internal helper */
+static qboolean selectPhysicalDevice(int preferredDeviceIdx)
+{
+	VkPhysicalDeviceType typePriorities[] = {
+		VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
+		VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU,
+		VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
+		VK_PHYSICAL_DEVICE_TYPE_CPU,
+		VK_PHYSICAL_DEVICE_TYPE_OTHER
+	};
+	uint32_t physicalDeviceCount = 0;
+	int i;
+
+	VK_VERIFY(vkEnumeratePhysicalDevices(vk_instance, &physicalDeviceCount, NULL));
+
+	if (physicalDeviceCount == 0)
+	{
+		ri.Con_Printf(PRINT_ALL, "No Vulkan-capable devices found!\n");
+		return false;
+	}
+
+	ri.Con_Printf(PRINT_ALL, "...found %d Vulkan-capable device(s)\n", physicalDeviceCount);
+
+	VkPhysicalDevice* physicalDevices = (VkPhysicalDevice*)malloc(physicalDeviceCount * sizeof(VkPhysicalDevice));
+	VK_CHECK_OOM(physicalDevices, "malloc() VkPhysicalDevice")
+	VK_VERIFY(vkEnumeratePhysicalDevices(vk_instance, &physicalDeviceCount, physicalDevices));
+
+	// List every device so the user can override with "vk_device <index>".
+	// On hybrid (PRIME) laptops the discrete GPU is auto-picked, but presenting
+	// it to a display owned by the integrated GPU incurs a per-frame cross-GPU
+	// copy (stutter); selecting the display-owning iGPU here can be smoother.
+	for (uint32_t d = 0; d < physicalDeviceCount; d++)
+	{
+		VkPhysicalDeviceProperties props;
+		vkGetPhysicalDeviceProperties(physicalDevices[d], &props);
+		ri.Con_Printf(PRINT_ALL, "  vk_device %u: %s (%s)\n", d, props.deviceName,
+			props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? "discrete" :
+			props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU ? "integrated" :
+			props.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU ? "software" : "other");
+	}
+
+	for (i = 0; i < sizeof(typePriorities) / sizeof(*typePriorities); i++)
+	{
+		getBestPhysicalDevice(physicalDevices, (preferredDeviceIdx < (int)physicalDeviceCount ? preferredDeviceIdx : -1),
+			physicalDeviceCount, typePriorities[i]);
+		if (vk_device.physical != VK_NULL_HANDLE)
+			break;
+	}
+
+	free(physicalDevices);
+
+	if (vk_device.physical == VK_NULL_HANDLE)
+	{
+		ri.Con_Printf(PRINT_ALL, "Could not find a suitable physical device!\n");
+		return false;
+	}
+
+	if (!vk_device.features.samplerAnisotropy)
+	{
+		ri.Con_Printf(PRINT_ALL, "...anisotropy filtering is unsupported.\n");
+	}
+
+	return true;
+}
+
+/* internal helper */
+static VkResult createLogicalDevice(void)
+{
+	// at least one queue (graphics and present combined) has to be present
+	uint32_t numQueues = 1;
+	float queuePriority = 1.0f;
+	VkDeviceQueueCreateInfo queueCreateInfo[3];
+	queueCreateInfo[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueCreateInfo[0].pNext = NULL;
+	queueCreateInfo[0].flags = 0;
+	queueCreateInfo[0].queueFamilyIndex = vk_device.gfxFamilyIndex;
+	queueCreateInfo[0].queueCount = 1;
+	queueCreateInfo[0].pQueuePriorities = &queuePriority;
+	queueCreateInfo[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueCreateInfo[1].pNext = NULL;
+	queueCreateInfo[1].flags = 0;
+	queueCreateInfo[1].queueFamilyIndex = 0;
+	queueCreateInfo[1].queueCount = 1;
+	queueCreateInfo[1].pQueuePriorities = &queuePriority;
+	queueCreateInfo[2].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueCreateInfo[2].pNext = NULL;
+	queueCreateInfo[2].flags = 0;
+	queueCreateInfo[2].queueFamilyIndex = 0;
+	queueCreateInfo[2].queueCount = 1;
+	queueCreateInfo[2].pQueuePriorities = &queuePriority;
+
+	VkPhysicalDeviceFeatures wantedDeviceFeatures = {
+		.samplerAnisotropy = vk_device.features.samplerAnisotropy,
+		.fillModeNonSolid = vk_device.features.fillModeNonSolid,	// for wireframe rendering
+		.sampleRateShading = vk_device.features.sampleRateShading,	// for sample shading
+	};
+
+	// a graphics and present queue are different - two queues have to be created
+	if (vk_device.gfxFamilyIndex != vk_device.presentFamilyIndex)
+	{
+		queueCreateInfo[numQueues++].queueFamilyIndex = vk_device.presentFamilyIndex;
+	}
+
+	// a separate transfer queue exists that's different from present and graphics queue?
+	if (vk_device.transferFamilyIndex != vk_device.gfxFamilyIndex && vk_device.transferFamilyIndex != vk_device.presentFamilyIndex)
+	{
+		queueCreateInfo[numQueues++].queueFamilyIndex = vk_device.transferFamilyIndex;
+	}
+
+	const char* deviceExtensions[] = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	};
+
+	VkDeviceCreateInfo deviceCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+		.pEnabledFeatures = &wantedDeviceFeatures,
+		.ppEnabledExtensionNames = deviceExtensions,
+		.enabledExtensionCount = sizeof(deviceExtensions) / sizeof(deviceExtensions[0]),
+		.enabledLayerCount = 0,
+		.ppEnabledLayerNames = NULL,
+		.queueCreateInfoCount = numQueues,
+		.pQueueCreateInfos = queueCreateInfo
+	};
+
+#if VK_HEADER_VERSION > 101
+	const char* validationLayers[] = { "VK_LAYER_KHRONOS_validation" };
+#else
+	const char* validationLayers[] = { "VK_LAYER_LUNARG_standard_validation" };
+#endif
+
+	if (vk_validation->value > 0.0f)
+	{
+		deviceCreateInfo.enabledLayerCount = sizeof(validationLayers) / sizeof(validationLayers[0]);
+		deviceCreateInfo.ppEnabledLayerNames = validationLayers;
+	}
+
+	return vkCreateDevice(vk_device.physical, &deviceCreateInfo, NULL, &vk_device.logical);
+}
+
+/* internal helper */
+static const char* deviceTypeString(VkPhysicalDeviceType dType)
+{
+#define DEVTYPESTR(r) case VK_ ##r: return "VK_"#r
+	switch (dType)
+	{
+		DEVTYPESTR(PHYSICAL_DEVICE_TYPE_OTHER);
+		DEVTYPESTR(PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU);
+		DEVTYPESTR(PHYSICAL_DEVICE_TYPE_DISCRETE_GPU);
+		DEVTYPESTR(PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU);
+		DEVTYPESTR(PHYSICAL_DEVICE_TYPE_CPU);
+		default: return "<unknown>";
+	}
+#undef DEVTYPESTR
+}
+
+/* internal helper */
+static const char* vendorNameString(uint32_t vendorId)
+{
+	switch (vendorId)
+	{
+	/* PCI vendor ID */
+	case 0x1002:	return "AMD";
+	case 0x1010:	return "ImgTec";
+	case 0x106B:	return "Apple";
+	case 0x10DE:	return "NVIDIA";
+	case 0x13B5:	return "ARM";
+	case 0x5143:	return "Qualcomm";
+	case 0x8086:	return "Intel";
+	/* Khronos vendor ID */
+	case 0x10001:	return "VIV";
+	case 0x10002:	return "VSI";
+	case 0x10003:	return "KAZAN";
+	case 0x10004:	return "CODEPLAY";
+	case 0x10005:	return "MESA";
+	case 0x10006:	return "POCL";
+	default:		return "unknown";
+	}
+}
+
+qboolean QVk_CreateDevice(int preferredDeviceIdx)
+{
+	if (!selectPhysicalDevice(preferredDeviceIdx))
+		return false;
+
+	vk_config.vendor_name = vendorNameString(vk_device.properties.vendorID);
+	vk_config.device_type = deviceTypeString(vk_device.properties.deviceType);
+
+	VkResult res = createLogicalDevice();
+	if (res != VK_SUCCESS)
+	{
+		ri.Con_Printf(PRINT_ALL, "Could not create Vulkan logical device: %s\n", QVk_GetError(res));
+		return false;
+	}
+
+	// volk: load device-level entrypoints straight from the device for less dispatch overhead.
+	volkLoadDevice(vk_device.logical);
+
+	vkGetDeviceQueue(vk_device.logical, vk_device.gfxFamilyIndex, 0, &vk_device.gfxQueue);
+	vkGetDeviceQueue(vk_device.logical, vk_device.presentFamilyIndex, 0, &vk_device.presentQueue);
+	vkGetDeviceQueue(vk_device.logical, vk_device.transferFamilyIndex, 0, &vk_device.transferQueue);
+	vkGetPhysicalDeviceMemoryProperties(vk_device.physical, &vk_device.mem_properties);
+	// init our memory management
+	vulkan_memory_init();
+
+	return true;
+}
+
+// debug label related functions
+void QVk_DebugSetObjectName(uint64_t obj, VkObjectType objType, const char* objName)
+{
+	if (qvkSetDebugUtilsObjectNameEXT)
+	{
+		VkDebugUtilsObjectNameInfoEXT oNameInf = {
+			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+			.pNext = NULL,
+			.objectType = objType,
+			.objectHandle = obj,
+			.pObjectName = objName
+		};
+
+		qvkSetDebugUtilsObjectNameEXT(vk_device.logical, &oNameInf);
+	}
+}
+
+void QVk_DebugSetObjectTag(uint64_t obj, VkObjectType objType, uint64_t tagName, size_t tagSize, const void* tagData)
+{
+	if (qvkSetDebugUtilsObjectTagEXT)
+	{
+		VkDebugUtilsObjectTagInfoEXT oTagInf = {
+			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_TAG_INFO_EXT,
+			.pNext = NULL,
+			.objectType = objType,
+			.objectHandle = obj,
+			.tagName = tagName,
+			.tagSize = tagSize,
+			.pTag = tagData
+		};
+
+		qvkSetDebugUtilsObjectTagEXT(vk_device.logical, &oTagInf);
+	}
+}
+
+void QVk_DebugLabelBegin(const VkCommandBuffer* cmdBuffer, const char* labelName, const float r, const float g, const float b)
+{
+	if (qvkCmdBeginDebugUtilsLabelEXT)
+	{
+		VkDebugUtilsLabelEXT labelInfo = {
+			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+			.pNext = NULL,
+			.pLabelName = labelName,
+			.color = { r, g, b, 1.0f }
+		};
+
+		qvkCmdBeginDebugUtilsLabelEXT(*cmdBuffer, &labelInfo);
+	}
+}
+
+void QVk_DebugLabelEnd(const VkCommandBuffer* cmdBuffer)
+{
+	if (qvkCmdEndDebugUtilsLabelEXT)
+	{
+		qvkCmdEndDebugUtilsLabelEXT(*cmdBuffer);
+	}
+}
+
+void QVk_DebugLabelInsert(const VkCommandBuffer* cmdBuffer, const char* labelName, const float r, const float g, const float b)
+{
+	if (qvkInsertDebugUtilsLabelEXT)
+	{
+		VkDebugUtilsLabelEXT labelInfo = {
+			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+			.pNext = NULL,
+			.pLabelName = labelName,
+			.color = { r, g, b, 1.0f }
+		};
+
+		qvkInsertDebugUtilsLabelEXT(*cmdBuffer, &labelInfo);
+	}
+}

@@ -136,6 +136,17 @@ void* Sys_GetProcAddress(HINSTANCE hinst, const char* name)
 	return dlsym(hinst, name);
 }
 
+void* Sys_LoadLibrary(const char* name)
+{
+	return dlopen(name, RTLD_NOW);
+}
+
+void Sys_FreeLibrary(void* library)
+{
+	if (library != NULL)
+		dlclose(library);
+}
+
 void Sys_Init(void)
 {
 	Set_Com_Printf(Com_Printf);

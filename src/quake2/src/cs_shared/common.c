@@ -33,6 +33,8 @@ static cvar_t* logfile_active;	// 1 = buffer log, 2 = flush after each print
 static cvar_t* showtrace;
 cvar_t* dedicated;
 cvar_t* vid_maxfps; // YQ2
+cvar_t* vid_vsync_active; // Renderer-reported: present is vblank-limited (gl SwapInterval / vk FIFO/MAILBOX).
+cvar_t* vid_displayrefresh; // Vid-reported display refresh rate in Hz (0 = unknown).
 
 // H2:
 static cvar_t* hideconprint;
@@ -636,6 +638,8 @@ void Qcommon_Init(const int argc, char** argv)
 	dedicated = Cvar_Get("dedicated", "0", CVAR_NOSET);
 #endif
 	vid_maxfps = Cvar_Get("vid_maxfps", "60", CVAR_ARCHIVE); // YQ2
+	vid_vsync_active = Cvar_Get("vid_vsync_active", "0", 0); // Set by the renderer.
+	vid_displayrefresh = Cvar_Get("vid_displayrefresh", "0", 0); // Set by the vid layer.
 
 	// H2:
 	hideconprint = Cvar_Get("hideconprint", "0", 0);
@@ -729,7 +733,24 @@ void Qcommon_Frame(int usec) //mxd. msec -> usec.
 	if (cl_maxfps->value > 250.0f)
 		Cvar_SetValue("cl_maxfps", 250.0f);
 
-	const float rfps = vid_maxfps->value;
+	// When the present is vblank-limited (gl SwapInterval, vk FIFO/MAILBOX), pacing the render loop
+	// with a flat vid_maxfps == refresh beats against the display's vblank. Target refresh * 1.2 so
+	// the loop samples cl.time with a little headroom, and let vsync throttle presentation (yquake2
+	// frame.c). A higher user vid_maxfps still applies.
+	float rfps;
+	if (vid_vsync_active->value != 0.0f)
+	{
+		float refresh = vid_displayrefresh->value;
+		if (refresh < 1.0f)
+			refresh = 60.0f;
+
+		rfps = max(refresh * 1.2f, vid_maxfps->value);
+	}
+	else
+	{
+		rfps = vid_maxfps->value;
+	}
+
 	const float pfps = min(cl_maxfps->value, rfps); // We can't have more packet frames than render frames, so limit pfps to rfps.
 
 	// Calculate timings.
