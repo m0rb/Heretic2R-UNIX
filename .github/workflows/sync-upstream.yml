@@ -31,7 +31,7 @@ jobs:
           # Upstream commits CRLF, the unix branch is LF. Without renormalization every
           # file both sides touched conflicts in FULL (whole-file conflict) even when the
           # content is identical. Two safeguards, because .gitattributes only lives on the
-          # unix branch and is absent while the rebase has main checked out:
+          # unix branch and is absent while main is checked out:
           #   1. .git/info/attributes applies regardless of which branch is checked out.
           #   2. core.autocrlf=input makes text=auto the default even without attributes.
           git config merge.renormalize true
@@ -39,7 +39,7 @@ jobs:
           printf '* text=auto eol=lf\n' > .git/info/attributes
 
       # Fail fast if the CRLF safeguards above aren't actually in effect: without them
-      # the rebase still "works", but reports a huge bogus conflict set (every co-touched
+      # the merge still "works", but reports a huge bogus conflict set (every co-touched
       # file, whole-file) that masks the handful of real content conflicts.
       - name: Verify CRLF normalization is active
         run: |
@@ -47,7 +47,7 @@ jobs:
           renorm=$(git config --get merge.renormalize || echo false)
           echo "text attribute = $attr / merge.renormalize = $renorm"
           if [ "$attr" != "auto" ] || [ "$renorm" != "true" ]; then
-            echo "::error::CRLF normalization inactive - rebase would produce bogus whole-file conflicts."
+            echo "::error::CRLF normalization inactive - merge would produce bogus whole-file conflicts."
             exit 1
           fi
 
@@ -72,8 +72,7 @@ jobs:
           LOCAL=$(git rev-parse origin/main)
           UPSTREAM=$(git rev-parse upstream/main)
           UNIX_BASE=$(git merge-base origin/unix "$UPSTREAM")
-          # Skip only if main is at upstream AND unix is already rebased on it.
-          # A failed rebase used to strand unix behind once main caught up.
+          # Skip only if main is at upstream AND unix already contains it.
           if [ "$LOCAL" = "$UPSTREAM" ] && [ "$UNIX_BASE" = "$UPSTREAM" ]; then
             echo "main and unix both up to date with upstream."
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -83,7 +82,7 @@ jobs:
               echo "Found $(git rev-list --count "$LOCAL..$UPSTREAM") new upstream commit(s)."
             fi
             if [ "$UNIX_BASE" != "$UPSTREAM" ]; then
-              echo "unix needs rebase across $(git rev-list --count "$UNIX_BASE..$UPSTREAM") commit(s)."
+              echo "unix needs to merge $(git rev-list --count "$UNIX_BASE..$UPSTREAM") commit(s)."
             fi
             {
               echo 'log<<EOF'
@@ -106,21 +105,14 @@ jobs:
             git push origin HEAD:refs/heads/main
           fi
 
-      - name: Rebase unix onto main
+      - name: Merge main into unix
         if: steps.check.outputs.skip == 'false'
         id: rebase
         run: |
           git switch unix
-          if git rebase refs/heads/main; then
+          if git merge --no-edit refs/heads/main; then
             echo "success=true" >> "$GITHUB_OUTPUT"
           else
-            # Classify each conflict before aborting, so a line-ending artifact can never
-            # masquerade as a real conflict. A file is a pure CRLF artifact when either:
-            #   a) both sides are byte-identical once CR is stripped, or
-            #   b) the replayed unix side changed ONLY line endings vs the merge base
-            #      (so it contributed no content and should have taken upstream's version).
-            # Both are impossible when renormalization is working, so any hit means the
-            # safeguards slipped and this conflict list is inflated.
             hash() { git show "$1" 2>/dev/null | git hash-object --stdin; }
             hash_nocr() { git show "$1" 2>/dev/null | tr -d '\r' | git hash-object --stdin; }
             crlf_only=0
@@ -141,7 +133,7 @@ jobs:
                 echo "[content]      $f" >> /tmp/conflicts.txt
               fi
             done < /tmp/unmerged.txt
-            git rebase --abort
+            git merge --abort
             {
               echo 'conflicts<<EOF'
               cat /tmp/conflicts.txt
@@ -151,9 +143,9 @@ jobs:
             echo "success=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Push rebased unix
+      - name: Push merged unix
         if: steps.check.outputs.skip == 'false' && steps.rebase.outputs.success == 'true'
-        run: git push origin HEAD:refs/heads/unix --force-with-lease
+        run: git push origin HEAD:refs/heads/unix
 
       # Mirror upstream release tags: R5 → R5-unix (points to unix HEAD at
       # time of integration, i.e. the unix port that includes all R5 changes).
@@ -182,7 +174,7 @@ jobs:
           key: rerere-${{ github.run_id }}
 
       # On conflict: open (or find existing open) issue rather than silently failing.
-      - name: Open issue on rebase conflict
+      - name: Open issue on merge conflict
         if: steps.check.outputs.skip == 'false' && steps.rebase.outputs.success == 'false'
         uses: actions/github-script@v7
         with:
@@ -211,10 +203,10 @@ jobs:
               'git checkout unix',
               '# Upstream is CRLF, unix is LF - these flags are required, or every file',
               '# both sides touched conflicts in full (whole-file) instead of just the real ones.',
-              'git -c core.autocrlf=input -c merge.renormalize=true rebase origin/main',
+              'git -c core.autocrlf=input -c merge.renormalize=true merge origin/main',
               '# resolve conflicts, git add <files>, then:',
-              'git -c core.autocrlf=input -c merge.renormalize=true rebase --continue',
-              'git push origin unix --force-with-lease',
+              'git commit',
+              'git push origin unix',
               '```',
             ].join('\n');
 
@@ -245,13 +237,13 @@ jobs:
               await github.rest.issues.create({
                 owner:  context.repo.owner,
                 repo:   context.repo.repo,
-                title:  '⚠️ Upstream sync — rebase conflict requires manual resolution',
+                title:  '⚠️ Upstream sync — merge conflict requires manual resolution',
                 labels: ['upstream-sync-conflict'],
                 assignees: [assignee],
                 body: [
                   '## Upstream sync failed',
                   '',
-                  'The automated rebase of `unix` onto new upstream `main` hit a conflict.',
+                  'The automated merge of upstream `main` into `unix` hit a conflict.',
                   'This issue will receive a comment on each subsequent failure until resolved.',
                   '',
                   crlfWarning,
