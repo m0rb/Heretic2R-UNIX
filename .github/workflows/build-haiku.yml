@@ -53,7 +53,6 @@ jobs:
 
             mkdir -p dist dist-ded
             cp build/release/heretic2r dist/
-            cp build/release/ref_*.so dist/
             cp -r build/release/base dist/
             # Bundle SDL3 shared library alongside the binary ($ORIGIN rpath resolves it).
             # Include the SDL3 license as required by its zlib license terms.
