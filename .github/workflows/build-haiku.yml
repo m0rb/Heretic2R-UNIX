@@ -23,6 +23,19 @@ jobs:
           run: |
             # Build SDL3 from source — not yet in HaikuPorts.
             git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
+
+            # R1/beta6: BUrl(const char*, bool encode = true)
+            burl_files=$(grep -rl 'BUrl burl(url);' SDL3-src/src || true)
+            if [ -z "$burl_files" ]; then
+              echo "BUrl was finally fixed in SDL3 3.2.x"
+              exit 1
+            fi
+            for f in $burl_files; do
+              sed -i 's|^\( *\)BUrl burl(url);|#if B_HAIKU_VERSION <= B_HAIKU_VERSION_1_BETA_5\n\1BUrl burl(url);\n#else\n\1BUrl burl(url, true);\n#endif|' "$f"
+              grep -qx '#if B_HAIKU_VERSION <= B_HAIKU_VERSION_1_BETA_5' "$f" \
+                || { echo "patch did not apply cleanly to $f"; exit 1; }
+            done
+
             cmake -S SDL3-src -B SDL3-build -G "Unix Makefiles" \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INSTALL_PREFIX=/boot/system/non-packaged \
