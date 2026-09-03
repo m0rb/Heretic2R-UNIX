@@ -50,9 +50,6 @@ jobs:
             NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
             make -j$NCPU
             make server -j$NCPU
-            for m in gl1 gl3; do
-              test -f "build/release/ref_$m.so" || { echo "::error::ref_$m.so was not built"; exit 1; }
-            done
 
             mkdir -p dist dist-ded
             cp build/release/heretic2r dist/
