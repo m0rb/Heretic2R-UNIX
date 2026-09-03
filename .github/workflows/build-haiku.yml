@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
 
-
     steps:
       - uses: actions/checkout@v4
 
@@ -19,12 +18,25 @@ jobs:
         with:
           usesh: true
           prepare: |
-            pkgman install -y cmake ninja pkgconfig libexecinfo_devel
+            pkgman install -y cmake pkgconfig libexecinfo_devel
 
           run: |
             # Build SDL3 from source — not yet in HaikuPorts.
             git clone --depth 1 --branch release-3.2.10 https://github.com/libsdl-org/SDL.git SDL3-src
-            cmake -S SDL3-src -B SDL3-build -G Ninja \
+
+            # R1/beta6: BUrl(const char*, bool encode = true)
+            burl_files=$(grep -rl 'BUrl burl(url);' SDL3-src/src || true)
+            if [ -z "$burl_files" ]; then
+              echo "BUrl was finally fixed in SDL3 3.2.x"
+              exit 1
+            fi
+            for f in $burl_files; do
+              sed -i 's|^\( *\)BUrl burl(url);|#if B_HAIKU_VERSION <= B_HAIKU_VERSION_1_BETA_5\n\1BUrl burl(url);\n#else\n\1BUrl burl(url, true);\n#endif|' "$f"
+              grep -qx '#if B_HAIKU_VERSION <= B_HAIKU_VERSION_1_BETA_5' "$f" \
+                || { echo "patch did not apply cleanly to $f"; exit 1; }
+            done
+
+            cmake -S SDL3-src -B SDL3-build -G "Unix Makefiles" \
               -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_INSTALL_PREFIX=/boot/system/non-packaged \
               -DSDL_SHARED=ON \
@@ -38,9 +50,13 @@ jobs:
             NCPU=$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)
             make -j$NCPU
             make server -j$NCPU
+            for m in gl1 gl3; do
+              test -f "build/release/ref_$m.so" || { echo "::error::ref_$m.so was not built"; exit 1; }
+            done
 
             mkdir -p dist dist-ded
             cp build/release/heretic2r dist/
+            cp build/release/ref_*.so dist/
             cp -r build/release/base dist/
             # Bundle SDL3 shared library alongside the binary ($ORIGIN rpath resolves it).
             # Include the SDL3 license as required by its zlib license terms.
