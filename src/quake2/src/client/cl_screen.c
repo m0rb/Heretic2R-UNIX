@@ -438,10 +438,12 @@ void SCR_Init(void)
 
 static void SCR_DrawNet(void)
 {
-	if (cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged >= CMD_BACKUP - 1)
+	const int hs = SCR_GetHUDScale();
+
+	if (hs != 0 && cls.netchan.outgoing_sequence - cls.netchan.incoming_acknowledged >= CMD_BACKUP - 1)
 	{
-		const int offset = ui_scale * 16;
-		re.DrawPic(scr_vrect.x + offset, scr_vrect.y + offset, ui_scale, "misc/net.m8", 1.0f); // Q2: re.DrawPic(scr_vrect.x + 64, scr_vrect.y, "net");
+		const int offset = hs * 16;
+		re.DrawPic(scr_vrect.x + offset, scr_vrect.y + offset, hs, "misc/net.m8", 1.0f); // Q2: re.DrawPic(scr_vrect.x + 64, scr_vrect.y, "net");
 	}
 }
 
@@ -594,7 +596,7 @@ static void SCR_TileClear(void)
 	}
 }
 
-static void DrawPic(const int x, const int y, char* str, const qboolean use_alpha) // H2
+static void DrawPic(const int x, const int y, char* str, const qboolean use_alpha, const int hs) // H2
 {
 	const int img_data = cl.frame.playerstate.stats[Q_atoi(COM_Parse(&str))];
 
@@ -613,43 +615,47 @@ static void DrawPic(const int x, const int y, char* str, const qboolean use_alph
 	if (*img_name != 0)
 	{
 		SCR_AddDirtyPoint(x, y);
-		SCR_AddDirtyPoint(x + 31 * ui_scale, y + 31 * ui_scale);
-		re.DrawPic(x, y, ui_scale, img_name, alpha);
+		SCR_AddDirtyPoint(x + 31 * hs, y + 31 * hs);
+		re.DrawPic(x, y, hs, img_name, alpha);
 	}
 }
 
-static void DrawTeamBlock(int x, int y, char* str) // H2 //TODO: 'x' and 'y' args are ignored.
+static void DrawTeamBlock(int x, int y, char* str, const int hs) // H2 //TODO: 'x' and 'y' args are ignored.
 {
+	const int hcs = CONCHAR_SIZE * hs;
+
 	int ox = Q_atoi(COM_Parse(&str));
-	ox += (ui_screen_width / 2 - 128 * ui_scale) + ui_screen_offset_x;
+	ox += (ui_screen_width / 2 - 128 * hs) + ui_screen_offset_x;
 
 	int oy = Q_atoi(COM_Parse(&str));
-	oy += viddef.height / 2 - 120 * ui_scale;
+	oy += viddef.height / 2 - 120 * hs;
 
 	//TODO: needs the same 'oy' adjustment as in DrawClientBlock(). How do we get team index? Is this even used?
 	const int score = Q_atoi(COM_Parse(&str));
 	const char* team = COM_Parse(&str);
 
-	DrawString(ox, oy, va("Team %s", team), TextPalette[P_TEAM], -1);
-	DrawString(ox, oy + ui_char_size, va("Score %i", score), TextPalette[P_WHITE], -1);
+	DrawStringScaled(ox, oy, va("Team %s", team), TextPalette[P_TEAM], -1, hs);
+	DrawStringScaled(ox, oy + hcs, va("Score %i", score), TextPalette[P_WHITE], -1, hs);
 }
 
-static void DrawClientBlock(int x, int y, char* str) // H2 //TODO: 'x' and 'y' args are ignored.
+static void DrawClientBlock(int x, int y, char* str, const int hs) // H2 //TODO: 'x' and 'y' args are ignored.
 {
+	const int hcs = CONCHAR_SIZE * hs;
+
 	int ox = Q_atoi(COM_Parse(&str));
-	ox += (ui_screen_width / 2 - 160 * ui_scale) + ui_screen_offset_x;
+	ox += (ui_screen_width / 2 - 160 * hs) + ui_screen_offset_x;
 
 	int oy = Q_atoi(COM_Parse(&str));
-	oy += viddef.height / 2 - 120 * ui_scale;
+	oy += viddef.height / 2 - 120 * hs;
 
 	const int client = Q_atoi(COM_Parse(&str));
 
 	//mxd. Gross hacks: adjust 'oy' to match UI scaling by adding missing part of char height for 4 lines...
 	// Doing this correctly (by adjusting xy coords in DeathmatchScoreboardMessage()) will break vanilla compatibility...
-	oy += client * (ui_char_size - CONCHAR_SIZE) * 4;
+	oy += client * (hcs - CONCHAR_SIZE) * 4;
 
 	SCR_AddDirtyPoint(ox, oy);
-	SCR_AddDirtyPoint(ox + 159 * ui_scale, oy + 31 * ui_scale);
+	SCR_AddDirtyPoint(ox + 159 * hs, oy + 31 * hs);
 
 	if (client < 0 || client >= MAX_CLIENTS)
 		Com_Error(ERR_DROP, "client >= MAX_CLIENTS");
@@ -658,26 +664,26 @@ static void DrawClientBlock(int x, int y, char* str) // H2 //TODO: 'x' and 'y' a
 	const int ping = Q_atoi(COM_Parse(&str));
 	const int time = Q_atoi(COM_Parse(&str));
 
-	DrawString(ox + ui_char_size * 4, oy, cl.clientinfo[client].name, TextPalette[P_FRAGNAME], -1);
+	DrawStringScaled(ox + hcs * 4, oy, cl.clientinfo[client].name, TextPalette[P_FRAGNAME], -1, hs);
 
-	DrawString(ox + ui_char_size * 4,  oy + ui_char_size, "Score: ", TextPalette[P_FRAGS], -1);
-	DrawString(ox + ui_char_size * 11, oy + ui_char_size, va("%i", score), TextPalette[P_ALTFRAGS], -1);
-	DrawString(ox + ui_char_size * 4,  oy + ui_char_size * 2, va("Ping:  %i", ping), TextPalette[P_FRAGS], -1);
-	DrawString(ox + ui_char_size * 4,  oy + ui_char_size * 3, va("Time:  %i", time), TextPalette[P_FRAGS], -1);
+	DrawStringScaled(ox + hcs * 4,  oy + hcs, "Score: ", TextPalette[P_FRAGS], -1, hs);
+	DrawStringScaled(ox + hcs * 11, oy + hcs, va("%i", score), TextPalette[P_ALTFRAGS], -1, hs);
+	DrawStringScaled(ox + hcs * 4,  oy + hcs * 2, va("Ping:  %i", ping), TextPalette[P_FRAGS], -1, hs);
+	DrawStringScaled(ox + hcs * 4,  oy + hcs * 3, va("Time:  %i", time), TextPalette[P_FRAGS], -1, hs);
 }
 
-static void DrawAClientBlock(int x, int y, char* str) // H2 //TODO: 'x' and 'y' args are ignored.
+static void DrawAClientBlock(int x, int y, char* str, const int hs) // H2 //TODO: 'x' and 'y' args are ignored.
 {
 	char buffer[80];
 
 	int ox = Q_atoi(COM_Parse(&str));
-	ox += viddef.width / 2 - 160 * ui_scale;
+	ox += viddef.width / 2 - 160 * hs;
 
 	int oy = Q_atoi(COM_Parse(&str));
-	oy += viddef.height / 2 - 120 * ui_scale;
+	oy += viddef.height / 2 - 120 * hs;
 
 	SCR_AddDirtyPoint(ox, oy);
-	SCR_AddDirtyPoint(ox + 159 * ui_scale, oy + 31 * ui_scale);
+	SCR_AddDirtyPoint(ox + 159 * hs, oy + 31 * hs);
 
 	const int pal_index = Q_atoi(COM_Parse(&str));
 	const int client = Q_atoi(COM_Parse(&str));
@@ -690,7 +696,7 @@ static void DrawAClientBlock(int x, int y, char* str) // H2 //TODO: 'x' and 'y' 
 	const int time = Q_atoi(COM_Parse(&str));
 
 	sprintf_s(buffer, sizeof(buffer), "%-12.12s    %3d   %3d   %3d", cl.clientinfo[client].name, score, ping, time); //mxd. sprintf -> sprintf_s
-	DrawString(ox, oy, buffer, TextPalette[pal_index], -1);
+	DrawStringScaled(ox, oy, buffer, TextPalette[pal_index], -1, hs);
 }
 
 static int GetMenuNumsIndex(const char c, const qboolean is_red) // H2
@@ -702,7 +708,7 @@ static int GetMenuNumsIndex(const char c, const qboolean is_red) // H2
 	return c + offset - '0';
 }
 
-static void DrawHudNum(const int x, const int y, int width, const int value, const qboolean is_red)
+static void DrawHudNum(const int x, const int y, int width, const int value, const qboolean is_red, const int hs)
 {
 	static HudNumInfo_t menu_nums[] =
 	{
@@ -748,27 +754,27 @@ static void DrawHudNum(const int x, const int y, int width, const int value, con
 		draw_width += menu_nums[num_index].width;
 	}
 
-	int ox = x - 30 * ui_scale + (width * 19 - draw_width) * ui_scale;
+	int ox = x - 30 * hs + (width * 19 - draw_width) * hs;
 
-	SCR_AddDirtyPoint(ox, y + 16 * ui_scale);
-	SCR_AddDirtyPoint(ox + draw_width * ui_scale, y + 24 * ui_scale);
+	SCR_AddDirtyPoint(ox, y + 16 * hs);
+	SCR_AddDirtyPoint(ox + draw_width * hs, y + 24 * hs);
 
 	for (int i = 0; i < len; i++)
 	{
 		const int num_index = GetMenuNumsIndex(num[i], is_red);
-		re.DrawPic(ox, y + 16 * ui_scale, ui_scale, menu_nums[num_index].filename, 1.0f);
-		ox += menu_nums[num_index].width * ui_scale;
+		re.DrawPic(ox, y + 16 * hs, hs, menu_nums[num_index].filename, 1.0f);
+		ox += menu_nums[num_index].width * hs;
 	}
 }
 
-static void DrawBar(const int x, const int y, int width, const int height, const int stat_index) // H2
+static void DrawBar(const int x, const int y, int width, const int height, const int stat_index, const int hs) // H2
 {
 	const short bar_index = cl.frame.playerstate.stats[stat_index];
 	const short bg_index = cl.frame.playerstate.stats[stat_index + 1];
 	short scaler = cl.frame.playerstate.stats[stat_index + 2];
 
-	SCR_AddDirtyPoint(x, y - 3 * ui_scale);
-	SCR_AddDirtyPoint(x + width * ui_scale, y + (height + 3) * ui_scale);
+	SCR_AddDirtyPoint(x, y - 3 * hs);
+	SCR_AddDirtyPoint(x + width * hs, y + (height + 3) * hs);
 
 	const char* bar_name = cl.configstrings[CS_IMAGES + bar_index];
 	const char* bg_name = cl.configstrings[CS_IMAGES + bg_index];
@@ -785,24 +791,28 @@ static void DrawBar(const int x, const int y, int width, const int height, const
 	if (width < height)
 	{
 		if (*bg_name != 0)
-			re.DrawStretchPic(x, y - 3 * ui_scale, width * ui_scale, (height + 6) * ui_scale, bg_name, 1.0f, DSP_NONE);
+			re.DrawStretchPic(x, y - 3 * hs, width * hs, (height + 6) * hs, bg_name, 1.0f, DSP_NONE);
 
 		const int offset = (int)((float)height - (float)(height * scaler) * 0.01f);
-		re.DrawStretchPic(x, y + offset * ui_scale, width * ui_scale, (height - offset) * ui_scale, bar_name, 1.0f, DSP_NONE);
+		re.DrawStretchPic(x, y + offset * hs, width * hs, (height - offset) * hs, bar_name, 1.0f, DSP_NONE);
 	}
 	else
 	{
 		if (*bg_name != 0)
-			re.DrawStretchPic(x - 3 * ui_scale, y, (width + 6) * ui_scale, height * ui_scale, bg_name, 1.0f, DSP_NONE);
+			re.DrawStretchPic(x - 3 * hs, y, (width + 6) * hs, height * hs, bg_name, 1.0f, DSP_NONE);
 
 		const int offset = (int)((float)width - (float)(width * scaler) * 0.01f);
-		re.DrawStretchPic(x, y, (width - offset) * ui_scale, height * ui_scale, bar_name, 1.0f, DSP_NONE);
+		re.DrawStretchPic(x, y, (width - offset) * hs, height * hs, bar_name, 1.0f, DSP_NONE);
 	}
 }
 
 static void SCR_ExecuteLayoutString(char* s)
 {
 	if (cls.state != ca_active || !cl.refresh_prepped || s[0] == 0)
+		return;
+
+	const int hs = SCR_GetHUDScale();
+	if (hs == 0) // r_hudscale 0 hides the HUD.
 		return;
 
 	int x = 0;
@@ -815,70 +825,70 @@ static void SCR_ExecuteLayoutString(char* s)
 
 		if (strcmp(token, "xl") == 0)
 		{
-			x = Q_atoi(COM_Parse(&s)) * ui_scale;
+			x = Q_atoi(COM_Parse(&s)) * hs;
 		}
 		else if (strcmp(token, "xr") == 0)
 		{
-			x = viddef.width + Q_atoi(COM_Parse(&s)) * ui_scale;
+			x = viddef.width + Q_atoi(COM_Parse(&s)) * hs;
 		}
 		else if (strcmp(token, "xv") == 0)
 		{
-			x = viddef.width / 2 - (160 + Q_atoi(COM_Parse(&s))) * ui_scale;
+			x = viddef.width / 2 - (160 + Q_atoi(COM_Parse(&s))) * hs;
 		}
 		else if (strcmp(token, "xc") == 0) // H2
 		{
-			const int offset = cl.frame.playerstate.stats[STAT_PUZZLE_COUNT] * 40 * ui_scale;
-			x = (viddef.width - offset) / 2 + Q_atoi(COM_Parse(&s)) * ui_scale;
+			const int offset = cl.frame.playerstate.stats[STAT_PUZZLE_COUNT] * 40 * hs;
+			x = (viddef.width - offset) / 2 + Q_atoi(COM_Parse(&s)) * hs;
 		}
 		else if (strcmp(token, "yt") == 0)
 		{
-			y = Q_atoi(COM_Parse(&s)) * ui_scale;
+			y = Q_atoi(COM_Parse(&s)) * hs;
 		}
 		else if (strcmp(token, "yb") == 0)
 		{
-			y = viddef.height + Q_atoi(COM_Parse(&s)) * ui_scale;
+			y = viddef.height + Q_atoi(COM_Parse(&s)) * hs;
 		}
 		else if (strcmp(token, "yv") == 0)
 		{
-			y = viddef.height / 2 - (120 + Q_atoi(COM_Parse(&s))) * ui_scale;
+			y = viddef.height / 2 - (120 + Q_atoi(COM_Parse(&s))) * hs;
 		}
 		else if (strcmp(token, "yp") == 0) // H2
 		{
-			y += Q_atoi(COM_Parse(&s)) * ui_scale;
+			y += Q_atoi(COM_Parse(&s)) * hs;
 		}
 		else if (strcmp(token, "pic") == 0)
 		{
 			// Draw a pic from a stat number.
-			DrawPic(x, y, s, false);
+			DrawPic(x, y, s, false, hs);
 		}
 		else if (strcmp(token, "pici") == 0) // H2
 		{
 			// When 'Show puzzle inventory' flag is set.
 			if ((cl.frame.playerstate.stats[STAT_LAYOUTS] & 4) != 0)
-				DrawPic(x, y, s, true);
+				DrawPic(x, y, s, true, hs);
 		}
 		else if (strcmp(token, "tm") == 0) // H2
 		{
 			// Draw a team deathmatch team block.
-			DrawTeamBlock(x, y, s);
+			DrawTeamBlock(x, y, s, hs);
 		}
 		else if (strcmp(token, "client") == 0)
 		{
 			// Draw a deathmatch client block.
-			DrawClientBlock(x, y, s);
+			DrawClientBlock(x, y, s, hs);
 		}
 		else if (strcmp(token, "aclient") == 0) // H2 //TODO: never used?
 		{
 			// Draw a coop client block (?).
-			DrawAClientBlock(x, y, s);
+			DrawAClientBlock(x, y, s, hs);
 		}
 		else if (strcmp(token, "picn") == 0)
 		{
 			// Draw a pic from a name.
 			SCR_AddDirtyPoint(x, y);
-			SCR_AddDirtyPoint(x + 32 * ui_scale, y + 32 * ui_scale);
+			SCR_AddDirtyPoint(x + 32 * hs, y + 32 * hs);
 
-			re.DrawPic(x, y, ui_scale, COM_Parse(&s), 1.0f);
+			re.DrawPic(x, y, hs, COM_Parse(&s), 1.0f);
 		}
 		else if (strcmp(token, "num") == 0)
 		{
@@ -886,13 +896,13 @@ static void SCR_ExecuteLayoutString(char* s)
 			width = Q_atoi(COM_Parse(&s));
 			const int value = cl.frame.playerstate.stats[Q_atoi(COM_Parse(&s))];
 
-			DrawHudNum(x, y, width, value, value <= 0);
+			DrawHudNum(x, y, width, value, value <= 0, hs);
 		}
 		else if (strcmp(token, "hnum") == 0) // H2
 		{
 			// Draw health number.
 			const int amount = max(-99, cl.frame.playerstate.stats[STAT_HEALTH]);
-			DrawHudNum(x, y, width, amount, amount <= 25);
+			DrawHudNum(x, y, width, amount, amount <= 25, hs);
 		}
 		else if (strcmp(token, "arm") == 0) // H2
 		{
@@ -900,7 +910,7 @@ static void SCR_ExecuteLayoutString(char* s)
 			if (cl.frame.playerstate.stats[STAT_ARMOUR] != 0)
 			{
 				const int amount = max(-99, cl.frame.playerstate.stats[STAT_ARMOUR]);
-				DrawHudNum(x, y, width, amount, amount <= 25);
+				DrawHudNum(x, y, width, amount, amount <= 25, hs);
 			}
 		}
 		else if (strcmp(token, "am") == 0) // H2
@@ -909,7 +919,7 @@ static void SCR_ExecuteLayoutString(char* s)
 			if (cl.frame.playerstate.stats[STAT_AMMO_ICON] != 0)
 			{
 				const int amount = max(0, cl.frame.playerstate.stats[STAT_AMMO]);
-				DrawHudNum(x, y, width, amount, amount <= 10);
+				DrawHudNum(x, y, width, amount, amount <= 10, hs);
 			}
 		}
 		else if (strcmp(token, "bar") == 0) // H2
@@ -921,7 +931,7 @@ static void SCR_ExecuteLayoutString(char* s)
 			width = Q_atoi(COM_Parse(&s));
 			const int height = Q_atoi(COM_Parse(&s));
 
-			DrawBar(x, y, width, height, index);
+			DrawBar(x, y, width, height, index, hs);
 		}
 		else if (strcmp(token, "gbar") == 0) // H2
 		{
@@ -932,7 +942,7 @@ static void SCR_ExecuteLayoutString(char* s)
 			width = cl.frame.playerstate.stats[index];
 			const int height = cl.frame.playerstate.stats[index + 1];
 
-			DrawBar(x, y, width, height, index + 2);
+			DrawBar(x, y, width, height, index + 2, hs);
 		}
 		else if (strcmp(token, "stat_string") == 0)
 		{
@@ -944,16 +954,16 @@ static void SCR_ExecuteLayoutString(char* s)
 			if (index < 0 || index >= MAX_CONFIGSTRINGS)
 				Com_Error(ERR_DROP, "Bad stat_string index");
 
-			DrawString(x, y, cl.configstrings[index], TextPalette[P_WHITE], -1);
+			DrawStringScaled(x, y, cl.configstrings[index], TextPalette[P_WHITE], -1, hs);
 		}
 		else if (strcmp(token, "hstring") == 0) // H2
 		{
-			x = viddef.width / 2 - (160 + Q_atoi(COM_Parse(&s))) * ui_scale;
-			y = viddef.height / 2 - (120 + Q_atoi(COM_Parse(&s))) * ui_scale;
+			x = viddef.width / 2 - (160 + Q_atoi(COM_Parse(&s))) * hs;
+			y = viddef.height / 2 - (120 + Q_atoi(COM_Parse(&s))) * hs;
 			const int pal_index = Q_atoi(COM_Parse(&s));
 			const char* str = COM_Parse(&s);
 
-			DrawString(x, y, str, TextPalette[pal_index], -1);
+			DrawStringScaled(x, y, str, TextPalette[pal_index], -1, hs);
 		}
 		else if (strcmp(token, "string") == 0)
 		{
@@ -962,7 +972,7 @@ static void SCR_ExecuteLayoutString(char* s)
 			const int pal_index = Q_atoi(COM_Parse(&s));
 			const char* str = COM_Parse(&s);
 
-			DrawString(x, y, str, TextPalette[pal_index], -1);
+			DrawStringScaled(x, y, str, TextPalette[pal_index], -1, hs);
 		}
 		else if (strcmp(token, "if") == 0)
 		{
@@ -1048,6 +1058,12 @@ static void SCR_DrawGameMessage(void) // H2
 	if (display_msg.dispay_time <= 0.0f)
 		return;
 
+	const int hs = SCR_GetHUDScale();
+	if (hs == 0)
+		return;
+
+	const int hcs = CONCHAR_SIZE * hs;
+
 	//mxd. The above code was in a separate function in original version.
 
 	//mxd. When drawing a caption, start at vertical center of bottom cinematic border. Original logic uses viddef.height * 0.9f instead
@@ -1058,7 +1074,7 @@ static void SCR_DrawGameMessage(void) // H2
 	else
 		start_y = (int)((float)viddef.height * 0.4f);
 
-	int y = start_y - (display_msg.num_lines * ui_char_size / 2);
+	int y = start_y - (display_msg.num_lines * hcs / 2);
 
 	const char* s = &display_msg.message[0];
 	while (true)
@@ -1073,10 +1089,10 @@ static void SCR_DrawGameMessage(void) // H2
 		while (trimmed_len > 0 && s[trimmed_len - 1] == ' ')
 			trimmed_len--;
 
-		const int x = (viddef.width - trimmed_len * ui_char_size) / 2;
+		const int x = (viddef.width - trimmed_len * hcs) / 2;
 		SCR_AddDirtyPoint(x, y);
-		DrawString(x, y, s, display_msg.color, trimmed_len);
-		SCR_AddDirtyPoint(x + trimmed_len * ui_char_size, y + ui_char_size);
+		DrawStringScaled(x, y, s, display_msg.color, trimmed_len, hs);
+		SCR_AddDirtyPoint(x + trimmed_len * hcs, y + hcs);
 
 		// Skip to next line.
 		s += line_len;
@@ -1085,7 +1101,7 @@ static void SCR_DrawGameMessage(void) // H2
 			break;
 
 		s++; // Skip newline char.
-		y += ui_char_size;
+		y += hcs;
 	}
 }
 

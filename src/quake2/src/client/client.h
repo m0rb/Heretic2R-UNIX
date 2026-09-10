@@ -613,6 +613,7 @@ extern qboolean ignored_players[MAX_CLIENTS]; //mxd
 extern struct ResourceManager_s cl_FXBufMngr;
 
 extern void DrawString(int x, int y, const char* s, paletteRGBA_t color, int maxlen);
+extern void DrawStringScaled(int x, int y, const char* s, paletteRGBA_t color, int maxlen, int scale);
 extern qboolean CL_CheckOrDownloadFile(const char* filename);
 
 extern uint net_transmit_size; //mxd
