@@ -315,7 +315,16 @@ char* Sys_FindFirst(const char* path, unsigned musthave, unsigned canthave)
 
 	finddir = opendir(findpath);
 	if (!finddir)
-		return NULL;
+	{
+		if (!FS_FixCasePath(findpath, sizeof(findpath)))
+			return NULL;
+
+		finddir_len = (int)strlen(findpath);
+
+		finddir = opendir(findpath);
+		if (!finddir)
+			return NULL;
+	}
 
 	while ((d = readdir(finddir)) != NULL)
 	{

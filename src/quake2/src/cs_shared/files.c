@@ -32,7 +32,7 @@
 // Walk each component of 'path' doing case-insensitive directory lookups.
 // Modifies 'path' in place. Returns true if the full path was resolved to an existing file/dir.
 // Only called after a direct fopen/stat already failed, so the overhead only hits missing files.
-static qboolean FS_FixCasePath(char* path, const size_t maxlen)
+qboolean FS_FixCasePath(char* path, const size_t maxlen)
 {
 	char work[MAX_OSPATH];
 	char resolved[MAX_OSPATH];
