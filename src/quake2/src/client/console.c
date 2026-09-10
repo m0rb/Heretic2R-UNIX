@@ -16,15 +16,22 @@ static cvar_t* con_notifytime;
 static cvar_t* con_alpha; // H2
 static cvar_t* nextserver; // H2
 
-void DrawString(int x, const int y, const char* s, const paletteRGBA_t color, int maxlen) //mxd. +char scaling and shadow logic.
+void DrawStringScaled(int x, const int y, const char* s, const paletteRGBA_t color, int maxlen, const int scale) //mxd. +char scaling and shadow logic. --morb: +explicit scale, for the HUD.
 {
+	const int char_size = CONCHAR_SIZE * scale;
+
 	while (*s != 0 && maxlen != 0) //NOTE: 'maxlen' can be -1!
 	{
-		re.DrawChar(x, y, ui_scale, *s, color, true);
+		re.DrawChar(x, y, scale, *s, color, true);
 		s++;
-		x += ui_char_size;
+		x += char_size;
 		maxlen--;
 	}
+}
+
+void DrawString(int x, const int y, const char* s, const paletteRGBA_t color, int maxlen)
+{
+	DrawStringScaled(x, y, s, color, maxlen, ui_scale);
 }
 
 // Q2 counterpart
